@@ -64,6 +64,7 @@ def create_engine(library: LibraryModel) -> QQmlApplicationEngine:
     engine.addImageProvider("cover", CoverImageProvider())
     engine.addImageProvider("bg", BackgroundImageProvider())
     engine.rootContext().setContextProperty("Library", library)
+    engine.rootContext().setContextProperty("Sessions", library.sessions)
     engine.load(QUrl.fromLocalFile(str(QML_DIR / "Main.qml")))
     return engine
 

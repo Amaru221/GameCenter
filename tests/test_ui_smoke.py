@@ -86,6 +86,15 @@ def test_background_is_generated(app) -> None:
     assert image.size().width() == 640
 
 
+def test_launch_starts_a_session(model, monkeypatch) -> None:
+    monkeypatch.setattr(library_model, "launch_game", lambda game: 4321)
+
+    model.launch(0)
+
+    assert model.sessions.count == 1
+    assert model.sessions.list[0]["title"] == "Gamma Flight"
+
+
 def test_favorites_toggle_and_filter(model) -> None:
     assert model.rowCount() == 3
 

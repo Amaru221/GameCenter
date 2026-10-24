@@ -3,16 +3,20 @@ import QtQuick.Layouts
 
 Rectangle {
     id: dock
-    width: 380
+    readonly property bool idle: Sessions.count === 0
+    width: idle ? 380 : Math.min(920, 180 + Sessions.count * 204)
     height: 54
     radius: 27
     border.width: 1
     border.color: "#394252"
+    clip: true
 
     gradient: Gradient {
         GradientStop { position: 0.0; color: "#232a35" }
         GradientStop { position: 1.0; color: "#141820" }
     }
+
+    Behavior on width { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
 
     Rectangle {
         x: (dock.width - width) / 2
@@ -35,22 +39,106 @@ Rectangle {
 
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: 22
-        anchors.rightMargin: 22
+        anchors.leftMargin: 16
+        anchors.rightMargin: 18
         spacing: 10
 
-        Rectangle {
-            width: 8
-            height: 8
-            radius: 4
-            color: "#3ddc97"
+        Row {
+            visible: dock.idle
+            Layout.alignment: Qt.AlignVCenter
+            spacing: 10
+
+            Rectangle {
+                width: 8
+                height: 8
+                radius: 4
+                color: "#3ddc97"
+            }
+
+            Text {
+                text: "Ready"
+                color: "#dfe6f0"
+                font.family: "Sora"
+                font.pixelSize: 12
+            }
         }
 
-        Text {
-            text: "Ready"
-            color: "#dfe6f0"
-            font.family: "Sora"
-            font.pixelSize: 12
+        Row {
+            visible: !dock.idle
+            Layout.alignment: Qt.AlignVCenter
+            spacing: 8
+
+            Repeater {
+                model: Sessions.list
+
+                delegate: Rectangle {
+                    width: 194
+                    height: 38
+                    radius: 10
+                    color: "#0d0f14"
+                    border.width: 1
+                    border.color: "#2a3140"
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 5
+                        spacing: 8
+
+                        Image {
+                            Layout.preferredWidth: 26
+                            Layout.preferredHeight: 28
+                            source: modelData.cover
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                            cache: true
+                        }
+
+                        Column {
+                            Layout.fillWidth: true
+                            spacing: 1
+
+                            Text {
+                                width: parent.width
+                                text: modelData.title
+                                color: "#dfe6f0"
+                                font.family: "Sora"
+                                font.pixelSize: 10
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                text: modelData.elapsed
+                                color: "#8b95a5"
+                                font.family: "Chakra Petch"
+                                font.pixelSize: 9
+                                font.letterSpacing: 0.8
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.preferredWidth: 18
+                            Layout.preferredHeight: 18
+                            radius: 9
+                            color: ejectArea.containsMouse ? "#232936" : "#171b23"
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "×"
+                                color: "#aeb8c7"
+                                font.pixelSize: 12
+                            }
+
+                            MouseArea {
+                                id: ejectArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: Sessions.eject(modelData.id)
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         Item { Layout.fillWidth: true }

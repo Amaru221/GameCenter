@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -16,10 +17,63 @@ from gamecenter.ui.app import _load_fonts, create_engine  # noqa: E402
 from gamecenter.ui.library_model import LibraryModel  # noqa: E402
 
 
+def _demo_games():
+    """A fictional library, so the public preview doesn't show a real one."""
+    from gamecenter.core.models import Game
+
+    specs = (
+        ("Neon Drifter", "steam", "900001", 12.4, 3420, 1792000000, True),
+        ("Echoes of Aether", "steam", "900002", 8.1, 890, 1791000000, True),
+        ("Cobalt Frontier", "epic", "CobaltFrontier", 22.7, 0, 0, True),
+        ("Paper Kingdom", "gog", "900003", 5.2, 1450, 1790000000, True),
+        ("Night Shift", "battlenet", "Pro", 0.0, 0, 0, True),
+        ("Pixel Rally", "riot", "pixel_rally.live", 3.9, 320, 1789000000, True),
+        ("Hollow Circuit", "steam", "900004", 15.0, 0, 0, False),
+    )
+    return [
+        Game(
+            id=f"{source}:{app_id}",
+            title=title,
+            source=source,
+            app_id=app_id,
+            size_bytes=int(size_gb * 1024 ** 3),
+            playtime_minutes=minutes,
+            last_played=last_played,
+            installed=installed,
+        )
+        for title, source, app_id, size_gb, minutes, last_played, installed in specs
+    ]
+
+
 def main() -> int:
     app = QApplication(sys.argv)
     _load_fonts()
-    library = LibraryModel()
+
+    demo = bool(os.environ.get("GC_DEMO"))
+    if demo:
+        from gamecenter.ui import library_model
+
+        library_model.scan_all = _demo_games
+
+    library = LibraryModel(
+        download_art=not demo,
+        favorites_path=Path(os.environ.get("TEMP", ".")) / "gamecenter-preview.json",
+    )
+
+    if os.environ.get("GC_SESSION") and library._visible:
+        # A fake running session, so the dock can be reviewed without launching.
+        from gamecenter.core.sessions import SessionTracker
+        from gamecenter.ui import covers
+
+        tracker = SessionTracker(running=lambda session: True)
+        library._sessions = tracker
+        game = library._visible[0]
+        session = tracker.start(
+            game, None, "image://cover/" + covers.cover_key(game.title, game.app_id)
+        )
+        session.started_at -= 754
+        tracker.changed.emit()
+
     engine = create_engine(library)
     roots = engine.rootObjects()
     if not roots:
@@ -34,6 +88,8 @@ def main() -> int:
         name = "screenshot-hover.png"
     elif os.environ.get("GC_DETAIL"):
         name = "screenshot-detail.png"
+    elif os.environ.get("GC_SESSION"):
+        name = "screenshot-session.png"
     out = Path(__file__).resolve().parents[1] / name
 
     if os.environ.get("GC_HOVER"):

@@ -13,3 +13,12 @@ htmlcov/
 *.log
 screenshot*.png
 
+# Never commit secrets or local app state
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+settings.json
+

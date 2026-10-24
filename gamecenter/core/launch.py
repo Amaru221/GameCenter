@@ -34,27 +34,30 @@ def open_folder(path: Path) -> None:
         subprocess.Popen(["xdg-open", str(path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
-def launch(game: Game) -> None:
-    """Start `game`, preferring the store's own launcher."""
+def launch(game: Game) -> int | None:
+    """Start `game`; returns the process id when the store gave us one."""
     if game.launch_uri:
         open_uri(game.launch_uri)
-        return
+        return None
+
     if game.launch_command:
         # A trusted command line from the store's own registry entry.
         args = game.launch_command if sys.platform == "win32" else shlex.split(game.launch_command)
-        subprocess.Popen(
+        process = subprocess.Popen(
             args,
             cwd=str(game.install_dir) if game.install_dir and game.install_dir.is_dir() else None,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        return
+        return process.pid
+
     if game.executable is not None and game.executable.is_file():
-        subprocess.Popen(
+        process = subprocess.Popen(
             [str(game.executable), *game.launch_args],
             cwd=str(game.executable.parent),
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        return
+        return process.pid
+
     raise LaunchError(f"Don't know how to start {game.title!r}.")

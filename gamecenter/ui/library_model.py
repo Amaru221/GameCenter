@@ -11,8 +11,10 @@ from PySide6.QtCore import (
     QAbstractListModel,
     QByteArray,
     QModelIndex,
+    QObject,
     Property,
     Qt,
+    QTimer,
     Signal,
     Slot,
 )
@@ -21,6 +23,7 @@ from PySide6.QtGui import QGuiApplication
 from ..core.favorites import Favorites
 from ..core.launch import LaunchError, launch as launch_game, open_folder
 from ..core.models import SOURCE_LABELS, Game
+from ..core.sessions import SessionTracker
 from ..core.sources import scan_all
 from . import artwork, covers
 
@@ -88,6 +91,11 @@ class LibraryModel(QAbstractListModel):
         self._sort = "recent"
         self._favorites = Favorites(favorites_path)
         self._favorites_only = False
+        self._sessions = SessionTracker()
+        self._session_timer = QTimer(self)
+        self._session_timer.setInterval(1000)
+        self._session_timer.timeout.connect(self._sessions.poll)
+        self._session_timer.start()
         self._art_revision = 0
         self._art_downloads = download_art and artwork.enabled()
         self._art_running = False
@@ -166,6 +174,10 @@ class LibraryModel(QAbstractListModel):
     @Property(bool, notify=changed)
     def favoritesOnly(self) -> bool:
         return self._favorites_only
+
+    @Property(QObject, constant=True)
+    def sessions(self) -> SessionTracker:
+        return self._sessions
 
     @Property("QVariantList", notify=changed)
     def sourceOptions(self) -> list[dict]:
@@ -289,9 +301,13 @@ class LibraryModel(QAbstractListModel):
         if game is None:
             return
         try:
-            launch_game(game)
+            pid = launch_game(game)
         except (LaunchError, OSError) as exc:
             self.failed.emit(str(exc))
+            return
+
+        key = covers.cover_key(game.title, game.app_id, self._art_revision)
+        self._sessions.start(game, pid, "image://cover/" + key)
 
     @Slot(int)
     def openFolder(self, row: int) -> None:
