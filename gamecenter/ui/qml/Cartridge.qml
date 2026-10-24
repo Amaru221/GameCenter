@@ -12,12 +12,16 @@ Item {
     property string coverUrl: ""
     property bool gameInstalled: true
     property bool selected: false
+    property bool showTitle: true
+    property bool favorite: false
 
     property real tiltX: 0
     property real tiltY: 0
 
     signal launchRequested()
     signal contextRequested()
+    signal clicked()
+    signal favoriteRequested()
 
     readonly property bool hovered: pointer.containsMouse
 
@@ -261,6 +265,7 @@ Item {
                     card.contextRequested();
                 } else {
                     card.selected = !card.selected;
+                    card.clicked();
                 }
             }
             onDoubleClicked: card.launchRequested()
@@ -277,10 +282,37 @@ Item {
         }
     }
 
+    Rectangle {
+        x: card.width - 44
+        y: 10
+        width: 22
+        height: 22
+        radius: 11
+        color: "#0d0f14"
+        border.width: 1
+        border.color: card.favorite ? "#ffd166" : "#2a3140"
+        opacity: card.favorite || card.hovered ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: 140 } }
+
+        Text {
+            anchors.centerIn: parent
+            text: card.favorite ? "★" : "☆"
+            color: card.favorite ? "#ffd166" : "#c9d2e0"
+            font.pixelSize: 12
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: card.favoriteRequested()
+        }
+    }
+
     Text {
         x: 0
         y: 254
         width: card.width
+        visible: card.showTitle
         horizontalAlignment: Text.AlignHCenter
         text: card.gameTitle
         color: "#e9eef6"

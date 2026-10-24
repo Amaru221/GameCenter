@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from gamecenter.core import steam
+from gamecenter.core.sources import steam
 
 
 def _vdf_path(path: Path) -> str:
@@ -94,6 +94,38 @@ def test_tools_and_runtimes_are_hidden(tmp_path: Path) -> None:
     games = steam.scan(roots=[root])
 
     assert [g.title for g in games] == ["Half-Life 2"]
+
+
+def test_playtime_comes_from_localconfig(tmp_path: Path) -> None:
+    root, _ = _steam_tree(tmp_path)
+    _manifest(root, 220, "Half-Life 2")
+    config = root / "userdata" / "12345" / "config"
+    config.mkdir(parents=True)
+    (config / "localconfig.vdf").write_text(
+        """
+        "UserLocalConfigStore"
+        {
+            "Software"
+            {
+                "Valve"
+                {
+                    "Steam"
+                    {
+                        "apps"
+                        {
+                            "220" { "Playtime" "345" }
+                        }
+                    }
+                }
+            }
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    games = steam.scan(roots=[root])
+
+    assert games[0].playtime_minutes == 345
 
 
 def test_old_libraryfolders_format(tmp_path: Path) -> None:

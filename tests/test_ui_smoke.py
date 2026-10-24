@@ -27,14 +27,16 @@ def games() -> list[Game]:
     return [
         Game(id="steam:1", title="Alpha Quest", source="steam", app_id="123", last_played=100),
         Game(id="steam:2", title="Beta Racer", source="steam", installed=False),
-        Game(id="heroic:3", title="Gamma Flight", source="heroic", last_played=300),
+        Game(id="epic:3", title="Gamma Flight", source="epic", last_played=300),
     ]
 
 
 @pytest.fixture
-def model(app, monkeypatch, games):
-    monkeypatch.setattr(library_model.steam, "scan", lambda: games)
-    return library_model.LibraryModel(download_art=False)
+def model(app, monkeypatch, games, tmp_path):
+    monkeypatch.setattr(library_model, "scan_all", lambda: games)
+    return library_model.LibraryModel(
+        download_art=False, favorites_path=tmp_path / "settings.json"
+    )
 
 
 def test_model_lists_and_filters(model) -> None:
@@ -47,9 +49,9 @@ def test_model_lists_and_filters(model) -> None:
     model.setQuery("")
     assert model.rowCount() == 3
 
-    model.setSourceFilter("heroic")
+    model.setSourceFilter("epic")
     assert model.rowCount() == 1
-    assert model.data(model.index(0, 0), library_model.ROLE_SOURCE) == "heroic"
+    assert model.data(model.index(0, 0), library_model.ROLE_SOURCE) == "Epic Games"
 
     model.setSourceFilter("")
     assert model.rowCount() == 3
@@ -82,6 +84,39 @@ def test_background_is_generated(app) -> None:
     image = covers.render_background(640, 400)
     assert not image.isNull()
     assert image.size().width() == 640
+
+
+def test_favorites_toggle_and_filter(model) -> None:
+    assert model.rowCount() == 3
+
+    model.toggleFavorite(0)
+    assert model.data(model.index(0, 0), library_model.ROLE_FAVORITE) is True
+
+    model.setFavoritesOnly(True)
+    assert model.rowCount() == 1
+
+    model.setFavoritesOnly(False)
+    assert model.rowCount() == 3
+
+    model.toggleFavorite(0)
+    assert model.data(model.index(0, 0), library_model.ROLE_FAVORITE) is False
+
+
+def test_source_options_have_labels(model) -> None:
+    options = model.sourceOptions
+    assert {option["value"] for option in options} == {"steam", "epic"}
+    assert {option["text"] for option in options} == {"Steam", "Epic Games"}
+
+
+def test_game_at_returns_detail_data(model) -> None:
+    model.setQuery("alpha")
+    detail = model.gameAt(0)
+    assert detail["title"] == "Alpha Quest"
+    assert detail["source"] == "Steam"
+    assert detail["appId"] == "123"
+    assert detail["cover"].startswith("image://cover/")
+    assert detail["hasFolder"] is False
+    assert detail["lastPlayed"].startswith("Played")
 
 
 def test_provider_prefers_cached_art(app, tmp_path, monkeypatch) -> None:

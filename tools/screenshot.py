@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from PySide6.QtCore import QPoint, QTimer  # noqa: E402
+from PySide6.QtCore import QPoint, Qt, QTimer  # noqa: E402
 from PySide6.QtTest import QTest  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
@@ -29,13 +29,23 @@ def main() -> int:
     window.resize(1180, 800)
     window.show()
 
-    out = Path(__file__).resolve().parents[1] / (
-        "screenshot-hover.png" if os.environ.get("GC_HOVER") else "screenshot.png"
-    )
+    name = "screenshot.png"
+    if os.environ.get("GC_HOVER"):
+        name = "screenshot-hover.png"
+    elif os.environ.get("GC_DETAIL"):
+        name = "screenshot-detail.png"
+    out = Path(__file__).resolve().parents[1] / name
 
     if os.environ.get("GC_HOVER"):
         # Park the cursor over the first cartridge so the tilt shows up.
         QTimer.singleShot(1400, lambda: QTest.mouseMove(window, QPoint(140, 220)))
+    if os.environ.get("GC_DETAIL"):
+        QTimer.singleShot(
+            1400,
+            lambda: QTest.mouseClick(
+                window, Qt.LeftButton, Qt.NoModifier, QPoint(140, 220)
+            ),
+        )
 
     def grab() -> None:
         image = window.grabWindow()

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import re
 import threading
+import time
+from pathlib import Path
 
 from PySide6.QtCore import (
     QAbstractListModel,
@@ -16,9 +18,10 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QGuiApplication
 
-from ..core import steam
+from ..core.favorites import Favorites
 from ..core.launch import LaunchError, launch as launch_game, open_folder
-from ..core.models import Game
+from ..core.models import SOURCE_LABELS, Game
+from ..core.sources import scan_all
 from . import artwork, covers
 
 ROLE_TITLE = Qt.UserRole + 1
@@ -29,6 +32,7 @@ ROLE_COVER = Qt.UserRole + 5
 ROLE_INSTALLED = Qt.UserRole + 6
 ROLE_SIZE = Qt.UserRole + 7
 ROLE_HAS_FOLDER = Qt.UserRole + 8
+ROLE_FAVORITE = Qt.UserRole + 9
 
 _TAG_WORDS = re.compile(r"[A-Z0-9]+")
 
@@ -42,18 +46,48 @@ def _tag(title: str) -> str:
     return (head + tail)[:7]
 
 
+def _playtime_text(minutes: int) -> str:
+    if minutes <= 0:
+        return ""
+    if minutes < 60:
+        return f"{minutes} min played"
+    hours = minutes // 60
+    return "1 hour played" if hours == 1 else f"{hours:,} hours played"
+
+
+def _played_text(timestamp: int) -> str:
+    if not timestamp:
+        return "Never played"
+    days = (time.time() - timestamp) / 86400
+    if days < 1:
+        return "Played today"
+    if days < 2:
+        return "Played yesterday"
+    if days < 30:
+        return f"Played {int(days)} days ago"
+    if days < 365:
+        months = int(days // 30)
+        return f"Played {months} month{'s' if months != 1 else ''} ago"
+    years = int(days // 365)
+    return f"Played {years} year{'s' if years != 1 else ''} ago"
+
+
 class LibraryModel(QAbstractListModel):
     changed = Signal()
     failed = Signal(str)
     artReady = Signal(str)
 
-    def __init__(self, download_art: bool = True) -> None:
+    def __init__(
+        self, download_art: bool = True, favorites_path: Path | None = None
+    ) -> None:
         super().__init__()
-        self._all: list[Game] = steam.scan()
+        self._all: list[Game] = scan_all()
         self._visible: list[Game] = []
         self._query = ""
         self._source = ""
         self._sort = "recent"
+        self._favorites = Favorites(favorites_path)
+        self._favorites_only = False
         self._art_revision = 0
         self._art_downloads = download_art and artwork.enabled()
         self._art_running = False
@@ -74,11 +108,11 @@ class LibraryModel(QAbstractListModel):
         if role == ROLE_TITLE:
             return game.title
         if role == ROLE_SOURCE:
-            return game.source
+            return game.source_label
         if role == ROLE_APP_ID:
             return game.app_id
         if role == ROLE_META:
-            return f"{game.source.upper()} · {game.app_id or '—'} · {_tag(game.title)}"
+            return f"{game.source_label.upper()} · {game.app_id or '—'} · {_tag(game.title)}"
         if role == ROLE_COVER:
             key = covers.cover_key(game.title, game.app_id, self._art_revision)
             return "image://cover/" + key
@@ -88,6 +122,8 @@ class LibraryModel(QAbstractListModel):
             return f"{game.size_gb:.1f} GB" if game.size_gb else ""
         if role == ROLE_HAS_FOLDER:
             return bool(game.install_dir and game.install_dir.is_dir())
+        if role == ROLE_FAVORITE:
+            return game.id in self._favorites
         if role == Qt.DisplayRole:
             return game.title
         return None
@@ -102,6 +138,7 @@ class LibraryModel(QAbstractListModel):
             ROLE_INSTALLED: QByteArray(b"installed"),
             ROLE_SIZE: QByteArray(b"sizeText"),
             ROLE_HAS_FOLDER: QByteArray(b"hasFolder"),
+            ROLE_FAVORITE: QByteArray(b"favorite"),
         }
 
     # -- properties -------------------------------------------------------
@@ -126,9 +163,17 @@ class LibraryModel(QAbstractListModel):
     def total(self) -> int:
         return len(self._all)
 
-    @Property("QStringList", notify=changed)
-    def sources(self) -> list[str]:
-        return sorted({game.source for game in self._all})
+    @Property(bool, notify=changed)
+    def favoritesOnly(self) -> bool:
+        return self._favorites_only
+
+    @Property("QVariantList", notify=changed)
+    def sourceOptions(self) -> list[dict]:
+        keys = sorted({game.source for game in self._all})
+        return [
+            {"text": SOURCE_LABELS.get(key, key.capitalize()), "value": key}
+            for key in keys
+        ]
 
     # -- filtering --------------------------------------------------------
 
@@ -139,6 +184,7 @@ class LibraryModel(QAbstractListModel):
             for game in self._all
             if (not query or query in game.title.casefold())
             and (not self._source or game.source == self._source)
+            and (not self._favorites_only or game.id in self._favorites)
         ]
         if self._sort == "title":
             rows.sort(key=lambda g: g.title.casefold())
@@ -172,9 +218,16 @@ class LibraryModel(QAbstractListModel):
             self._sort = mode
             self._refresh_rows()
 
+    @Slot(bool)
+    def setFavoritesOnly(self, value: bool) -> None:
+        value = bool(value)
+        if value != self._favorites_only:
+            self._favorites_only = value
+            self._refresh_rows()
+
     @Slot()
     def refresh(self) -> None:
-        self._all = steam.scan()
+        self._all = scan_all()
         self._refresh_rows()
         self._start_art()
 
@@ -259,3 +312,37 @@ class LibraryModel(QAbstractListModel):
         if game is None:
             return
         QGuiApplication.clipboard().setText(game.app_id)
+
+    @Slot(int)
+    def toggleFavorite(self, row: int) -> None:
+        game = self._at(row)
+        if game is None:
+            return
+        self._favorites.toggle(game.id)
+        if self._favorites_only and game.id not in self._favorites:
+            self._refresh_rows()
+            return
+        index = self.index(row, 0)
+        self.dataChanged.emit(index, index, [ROLE_FAVORITE])
+
+    @Slot(int, result="QVariantMap")
+    def gameAt(self, row: int) -> dict:
+        """Everything the detail panel needs about one row."""
+        game = self._at(row)
+        if game is None:
+            return {}
+        key = covers.cover_key(game.title, game.app_id, self._art_revision)
+        return {
+            "title": game.title,
+            "source": game.source_label,
+            "appId": game.app_id,
+            "meta": f"{game.source_label.upper()} · {game.app_id or '—'} · {_tag(game.title)}",
+            "cover": "image://cover/" + key,
+            "installed": game.installed,
+            "favorite": game.id in self._favorites,
+            "sizeText": f"{game.size_gb:.1f} GB" if game.size_gb else "",
+            "playtimeText": _playtime_text(game.playtime_minutes),
+            "lastPlayed": _played_text(game.last_played),
+            "installDir": str(game.install_dir) if game.install_dir else "",
+            "hasFolder": bool(game.install_dir and game.install_dir.is_dir()),
+        }

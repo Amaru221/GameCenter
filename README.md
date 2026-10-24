@@ -3,20 +3,24 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.1 (MVP)** — solo Steam. Sin cuentas, sin telemetría.
+> Estado: **v0.2** — Steam, Epic, GOG, Battle.net y Riot. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 
 ## Qué hace hoy
 
-- Detecta Steam y todas sus bibliotecas (`libraryfolders.vdf`).
-- Lee los manifiestos instalados (`appmanifest_*.acf`).
+- Detecta **Steam, Epic Games, GOG, Battle.net y Riot** leyendo sus archivos
+  locales (manifiestos, registro de Windows y `libraryfolders.vdf`).
 - Lista los juegos como cartuchos con inclinación 3D al pasar el ratón.
 - Usa la carátula oficial de Steam (CDN público) y la cachea; sin conexión dibuja
   una portada generada.
+- **Vista de detalle** al hacer clic: cartucho grande, Play, tamaño, tiempo
+  jugado (Steam), última partida, ruta y botones.
+- **Favoritos** persistentes, con filtro en la barra.
 - Busca por título y filtra por tienda; ordena por reciente, título o tamaño.
-- Lanza el juego con `steam://rungameid/<appid>`.
-- Abre la carpeta de instalación y copia el App ID desde el menú contextual.
+- Lanza cada juego con el método de su tienda (URI de Steam/Epic, ejecutable o
+  cliente de Riot).
+- Menú contextual: lanzar, abrir carpeta y copiar App ID.
 
 ## Requisitos
 
@@ -52,14 +56,21 @@ gamecenter/
   core/
     models.py           modelo Game
     vdf.py              lector de VDF (formato de Valve)
-    steam.py            detección de Steam y manifiestos
+    favorites.py        favoritos persistentes (JSON)
     launch.py           lanzar juegos y abrir carpetas
+    sources/
+      __init__.py       scan_all() aísla los fallos de cada tienda
+      steam.py          manifiestos + tiempo jugado
+      epic.py           manifiestos .item
+      gog.py            registro GOG.com\Games
+      battlenet.py      claves Uninstall de Blizzard
+      riot.py           claves "Riot Game <producto>.<patchline>"
   ui/
     app.py              arranque de Qt Quick y proveedores de imágenes
-    library_model.py    modelo, filtros, orden y acciones
+    library_model.py    modelo, filtros, favoritos, orden y acciones
     artwork.py          carátulas del CDN de Steam con caché
     covers.py           portadas, fondo y logo generados con QPainter
-    qml/                Main, TopBar, Toolbar, Cartridge, LibraryGrid, Dock
+    qml/                Main, TopBar, Toolbar, Cartridge, GameDetail, Dock
     fonts/              Sora y Chakra Petch (SIL OFL 1.1)
 tools/screenshot.py     render de la ventana a PNG (desarrollo)
 tests/                  parser, escáner, modelo y carga del QML
@@ -68,14 +79,16 @@ docs/CLEANROOM.md       política de reimplementación limpia
 
 ## Hoja de ruta
 
-| Versión | Contenido |
-|---|---|
-| 0.1 | Steam local, búsqueda, filtros, lanzar |
-| 0.2 | Heroic, Lutris, Epic, Flatpak, GOG |
-| 0.3 | Tiempo jugado, ordenar, favoritos |
-| 0.4 | Carátulas opcionales desde SteamGridDB (con consentimiento) |
-| 0.5 | Vista tipo cartucho, dock de sesiones |
-| 0.6 | Empaquetado (PyInstaller/Inno Setup) y actualizaciones firmadas |
+| Versión | Contenido | Estado |
+|---|---|---|
+| 0.1 | Steam local, búsqueda, filtros, lanzar | hecho |
+| 0.2 | Epic, GOG, Battle.net, Riot | hecho |
+| 0.3 | Tiempo jugado, ordenar, favoritos | hecho |
+| 0.4 | Carátulas oficiales con caché y fallback generado | hecho |
+| 0.5 | Vista de detalle y cartuchos 3D | hecho |
+| 0.6 | Dock de sesiones y seguimiento de procesos | pendiente |
+| 0.7 | Heroic y Lutris (Linux) | pendiente |
+| 0.8 | Empaquetado (PyInstaller/Inno Setup) y actualizaciones firmadas | pendiente |
 
 ## Privacidad
 

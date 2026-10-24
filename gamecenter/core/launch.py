@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -38,9 +39,19 @@ def launch(game: Game) -> None:
     if game.launch_uri:
         open_uri(game.launch_uri)
         return
+    if game.launch_command:
+        # A trusted command line from the store's own registry entry.
+        args = game.launch_command if sys.platform == "win32" else shlex.split(game.launch_command)
+        subprocess.Popen(
+            args,
+            cwd=str(game.install_dir) if game.install_dir and game.install_dir.is_dir() else None,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return
     if game.executable is not None and game.executable.is_file():
         subprocess.Popen(
-            [str(game.executable)],
+            [str(game.executable), *game.launch_args],
             cwd=str(game.executable.parent),
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,

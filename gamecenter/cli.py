@@ -8,8 +8,8 @@ import sys
 from typing import Sequence
 
 from . import __version__
-from .core import steam
 from .core.models import Game
+from .core.sources import scan_all
 
 
 def _as_dict(game: Game) -> dict:
@@ -52,7 +52,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
     if args.scan:
-        games = steam.scan()
+        games = scan_all()
         if args.json:
             print(json.dumps([_as_dict(g) for g in games], indent=2, ensure_ascii=False))
         else:

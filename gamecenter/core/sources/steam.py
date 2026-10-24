@@ -9,11 +9,12 @@ from __future__ import annotations
 
 import os
 import sys
+from dataclasses import replace
 from pathlib import Path
 from typing import Iterable
 
-from . import vdf
-from .models import Game
+from .. import vdf
+from ..models import Game
 
 SOURCE = "steam"
 _FULLY_INSTALLED = 4  # StateFlags bit set once Steam has finished installing
@@ -171,18 +172,64 @@ def _read_manifest(manifest: Path, library: Path) -> Game | None:
     )
 
 
+def _playtime(root: Path) -> dict[str, int]:
+    """Minutes per app id, from the most recently used account's localconfig."""
+    userdata = root / "userdata"
+    if not userdata.is_dir():
+        return {}
+
+    best: tuple[float, Path] | None = None
+    try:
+        accounts = [p for p in userdata.iterdir() if p.is_dir() and p.name.isdigit()]
+    except OSError:
+        return {}
+    for account in accounts:
+        config = account / "config" / "localconfig.vdf"
+        try:
+            mtime = config.stat().st_mtime
+        except OSError:
+            continue
+        if best is None or mtime > best[0]:
+            best = (mtime, config)
+    if best is None:
+        return {}
+
+    try:
+        tree = vdf.parse(best[1].read_text(encoding="utf-8", errors="replace"))
+    except (OSError, vdf.VdfError):
+        return {}
+
+    node = tree
+    for key in ("UserLocalConfigStore", "Software", "Valve", "Steam", "apps"):
+        node = vdf.get_block(node, key)
+        if node is None:
+            return {}
+
+    minutes: dict[str, int] = {}
+    for app_id, entry in node.items():
+        if isinstance(entry, dict):
+            value = _int(vdf.get(entry, "Playtime"), 0)
+            if value > 0:
+                minutes[app_id] = value
+    return minutes
+
+
 def scan(roots: Iterable[Path] | None = None) -> list[Game]:
     """Every game installed in the given Steam roots (all detected ones by default)."""
     found: dict[str, Game] = {}
     for root in roots if roots is not None else steam_roots():
         root = Path(root)
+        playtime = _playtime(root)
         for library in library_folders(root):
             steamapps = library / "steamapps"
             if not steamapps.is_dir():
                 continue
             for manifest in steamapps.glob("appmanifest_*.acf"):
                 game = _read_manifest(manifest, library)
-                if game is not None:
-                    found.setdefault(game.id, game)
+                if game is None:
+                    continue
+                if game.app_id in playtime:
+                    game = replace(game, playtime_minutes=playtime[game.app_id])
+                found.setdefault(game.id, game)
 
     return sorted(found.values(), key=lambda g: (not g.installed, g.title.casefold()))

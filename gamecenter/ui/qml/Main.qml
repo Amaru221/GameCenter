@@ -11,6 +11,10 @@ Window {
     title: "GameCenter"
     color: "#07080b"
 
+    property var detailGame: ({})
+    property int detailIndex: -1
+    property bool detailOpen: false
+
     Image {
         anchors.fill: parent
         source: "image://bg/1"
@@ -49,6 +53,12 @@ Window {
         anchors.leftMargin: 24
         anchors.rightMargin: 24
         anchors.bottomMargin: 78
+
+        onDetailRequested: (index) => {
+            detailIndex = index;
+            detailGame = Library.gameAt(index);
+            detailOpen = true;
+        }
     }
 
     Dock {
@@ -97,6 +107,21 @@ Window {
         }
     }
 
+    GameDetail {
+        id: detail
+        anchors.fill: parent
+        game: detailGame
+        opened: detailOpen
+        onCloseRequested: detailOpen = false
+        onPlayRequested: Library.launch(detailIndex)
+        onFolderRequested: Library.openFolder(detailIndex)
+        onCopyRequested: Library.copyAppId(detailIndex)
+        onFavoriteRequested: {
+            Library.toggleFavorite(detailIndex);
+            detailGame = Library.gameAt(detailIndex);
+        }
+    }
+
     Connections {
         target: Library
         function onFailed(message) { toast.show(message) }
@@ -105,6 +130,11 @@ Window {
     Shortcut {
         sequence: "F5"
         onActivated: Library.refresh()
+    }
+
+    Shortcut {
+        sequence: "Escape"
+        onActivated: if (detailOpen) detailOpen = false
     }
 
     Shortcut {

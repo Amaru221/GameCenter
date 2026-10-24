@@ -5,6 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+SOURCE_LABELS = {
+    "steam": "Steam",
+    "epic": "Epic Games",
+    "gog": "GOG",
+    "battlenet": "Battle.net",
+    "riot": "Riot",
+}
+
 
 @dataclass(frozen=True)
 class Game:
@@ -21,14 +29,17 @@ class Game:
     app_id: str = ""
     install_dir: Path | None = None
     launch_uri: str = ""
+    launch_command: str = ""
     executable: Path | None = None
+    launch_args: tuple[str, ...] = ()
     installed: bool = True
     size_bytes: int = 0
     last_played: int = 0
+    playtime_minutes: int = 0
 
     @property
     def source_label(self) -> str:
-        return self.source.capitalize()
+        return SOURCE_LABELS.get(self.source, self.source.capitalize())
 
     @property
     def size_gb(self) -> float:

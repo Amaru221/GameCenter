@@ -36,14 +36,7 @@ Item {
             id: sourceCombo
             Layout.preferredWidth: 150
             value: ""
-            entries: {
-                var out = [{ text: "All stores", value: "" }];
-                for (var i = 0; i < Library.sources.length; i++) {
-                    var s = Library.sources[i];
-                    out.push({ text: s.charAt(0).toUpperCase() + s.slice(1), value: s });
-                }
-                return out;
-            }
+            entries: [{ text: "All stores", value: "" }].concat(Library.sourceOptions)
             onSelected: (chosen) => Library.setSourceFilter(chosen)
         }
 
@@ -57,6 +50,28 @@ Item {
                 { text: "Size", value: "size" }
             ]
             onSelected: (chosen) => Library.setSort(chosen)
+        }
+
+        Rectangle {
+            width: 34
+            height: 34
+            radius: 17
+            color: Library.favoritesOnly ? "#2a2410" : "#0d0f14"
+            border.width: 1
+            border.color: Library.favoritesOnly ? "#ffd166" : "#232833"
+
+            Text {
+                anchors.centerIn: parent
+                text: "★"
+                color: Library.favoritesOnly ? "#ffd166" : "#8b95a5"
+                font.pixelSize: 14
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: Library.setFavoritesOnly(!Library.favoritesOnly)
+            }
         }
 
         Rectangle {
