@@ -9,12 +9,12 @@ Rectangle {
     height: 54
     radius: 27
     border.width: 1
-    border.color: "#394252"
+    border.color: Qt.lighter(Library.surfaceColor, 1.6)
     clip: true
 
     gradient: Gradient {
-        GradientStop { position: 0.0; color: "#232a35" }
-        GradientStop { position: 1.0; color: "#141820" }
+        GradientStop { position: 0.0; color: Qt.lighter(Library.surfaceColor, 1.3) }
+        GradientStop { position: 1.0; color: Qt.darker(Library.surfaceColor, 1.05) }
     }
 
     Behavior on width { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }

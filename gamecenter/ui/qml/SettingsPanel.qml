@@ -25,7 +25,7 @@ Item {
     Rectangle {
         id: panel
         width: Math.min(parent.width - 80, 900)
-        height: 680
+        height: 740
         anchors.centerIn: parent
         radius: 20
         border.width: 1
@@ -98,34 +98,61 @@ Item {
 
             Flow {
                 Layout.fillWidth: true
-                spacing: 8
+                spacing: 6
 
                 Repeater {
                     model: Library.palette
 
-                    delegate: Rectangle {
-                        width: 30
-                        height: 30
-                        radius: 8
-                        color: modelData
-                        border.width: Library.accent.toLowerCase() === modelData.toLowerCase() ? 2 : 1
-                        border.color: Library.accent.toLowerCase() === modelData.toLowerCase()
-                                      ? "#ffffff" : "#2a3140"
+                    delegate: ColorSwatch {
+                        colour: modelData
+                        selected: Library.accent.toLowerCase() === modelData.toLowerCase()
+                        onClicked: Library.setAccent(modelData)
+                    }
+                }
+            }
 
-                        Text {
-                            anchors.centerIn: parent
-                            visible: Library.accent.toLowerCase() === modelData.toLowerCase()
-                            text: "✓"
-                            color: Library.accentText
-                            font.pixelSize: 12
-                            font.bold: true
-                        }
+            Text {
+                Layout.topMargin: 2
+                text: "Surface colour · navbar, Ready dock and shelf"
+                color: "#dfe6f0"
+                font.family: "Sora"
+                font.pixelSize: 13
+            }
 
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: Library.setAccent(modelData)
-                        }
+            Flow {
+                Layout.fillWidth: true
+                spacing: 6
+
+                Repeater {
+                    model: Library.surfacePalette
+
+                    delegate: ColorSwatch {
+                        colour: modelData
+                        selected: Library.surfaceColor.toLowerCase() === modelData.toLowerCase()
+                        onClicked: Library.setSurfaceColor(modelData)
+                    }
+                }
+            }
+
+            Text {
+                Layout.topMargin: 2
+                text: "Cartridge colour"
+                color: "#dfe6f0"
+                font.family: "Sora"
+                font.pixelSize: 13
+            }
+
+            Flow {
+                Layout.fillWidth: true
+                spacing: 6
+
+                Repeater {
+                    model: Library.cartridgePalette
+
+                    delegate: ColorSwatch {
+                        colour: modelData
+                        selected: Library.cartridgeColor.toLowerCase() === modelData.toLowerCase()
+                        onClicked: Library.setCartridgeColor(modelData)
                     }
                 }
             }

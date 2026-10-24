@@ -7,6 +7,7 @@ Item {
     height: 62
     signal toastRequested(string message)
     signal settingsRequested()
+    signal updateRequested()
 
     function focusSearch() {
         search.forceActiveFocus();
@@ -14,8 +15,8 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: "#08090c"
-        opacity: 0.88
+        color: Library.surfaceColor
+        opacity: 0.94
     }
     Rectangle {
         anchors.bottom: parent.bottom
@@ -179,6 +180,36 @@ Item {
                     }
                 }
             }
+        }
+
+        Rectangle {
+            visible: Library.updateAvailable
+            width: 38
+            height: 38
+            radius: 19
+            color: "#0d0f14"
+            border.width: 1
+            border.color: Library.accent
+
+            Text {
+                anchors.centerIn: parent
+                text: "↑"
+                color: Library.accent
+                font.family: "Sora"
+                font.pixelSize: 16
+                font.bold: true
+            }
+
+            MouseArea {
+                id: updateHover
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.updateRequested()
+            }
+
+            ToolTip.visible: updateHover.containsMouse
+            ToolTip.text: "GameCenter " + Library.updateVersion + " is available"
         }
 
         Rectangle {

@@ -66,14 +66,20 @@ def main() -> int:
     if os.environ.get("GC_ACCENT"):
         library.setAccent(os.environ["GC_ACCENT"])
 
-    if os.environ.get("GC_UPDATE"):
+    if os.environ.get("GC_SURFACE"):
+        library.setSurfaceColor(os.environ["GC_SURFACE"])
+
+    if os.environ.get("GC_CARTRIDGE"):
+        library.setCartridgeColor(os.environ["GC_CARTRIDGE"])
+
+    if os.environ.get("GC_UPDATE") or os.environ.get("GC_UPDATE_DIALOG"):
         from gamecenter.core.updater import UpdateInfo
 
         library._update_available = UpdateInfo(
-            version="0.5.0",
-            tag="v0.5.0",
-            url="https://github.com/Amaru221/GameCenter/releases/tag/v0.5.0",
-            name="GameCenter 0.5.0",
+            version="0.6.1",
+            tag="v0.6.1",
+            url="https://github.com/Amaru221/GameCenter/releases/tag/v0.6.1",
+            name="GameCenter 0.6.1",
             notes="",
             published_at="",
         )
@@ -114,6 +120,12 @@ def main() -> int:
         name = "screenshot-ds-back.png"
     elif os.environ.get("GC_DRAG"):
         name = "screenshot-ds-drag.png"
+    elif os.environ.get("GC_DRAG_LEFT"):
+        name = "screenshot-ds-drag-left.png"
+    elif os.environ.get("GC_UPDATE_DIALOG"):
+        name = "screenshot-update-dialog.png"
+    elif os.environ.get("GC_SURFACE") or os.environ.get("GC_CARTRIDGE"):
+        name = "screenshot-colors.png"
     elif os.environ.get("GC_INSERT"):
         name = "screenshot-insert.png"
     elif os.environ.get("GC_STYLE"):
@@ -146,6 +158,9 @@ def main() -> int:
         )
     if os.environ.get("GC_SETTINGS"):
         QTimer.singleShot(1200, lambda: window.setProperty("settingsOpen", True))
+
+    if os.environ.get("GC_UPDATE_DIALOG"):
+        QTimer.singleShot(1200, lambda: window.setProperty("updateOpen", True))
 
     if os.environ.get("GC_ART") and library._visible:
         from gamecenter.core import steamgriddb
@@ -204,6 +219,16 @@ def main() -> int:
             QTest.mouseRelease(window, Qt.LeftButton, Qt.NoModifier, QPoint(280, 220))
 
         QTimer.singleShot(1200, drag_card)
+
+    if os.environ.get("GC_DRAG_LEFT"):
+        def drag_left_card():
+            QTest.mousePress(window, Qt.LeftButton, Qt.NoModifier, QPoint(140, 220))
+            for x in range(120, -1, -20):
+                QTest.mouseMove(window, QPoint(x, 220))
+                QTest.qWait(40)
+            QTest.mouseRelease(window, Qt.LeftButton, Qt.NoModifier, QPoint(0, 220))
+
+        QTimer.singleShot(1200, drag_left_card)
 
     if os.environ.get("GC_INSERT"):
         def start_insert():

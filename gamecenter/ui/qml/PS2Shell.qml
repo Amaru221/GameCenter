@@ -21,11 +21,11 @@ Item {
         anchors.fill: parent
         radius: 8
         border.width: 2
-        border.color: "#2b4a8a"
+        border.color: Qt.lighter(Library.cartridgeColor, 1.6)
         gradient: Gradient {
-            GradientStop { position: 0.0; color: "#1b2a4a" }
-            GradientStop { position: 0.08; color: "#22365e" }
-            GradientStop { position: 1.0; color: "#101a30" }
+            GradientStop { position: 0.0; color: Qt.darker(Library.cartridgeColor, 1.2) }
+            GradientStop { position: 0.08; color: Qt.darker(Library.cartridgeColor, 1.0) }
+            GradientStop { position: 1.0; color: Qt.darker(Library.cartridgeColor, 1.9) }
         }
     }
 
@@ -35,7 +35,7 @@ Item {
         width: parent.width - 10
         height: 24
         radius: 4
-        color: "#172746"
+        color: Qt.darker(Library.cartridgeColor, 1.45)
 
         Text {
             anchors.centerIn: parent
@@ -95,7 +95,7 @@ Item {
         y: 10
         width: 5
         height: parent.height - 20
-        color: "#0d1a33"
+        color: Qt.darker(Library.cartridgeColor, 1.7)
         opacity: 0.95
     }
 

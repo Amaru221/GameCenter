@@ -13,6 +13,8 @@ import sys
 from pathlib import Path
 
 DEFAULT_ACCENT = "#4cc9f0"
+DEFAULT_SURFACE = "#12151b"
+DEFAULT_CARTRIDGE = "#3c414a"
 CARTRIDGE_STYLES = ("classic", "ds", "ps2")
 
 # A wide but curated set; all have enough contrast on the dark background.
@@ -21,6 +23,18 @@ PALETTE = (
     "#d946ef", "#ec4899", "#f43f5e", "#ef4444", "#f97316", "#f59e0b",
     "#eab308", "#84cc16", "#22c55e", "#10b981", "#14b8a6", "#06b6d4",
     "#0ea5e9", "#64748b", "#94a3b8", "#e2e8f0", "#f8fafc", "#facc15",
+)
+
+# Dark tones for the navbar, the dock and the cartridge shelf.
+SURFACES = (
+    "#0b0d10", "#12151b", "#1a1f29", "#20242e", "#101418", "#181818",
+    "#1f2a33", "#1f2a24", "#2a1f2e", "#2a2418", "#2a1c1c", "#1c1c2a",
+)
+
+# Plastic tones for the cartridge shells.
+CARTRIDGES = (
+    "#3c414a", "#23262d", "#5b616b", "#8a8f98", "#c9ced6", "#2f3e46",
+    "#3a2f46", "#463a2f", "#3f2b2b", "#2b3f3a", "#1f2f4a", "#4a3b1f",
 )
 
 _HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
@@ -59,6 +73,12 @@ class Preferences:
 
         style = str(data.get("cartridgeStyle") or "classic")
         data["cartridgeStyle"] = style if style in CARTRIDGE_STYLES else "classic"
+
+        surface = str(data.get("surfaceColor") or DEFAULT_SURFACE)
+        data["surfaceColor"] = surface if _HEX.match(surface) else DEFAULT_SURFACE
+
+        cartridge = str(data.get("cartridgeColor") or DEFAULT_CARTRIDGE)
+        data["cartridgeColor"] = cartridge if _HEX.match(cartridge) else DEFAULT_CARTRIDGE
 
         covers = data.get("covers")
         data["covers"] = covers if isinstance(covers, dict) else {}
@@ -115,6 +135,26 @@ class Preferences:
     def cartridge_style(self, value: str) -> None:
         if value in CARTRIDGE_STYLES:
             self._data["cartridgeStyle"] = value
+            self._save()
+
+    @property
+    def surface_color(self) -> str:
+        return self._data["surfaceColor"]
+
+    @surface_color.setter
+    def surface_color(self, value: str) -> None:
+        if _HEX.match(value or ""):
+            self._data["surfaceColor"] = value
+            self._save()
+
+    @property
+    def cartridge_color(self) -> str:
+        return self._data["cartridgeColor"]
+
+    @cartridge_color.setter
+    def cartridge_color(self, value: str) -> None:
+        if _HEX.match(value or ""):
+            self._data["cartridgeColor"] = value
             self._save()
 
     # -- updates ----------------------------------------------------------

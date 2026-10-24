@@ -124,6 +124,13 @@ def test_appearance_properties(model) -> None:
     model.setCartridgeStyle("nope")
     assert model.cartridgeStyle == "ds"
 
+    model.setSurfaceColor("#1f2a33")
+    assert model.surfaceColor == "#1f2a33"
+    model.setCartridgeColor("#5b616b")
+    assert model.cartridgeColor == "#5b616b"
+    assert len(model.surfacePalette) >= 8
+    assert len(model.cartridgePalette) >= 8
+
 
 def test_source_options_have_labels(model) -> None:
     options = model.sourceOptions

@@ -24,15 +24,21 @@ def test_appearance_round_trip(tmp_path) -> None:
 
     prefs.accent = "#ff6b6b"
     prefs.cartridge_style = "ds"
+    prefs.surface_color = "#1f2a33"
+    prefs.cartridge_color = "#5b616b"
 
     again = Preferences(path)
     assert again.accent == "#ff6b6b"
     assert again.cartridge_style == "ds"
+    assert again.surface_color == "#1f2a33"
+    assert again.cartridge_color == "#5b616b"
 
     prefs.accent = "not-a-colour"
     assert prefs.accent == "#ff6b6b"
     prefs.cartridge_style = "nope"
     assert prefs.cartridge_style == "ds"
+    prefs.surface_color = "nope"
+    assert prefs.surface_color == "#1f2a33"
 
 
 def test_cover_override_round_trip(tmp_path) -> None:

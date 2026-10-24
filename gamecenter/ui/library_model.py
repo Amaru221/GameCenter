@@ -25,7 +25,13 @@ from .. import __version__
 from ..core import credentials, steamgriddb, updater
 from ..core.launch import LaunchError, launch as launch_game, open_folder
 from ..core.models import SOURCE_LABELS, Game
-from ..core.preferences import CARTRIDGE_STYLES, PALETTE, Preferences
+from ..core.preferences import (
+    CARTRIDGES,
+    CARTRIDGE_STYLES,
+    PALETTE,
+    SURFACES,
+    Preferences,
+)
 from ..core.sessions import SessionTracker
 from ..core.sources import scan_all
 from . import artwork, covers
@@ -215,6 +221,32 @@ class LibraryModel(QAbstractListModel):
     def palette(self) -> list[str]:
         return list(PALETTE)
 
+    @Property("QVariantList", constant=True)
+    def surfacePalette(self) -> list[str]:
+        return list(SURFACES)
+
+    @Property("QVariantList", constant=True)
+    def cartridgePalette(self) -> list[str]:
+        return list(CARTRIDGES)
+
+    @Property(str, notify=appearanceChanged)
+    def surfaceColor(self) -> str:
+        return self._prefs.surface_color
+
+    @Slot(str)
+    def setSurfaceColor(self, value: str) -> None:
+        self._prefs.surface_color = value
+        self.appearanceChanged.emit()
+
+    @Property(str, notify=appearanceChanged)
+    def cartridgeColor(self) -> str:
+        return self._prefs.cartridge_color
+
+    @Slot(str)
+    def setCartridgeColor(self, value: str) -> None:
+        self._prefs.cartridge_color = value
+        self.appearanceChanged.emit()
+
     @Property(str, notify=appearanceChanged)
     def accentText(self) -> str:
         value = self._prefs.accent.lstrip("#")
@@ -252,6 +284,10 @@ class LibraryModel(QAbstractListModel):
     @Property(str, notify=updatesChanged)
     def updateUrl(self) -> str:
         return self._update_available.url if self._update_available else ""
+
+    @Property(str, notify=updatesChanged)
+    def updateNotes(self) -> str:
+        return self._update_available.notes if self._update_available else ""
 
     @Property(bool, notify=updatesChanged)
     def updateChecking(self) -> bool:

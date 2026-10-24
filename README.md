@@ -3,7 +3,7 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.5.0** — Steam, Epic, GOG, Battle.net y Riot. Sin cuentas, sin telemetría.
+> Estado: **v0.6.0** — Steam, Epic, GOG, Battle.net y Riot. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 
@@ -19,10 +19,12 @@ la muestra como una estantería y lanza los juegos con un doble clic.
 - **Favoritos** persistentes, con filtro en la barra.
 - **Dock de sesiones**: al lanzar un juego aparece con su tiempo en marcha y se
   retira solo cuando el proceso termina (o con la ×).
-- **Ajustes** (engranaje o `Ctrl+,`): color de acento entre 24 opciones y tres
-  estilos de cartucho: clásico, **Nintendo DS** y **PS2**.
-  - En el estilo DS puedes **agarrar el cartucho con el ratón y girarlo**
-    manteniendo pulsado; el reverso muestra los contactos metálicos en el borde
+- **Ajustes** (engranaje o `Ctrl+,`): color de acento entre 24 opciones,
+  **color de superficie** para la barra superior, el dock Ready y la estantería,
+  **color de los cartuchos** y tres estilos: clásico, **Nintendo DS** y **PS2**.
+  - En el estilo DS puedes **agarrar el cartucho con el ratón y girarlo en
+    cualquier dirección** manteniendo pulsado; también se inclina arriba/abajo
+    mientras arrastras. El reverso muestra los contactos metálicos en el borde
     inferior. Los cartuchos llevan la marca **GC**.
 - **Animación de inserción**: al pulsar Play, el cartucho vuela desde el detalle
   y se inserta en la ranura central del dock “Ready”, que se ilumina mientras
@@ -139,8 +141,9 @@ No hay claves, tokens ni cuentas en el repositorio ni en la app. Ver
 
 La app consulta como máximo **una vez al día** la API pública de GitHub
 Releases. Si hay una versión más nueva, muestra un aviso discreto con
-**Download** (abre la página del release) y **Later**. No descarga ni instala
-nada por su cuenta.
+**Download** (abre la página del release) y **Later**, además de un **botón ↑**
+junto a LIBRARY/STORE que abre un modal con los detalles. No descarga ni
+instala nada por su cuenta.
 
 Se puede desactivar en **Ajustes → Updates**, o comprobar manualmente con
 **Check now**. La petición solo envía la IP y el `User-Agent` a

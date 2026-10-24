@@ -20,7 +20,7 @@ Item {
     Item {
         id: frontFace
         anchors.fill: parent
-        visible: root.flipAngle <= 90
+        visible: root.flipAngle >= -90 && root.flipAngle <= 90
 
         transform: Rotation {
             origin.x: frontFace.width / 2
@@ -33,10 +33,10 @@ Item {
             anchors.fill: parent
             radius: 12
             border.width: 1
-            border.color: "#4d535e"
+            border.color: Qt.lighter(Library.cartridgeColor, 1.35)
             gradient: Gradient {
-                GradientStop { position: 0.0; color: root.hovered ? "#454a54" : "#3a3f48" }
-                GradientStop { position: 1.0; color: "#22262c" }
+                GradientStop { position: 0.0; color: root.hovered ? Qt.lighter(Library.cartridgeColor, 1.15) : Library.cartridgeColor }
+                GradientStop { position: 1.0; color: Qt.darker(Library.cartridgeColor, 1.55) }
             }
         }
 
@@ -136,23 +136,23 @@ Item {
     Item {
         id: backFace
         anchors.fill: parent
-        visible: root.flipAngle > 90
+        visible: root.flipAngle > 90 || root.flipAngle < -90
 
         transform: Rotation {
             origin.x: backFace.width / 2
             origin.y: backFace.height / 2
             axis { x: 0; y: 1; z: 0 }
-            angle: root.flipAngle + 180
+            angle: root.flipAngle > 90 ? root.flipAngle + 180 : root.flipAngle - 180
         }
 
         Rectangle {
             anchors.fill: parent
             radius: 12
             border.width: 1
-            border.color: "#454b56"
+            border.color: Qt.lighter(Library.cartridgeColor, 1.25)
             gradient: Gradient {
-                GradientStop { position: 0.0; color: "#333842" }
-                GradientStop { position: 1.0; color: "#1b1e24" }
+                GradientStop { position: 0.0; color: Qt.darker(Library.cartridgeColor, 1.05) }
+                GradientStop { position: 1.0; color: Qt.darker(Library.cartridgeColor, 1.8) }
             }
         }
 

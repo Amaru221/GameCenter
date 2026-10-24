@@ -22,13 +22,13 @@ Item {
         anchors.fill: parent
         radius: 19
         border.width: 1
-        border.color: "#4c525c"
+        border.color: Qt.lighter(Library.cartridgeColor, 1.45)
 
         gradient: Gradient {
-            GradientStop { position: 0.0; color: root.hovered ? "#4f5560" : "#454b55" }
-            GradientStop { position: 0.16; color: "#3a3f48" }
-            GradientStop { position: 0.72; color: "#2c3038" }
-            GradientStop { position: 1.0; color: "#24272e" }
+            GradientStop { position: 0.0; color: root.hovered ? Qt.lighter(Library.cartridgeColor, 1.18) : Library.cartridgeColor }
+            GradientStop { position: 0.16; color: Qt.darker(Library.cartridgeColor, 1.08) }
+            GradientStop { position: 0.72; color: Qt.darker(Library.cartridgeColor, 1.35) }
+            GradientStop { position: 1.0; color: Qt.darker(Library.cartridgeColor, 1.5) }
         }
 
         Rectangle {
@@ -169,7 +169,7 @@ Item {
 
             ShapePath {
                 strokeColor: "transparent"
-                fillColor: "#171a1f"
+                fillColor: Qt.darker(Library.cartridgeColor, 1.9)
                 startX: 0
                 startY: 0
                 PathLine { x: 42; y: 0 }

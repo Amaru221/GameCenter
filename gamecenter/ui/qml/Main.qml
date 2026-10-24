@@ -16,6 +16,7 @@ Window {
     property bool detailOpen: false
     property bool settingsOpen: false
     property bool artOpen: false
+    property bool updateOpen: false
     property bool demoInsert: false
 
     onDemoInsertChanged: {
@@ -50,6 +51,7 @@ Window {
         anchors.top: parent.top
         onToastRequested: (message) => toast.show(message)
         onSettingsRequested: settingsOpen = true
+        onUpdateRequested: updateOpen = true
     }
 
     Toolbar {
@@ -185,6 +187,18 @@ Window {
         onCloseRequested: settingsOpen = false
     }
 
+    UpdateDialog {
+        id: updateDialog
+        z: 45
+        anchors.fill: parent
+        opened: updateOpen
+        onCloseRequested: updateOpen = false
+        onDownloadRequested: {
+            Library.openUpdate();
+            updateOpen = false;
+        }
+    }
+
     Connections {
         target: Library
         function onFailed(message) { toast.show(message) }
@@ -204,7 +218,9 @@ Window {
     Shortcut {
         sequence: "Escape"
         onActivated: {
-            if (settingsOpen) {
+            if (updateOpen) {
+                updateOpen = false;
+            } else if (settingsOpen) {
                 settingsOpen = false;
             } else if (artOpen) {
                 artOpen = false;

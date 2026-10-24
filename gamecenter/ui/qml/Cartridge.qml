@@ -23,6 +23,7 @@ Item {
 
     property real _flipStart: 0
     property real _pressX: 0
+    property real _pressY: 0
     property bool _flipping: false
     property bool _flipMoved: false
 
@@ -125,16 +126,19 @@ Item {
                     card._flipping = true;
                     card._flipMoved = false;
                     card._pressX = mouse.x;
+                    card._pressY = mouse.y;
                     card._flipStart = card.flipAngle;
                 }
             }
             onPositionChanged: (mouse) => {
                 if (card._flipping) {
                     var dx = mouse.x - card._pressX;
-                    if (Math.abs(dx) > 4) {
+                    var dy = mouse.y - card._pressY;
+                    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
                         card._flipMoved = true;
                     }
-                    card.flipAngle = Math.max(0, Math.min(180, card._flipStart + dx * 1.2));
+                    card.flipAngle = Math.max(-180, Math.min(180, card._flipStart + dx * 1.2));
+                    card.tiltX = Math.max(-12, Math.min(12, dy * 0.25));
                 } else {
                     var nx = Math.max(0, Math.min(1, mouse.x / width)) - 0.5;
                     var ny = Math.max(0, Math.min(1, mouse.y / height)) - 0.5;
@@ -147,8 +151,16 @@ Item {
                     return;
                 }
                 card._flipping = false;
+                card.tiltX = 0;
+                card.tiltY = 0;
                 if (card._flipMoved) {
-                    card.flipAngle = card.flipAngle > 90 ? 180 : 0;
+                    if (card.flipAngle > 90) {
+                        card.flipAngle = 180;
+                    } else if (card.flipAngle < -90) {
+                        card.flipAngle = -180;
+                    } else {
+                        card.flipAngle = 0;
+                    }
                 } else {
                     card.selected = !card.selected;
                     card.clicked();

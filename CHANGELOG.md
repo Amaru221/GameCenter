@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.6.0
+
+- An update button (↑) next to LIBRARY/STORE opens a modal with the release
+  details, even after the banner is dismissed.
+- Settings: a **surface colour** for the top navbar, the Ready dock and the
+  cartridge shelf, plus a separate **cartridge colour**.
+- The Nintendo DS cartridge flips in both directions and tilts vertically while
+  dragging.
+
 ## v0.5.0
 
 - The app checks GitHub Releases once a day (and on demand from Settings) and

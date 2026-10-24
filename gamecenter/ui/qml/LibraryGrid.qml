@@ -7,6 +7,14 @@ Item {
 
     signal detailRequested(int index)
 
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: 2
+        radius: 18
+        color: Library.surfaceColor
+        opacity: 0.35
+    }
+
     GridView {
         id: grid
         anchors.fill: parent
