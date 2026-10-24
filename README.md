@@ -3,7 +3,7 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.8.0** — Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
+> Estado: **v0.8.1** — Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 
@@ -162,6 +162,12 @@ No hay claves, tokens ni cuentas en el repositorio ni en la app. Ver
 
   Si la carpeta no es escribible (por ejemplo, un juego en `Program Files`), el
   tiempo se guarda en `%APPDATA%\GameCenter\playtime.json`, para no perderlo.
+
+El fallback es un **espejo**: si desinstalas y reinstalas un juego, en el
+siguiente escaneo su tiempo se copia de vuelta a la nueva raíz. Los juegos de
+tienda se reconocen por su id estable; los manuales, por su título, aunque
+cambien de carpeta. Si la nueva carpeta tampoco es escribible, el tiempo sigue
+en el fallback y se muestra igualmente.
 
 Solo se cuentan los juegos lanzados desde GameCenter. Los de Steam no se tocan:
 Steam sigue siendo la fuente de verdad para sus horas.

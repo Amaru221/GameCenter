@@ -64,6 +64,23 @@ def _fallback_read(game_id: str) -> dict:
     return entry if isinstance(entry, dict) else {}
 
 
+def _fallback_entry(game: Game) -> dict:
+    """The fallback for this game id, or by title for a moved manual game."""
+    entry = _fallback_read(game.id)
+    if entry:
+        return entry
+    if game.source == "local":
+        data = _read(_fallback_path())
+        for value in data.values():
+            if (
+                isinstance(value, dict)
+                and value.get("source") == "local"
+                and value.get("title") == game.title
+            ):
+                return value
+    return {}
+
+
 def _fallback_write(game_id: str, entry: dict) -> None:
     data = _read(_fallback_path())
     data[game_id] = entry
@@ -77,8 +94,23 @@ def summary_for(game: Game) -> dict:
     path = file_for(game)
     entry = _read(path) if path is not None else {}
     if not entry:
-        entry = _fallback_read(game.id)
+        entry = _fallback_entry(game)
     return entry
+
+
+def restore_to_root(game: Game) -> bool:
+    """After a reinstall, copy the fallback back into the game's new folder."""
+    if game.source == "steam":
+        return False
+    path = file_for(game)
+    if path is None:
+        return False
+    if path.is_file() and _read(path):
+        return False  # the folder already has its own data
+    fallback = _fallback_entry(game)
+    if not fallback:
+        return False
+    return _write(path, fallback)
 
 
 def seconds_for(game: Game) -> int:
@@ -99,15 +131,19 @@ def add_seconds(game: Game, seconds: float) -> None:
 
     path = file_for(game)
     root_entry = _read(path) if path is not None else {}
-    fallback_entry = _fallback_read(game.id)
+    fallback_entry = _fallback_entry(game)
     base = root_entry or fallback_entry
 
     entry = {
         "seconds": int(base.get("seconds") or 0) + int(seconds),
         "sessions": int(base.get("sessions") or 0) + 1,
         "last_played": int(time.time()),
+        "title": game.title,
+        "source": game.source,
     }
 
     if path is not None and _write(path, entry):
+        # Keep a mirror under %APPDATA% so an uninstall/reinstall can recover it.
+        _fallback_write(game.id, entry)
         return
     _fallback_write(game.id, entry)

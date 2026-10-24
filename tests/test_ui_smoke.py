@@ -35,6 +35,9 @@ def games() -> list[Game]:
 def model(app, monkeypatch, games, tmp_path):
     monkeypatch.setattr(library_model, "scan_all", lambda: games)
     monkeypatch.setattr(library_model.credentials, "get_key", lambda: "")
+    monkeypatch.setattr(
+        library_model.playtime, "_fallback_path", lambda: tmp_path / "playtime.json"
+    )
     return library_model.LibraryModel(
         download_art=False, settings_path=tmp_path / "settings.json"
     )

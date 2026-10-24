@@ -1,7 +1,14 @@
 """Playtime files for non-Steam games."""
 
+import pytest
+
 from gamecenter.core import playtime
 from gamecenter.core.models import Game
+
+
+@pytest.fixture(autouse=True)
+def isolated_fallback(monkeypatch, tmp_path):
+    monkeypatch.setattr(playtime, "_fallback_path", lambda: tmp_path / "fallback.json")
 
 
 def _game(folder, source="epic") -> Game:
@@ -33,15 +40,74 @@ def test_steam_is_never_written(tmp_path) -> None:
     assert not (tmp_path / playtime.FILENAME).exists()
 
 
-def test_fallback_when_the_game_has_no_folder(monkeypatch, tmp_path) -> None:
-    monkeypatch.setattr(playtime, "_fallback_path", lambda: tmp_path / "playtime.json")
+def test_fallback_when_the_game_has_no_folder(tmp_path) -> None:
     game = Game(id="battlenet:1", title="Test", source="battlenet")
 
     playtime.add_seconds(game, 60)
 
     assert playtime.seconds_for(game) == 60
     assert playtime.minutes_for(game) == 1
-    assert (tmp_path / "playtime.json").is_file()
+    assert (tmp_path / "fallback.json").is_file()
+
+
+def test_fallback_recovers_after_losing_the_root_file(tmp_path) -> None:
+    folder = tmp_path / "Game"
+    folder.mkdir()
+    game = _game(folder)
+
+    playtime.add_seconds(game, 120)
+    (folder / playtime.FILENAME).unlink()  # simulate an uninstall
+
+    assert playtime.seconds_for(game) == 120  # read from the mirror
+    assert playtime.restore_to_root(game) is True
+    assert (folder / playtime.FILENAME).is_file()
+    assert playtime.seconds_for(game) == 120
+
+
+def test_manual_game_moved_to_another_folder_matches_by_title(tmp_path) -> None:
+    old = Game(id="local:old-123", title="My Game", source="local")
+    playtime._fallback_write(
+        old.id,
+        {
+            "seconds": 3600,
+            "sessions": 2,
+            "last_played": 123,
+            "title": "My Game",
+            "source": "local",
+        },
+    )
+
+    folder = tmp_path / "NewFolder"
+    folder.mkdir()
+    moved = Game(id="local:new-456", title="My Game", source="local", install_dir=folder)
+
+    assert playtime.seconds_for(moved) == 3600
+    assert playtime.restore_to_root(moved) is True
+    assert (folder / playtime.FILENAME).is_file()
+
+
+def test_fallback_records_the_title(tmp_path) -> None:
+    folder = tmp_path / "Game"
+    folder.mkdir()
+    game = _game(folder)
+
+    playtime.add_seconds(game, 60)
+
+    entry = playtime._fallback_read(game.id)
+    assert entry["title"] == "Test"
+    assert entry["source"] == "epic"
+
+
+def test_restore_does_not_overwrite_root_data(tmp_path) -> None:
+    folder = tmp_path / "Game"
+    folder.mkdir()
+    game = _game(folder)
+
+    playtime.add_seconds(game, 60)
+    (folder / playtime.FILENAME).write_text('{"seconds": 999}', encoding="utf-8")
+
+    assert playtime.restore_to_root(game) is False
+    assert playtime.seconds_for(game) == 999
 
 
 def test_missing_folder_does_not_create_it(monkeypatch, tmp_path) -> None:

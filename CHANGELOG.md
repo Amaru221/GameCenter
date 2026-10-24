@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.8.1
+
+- The playtime fallback is now a mirror. After an uninstall/reinstall, the next
+  scan copies the stored time back into the game's new root folder (store games
+  by their stable id, manual games by title). Existing root files are never
+  overwritten.
+
 ## v0.8.0
 
 - Non-Steam playtime: sessions launched from GameCenter are written to

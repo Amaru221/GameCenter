@@ -153,6 +153,7 @@ def test_scan_all_applies_non_steam_playtime(tmp_path, monkeypatch) -> None:
     from gamecenter.core import playtime, sources
     from gamecenter.core.models import Game
 
+    monkeypatch.setattr(playtime, "_fallback_path", lambda: tmp_path / "fallback.json")
     folder = tmp_path / "Game"
     folder.mkdir()
     game = Game(id="epic:1", title="Test", source="epic", install_dir=folder)
@@ -168,6 +169,29 @@ def test_scan_all_applies_non_steam_playtime(tmp_path, monkeypatch) -> None:
 
     assert games[0].playtime_minutes == 60
     assert games[0].last_played > 0
+
+
+def test_scan_all_restores_a_fallback_after_reinstall(tmp_path, monkeypatch) -> None:
+    from gamecenter.core import playtime, sources
+    from gamecenter.core.models import Game
+
+    monkeypatch.setattr(playtime, "_fallback_path", lambda: tmp_path / "fallback.json")
+    folder = tmp_path / "Game"
+    folder.mkdir()
+    game = Game(id="epic:2", title="Reinstalled", source="epic", install_dir=folder)
+    playtime.add_seconds(game, 7200)
+    (folder / playtime.FILENAME).unlink()  # uninstalled: the root file is gone
+
+    class Fake:
+        @staticmethod
+        def scan():
+            return [game]
+
+    monkeypatch.setattr(sources, "SOURCES", (Fake,))
+    games = sources.scan_all()
+
+    assert (folder / playtime.FILENAME).is_file()
+    assert games[0].playtime_minutes == 120
 
 
 def test_scan_all_survives_a_broken_source(monkeypatch) -> None:

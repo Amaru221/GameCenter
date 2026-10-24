@@ -28,6 +28,7 @@ def scan_all() -> list[Game]:
             continue
         for game in games:
             if game.source != "steam":
+                playtime.restore_to_root(game)
                 summary = playtime.summary_for(game)
                 if summary:
                     try:
