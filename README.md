@@ -3,7 +3,7 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.7.0** — Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
+> Estado: **v0.8.0** — Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 
@@ -41,6 +41,8 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   la categoría y el número de juegos visibles.
 - El cartucho **DS** tiene canto, lomo y borde inferior para darle volumen, y
   los títulos de los juegos van en negrita.
+- **Tiempo jugado propio** para las tiendas que no lo registran: las sesiones
+  lanzadas desde GameCenter se guardan en la raíz del juego (ver abajo).
 - Busca por título y filtra por tienda; ordena por reciente, título o tamaño.
 - Lanza cada juego con el método de su tienda (URI de Steam/Epic, ejecutable o
   cliente de Riot).
@@ -145,6 +147,24 @@ docs/CLEANROOM.md       política de reimplementación limpia
 
 No hay claves, tokens ni cuentas en el repositorio ni en la app. Ver
 [SECURITY.md](SECURITY.md) para los datos locales y cómo reportar un problema.
+
+## Tiempo jugado
+
+- **Steam**: se lee de `userdata/<cuenta>/config/localconfig.vdf`
+  (`Playtime`, en minutos).
+- **Epic, GOG, Battle.net, Riot y juegos locales**: cuando termina una sesión
+  lanzada desde GameCenter se escribe un archivo en la raíz del juego:
+
+  ```text
+  .gamecenter_playtime.json
+  {"seconds": 1234, "sessions": 3, "last_played": 1700000000}
+  ```
+
+  Si la carpeta no es escribible (por ejemplo, un juego en `Program Files`), el
+  tiempo se guarda en `%APPDATA%\GameCenter\playtime.json`, para no perderlo.
+
+Solo se cuentan los juegos lanzados desde GameCenter. Los de Steam no se tocan:
+Steam sigue siendo la fuente de verdad para sus horas.
 
 ## Actualizaciones
 

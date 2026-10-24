@@ -222,6 +222,11 @@ Window {
             }
             artOpen = false;
         }
+        function onPlaytimeChanged() {
+            if (detailOpen) {
+                detailGame = Library.gameAt(detailIndex);
+            }
+        }
     }
 
     Shortcut {

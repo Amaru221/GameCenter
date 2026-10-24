@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.8.0
+
+- Non-Steam playtime: sessions launched from GameCenter are written to
+  `.gamecenter_playtime.json` in the game root (with a fallback under
+  `%APPDATA%\GameCenter` when the folder is read-only), then shown in the
+  detail view. Steam keeps using its own `localconfig.vdf`.
+
 ## v0.7.0
 
 - Add games manually with the **+** button: title, root folder and executable.

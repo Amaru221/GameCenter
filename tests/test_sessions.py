@@ -48,6 +48,59 @@ def test_session_lifecycle(app) -> None:
     assert tracker.count == 0
 
 
+def test_session_end_reports_the_elapsed_time(app) -> None:
+    now = [100.0]
+    alive = [True]
+    ended = []
+
+    tracker = SessionTracker(
+        running=lambda session: alive[0],
+        clock=lambda: now[0],
+        on_end=lambda session, seconds: ended.append((session.id, seconds)),
+    )
+    session = tracker.start(Game(id="epic:1", title="Alpha", source="epic"), None, "")
+
+    now[0] = 165.0
+    alive[0] = False
+    tracker.poll()
+
+    assert ended == [(session.id, 65.0)]
+    assert tracker.count == 0
+
+
+def test_eject_reports_the_elapsed_time(app) -> None:
+    now = [100.0]
+    ended = []
+    tracker = SessionTracker(
+        running=lambda session: True,
+        clock=lambda: now[0],
+        on_end=lambda session, seconds: ended.append(seconds),
+    )
+    session = tracker.start(Game(id="epic:1", title="Alpha", source="epic"), None, "")
+
+    now[0] = 110.0
+    tracker.eject(session.id)
+
+    assert ended == [10.0]
+
+
+def test_finish_all_reports_running_sessions(app) -> None:
+    now = [100.0]
+    ended = []
+    tracker = SessionTracker(
+        running=lambda session: True,
+        clock=lambda: now[0],
+        on_end=lambda session, seconds: ended.append(seconds),
+    )
+    tracker.start(Game(id="epic:1", title="Alpha", source="epic"), None, "")
+
+    now[0] = 130.0
+    tracker.finish_all()
+
+    assert ended == [30.0]
+    assert tracker.count == 0
+
+
 def test_duplicate_launch_reuses_the_session(app) -> None:
     tracker = SessionTracker(running=lambda session: True, clock=lambda: 0.0)
     game = Game(id="steam:1", title="Alpha", source="steam")

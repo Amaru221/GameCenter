@@ -149,6 +149,27 @@ def test_gog_prefers_the_launch_command(tmp_path) -> None:
     assert game.launch_command.startswith('"C:\\Games')
 
 
+def test_scan_all_applies_non_steam_playtime(tmp_path, monkeypatch) -> None:
+    from gamecenter.core import playtime, sources
+    from gamecenter.core.models import Game
+
+    folder = tmp_path / "Game"
+    folder.mkdir()
+    game = Game(id="epic:1", title="Test", source="epic", install_dir=folder)
+    playtime.add_seconds(game, 3600)
+
+    class Fake:
+        @staticmethod
+        def scan():
+            return [game]
+
+    monkeypatch.setattr(sources, "SOURCES", (Fake,))
+    games = sources.scan_all()
+
+    assert games[0].playtime_minutes == 60
+    assert games[0].last_played > 0
+
+
 def test_scan_all_survives_a_broken_source(monkeypatch) -> None:
     from gamecenter.core import sources
 

@@ -7,7 +7,9 @@ isolated and logged.
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 
+from .. import playtime
 from ..models import Game
 from . import battlenet, epic, gog, local, riot, steam
 
@@ -25,5 +27,21 @@ def scan_all() -> list[Game]:
             log.exception("Couldn't scan %s", module.__name__)
             continue
         for game in games:
+            if game.source != "steam":
+                summary = playtime.summary_for(game)
+                if summary:
+                    try:
+                        seconds = int(summary.get("seconds") or 0)
+                    except (TypeError, ValueError):
+                        seconds = 0
+                    try:
+                        last_played = int(summary.get("last_played") or 0)
+                    except (TypeError, ValueError):
+                        last_played = 0
+                    game = replace(
+                        game,
+                        playtime_minutes=seconds // 60,
+                        last_played=last_played or game.last_played,
+                    )
             found.setdefault(game.id, game)
     return sorted(found.values(), key=lambda g: (not g.installed, g.title.casefold()))

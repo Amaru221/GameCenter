@@ -5,11 +5,13 @@ from __future__ import annotations
 import re
 import threading
 import time
+from dataclasses import replace
 from pathlib import Path
 
 from PySide6.QtCore import (
     QAbstractListModel,
     QByteArray,
+    QCoreApplication,
     QModelIndex,
     QObject,
     Property,
@@ -22,7 +24,7 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QDesktopServices, QGuiApplication
 
 from .. import __version__
-from ..core import credentials, manual, steamgriddb, updater
+from ..core import credentials, manual, playtime, steamgriddb, updater
 from ..core.launch import LaunchError, launch as launch_game, open_folder
 from ..core.models import SOURCE_LABELS, Game
 from ..core.preferences import (
@@ -93,6 +95,7 @@ class LibraryModel(QAbstractListModel):
     artChanged = Signal()
     credentialsChanged = Signal()
     updatesChanged = Signal()
+    playtimeChanged = Signal()
     _artOptionsReady = Signal(object)
     _artDownloaded = Signal(str, str)
     _artFailed = Signal(str)
@@ -117,11 +120,14 @@ class LibraryModel(QAbstractListModel):
         self._artOptionsReady.connect(self._on_art_options, Qt.QueuedConnection)
         self._artDownloaded.connect(self._on_art_downloaded, Qt.QueuedConnection)
         self._artFailed.connect(self._on_art_failed, Qt.QueuedConnection)
-        self._sessions = SessionTracker()
+        self._sessions = SessionTracker(on_end=self._session_ended)
         self._session_timer = QTimer(self)
         self._session_timer.setInterval(1000)
         self._session_timer.timeout.connect(self._sessions.poll)
         self._session_timer.start()
+        app = QCoreApplication.instance()
+        if app is not None:
+            app.aboutToQuit.connect(self._sessions.finish_all)
 
         self._update_available: updater.UpdateInfo | None = None
         self._update_checking = False
@@ -609,6 +615,42 @@ class LibraryModel(QAbstractListModel):
         if 0 <= row < len(self._visible):
             return self._visible[row]
         return None
+
+    def _session_ended(self, session, seconds: float) -> None:
+        """Persist a finished session for a non-Steam game."""
+        if session.source == "steam":
+            return
+        game = next((entry for entry in self._all if entry.id == session.game_id), None)
+        if game is None:
+            return
+
+        playtime.add_seconds(game, seconds)
+        summary = playtime.summary_for(game)
+        try:
+            total = int(summary.get("seconds") or 0)
+        except (TypeError, ValueError):
+            total = 0
+        try:
+            last_played = int(summary.get("last_played") or 0)
+        except (TypeError, ValueError):
+            last_played = 0
+
+        minutes = total // 60
+        if minutes == game.playtime_minutes and (
+            not last_played or last_played == game.last_played
+        ):
+            return
+
+        updated = replace(
+            game,
+            playtime_minutes=minutes,
+            last_played=last_played or game.last_played,
+        )
+        self._all = [updated if entry.id == game.id else entry for entry in self._all]
+        self._visible = [
+            updated if entry.id == game.id else entry for entry in self._visible
+        ]
+        self.playtimeChanged.emit()
 
     def _cover_url(self, game: Game) -> str:
         override = self._prefs.cover_for(game.id)

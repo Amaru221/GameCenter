@@ -79,12 +79,14 @@ class SessionTracker(QObject):
         self,
         running: Callable[[Session], bool] | None = None,
         clock: Callable[[], float] | None = None,
+        on_end: Callable[[Session, float], None] | None = None,
         parent=None,
     ) -> None:
         super().__init__(parent)
         self._sessions: list[Session] = []
         self._running = running or _process_running
         self._clock = clock or time.time
+        self._on_end = on_end
         self._seq = 0
 
     @Property(int, notify=changed)
@@ -131,13 +133,23 @@ class SessionTracker(QObject):
     def poll(self) -> None:
         if not self._sessions:
             return
-        alive = [session for session in self._sessions if self._running(session)]
+        now = self._clock()
+        alive: list[Session] = []
+        for session in self._sessions:
+            if self._running(session):
+                alive.append(session)
+            elif self._on_end is not None:
+                self._on_end(session, max(0.0, now - session.started_at))
         if len(alive) != len(self._sessions):
             self._sessions = alive
         self.changed.emit()
 
     @Slot(str)
     def eject(self, session_id: str) -> None:
+        now = self._clock()
+        for session in self._sessions:
+            if session.id == session_id and self._on_end is not None:
+                self._on_end(session, max(0.0, now - session.started_at))
         before = len(self._sessions)
         self._sessions = [s for s in self._sessions if s.id != session_id]
         if len(self._sessions) != before:
@@ -146,5 +158,21 @@ class SessionTracker(QObject):
     @Slot()
     def clear(self) -> None:
         if self._sessions:
+            now = self._clock()
+            if self._on_end is not None:
+                for session in self._sessions:
+                    self._on_end(session, max(0.0, now - session.started_at))
             self._sessions.clear()
             self.changed.emit()
+
+    @Slot()
+    def finish_all(self) -> None:
+        """Record everything still running (used when the app quits)."""
+        if not self._sessions:
+            return
+        now = self._clock()
+        if self._on_end is not None:
+            for session in self._sessions:
+                self._on_end(session, max(0.0, now - session.started_at))
+        self._sessions.clear()
+        self.changed.emit()
