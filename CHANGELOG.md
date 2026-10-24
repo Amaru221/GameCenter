@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.6.1
+
+- More natural insertion: the cartridge approaches the dock, pauses, slides in
+  with a small settle and rests slightly protruding before the session chip
+  appears.
+
 ## v0.6.0
 
 - An update button (↑) next to LIBRARY/STORE opens a modal with the release

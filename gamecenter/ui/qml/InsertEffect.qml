@@ -44,42 +44,84 @@ Item {
     SequentialAnimation {
         id: fly
 
+        // 1. Approach the dock and stop just above the slot.
         ParallelAnimation {
             NumberAnimation {
                 target: card
                 property: "x"
                 to: root.target.x - card.width / 2
-                duration: 460
-                easing.type: Easing.InCubic
+                duration: 480
+                easing.type: Easing.OutCubic
             }
             NumberAnimation {
                 target: card
                 property: "y"
-                to: root.target.y - card.height / 2
-                duration: 460
+                to: root.target.y - 24 - card.height / 2
+                duration: 480
+                easing.type: Easing.OutCubic
+            }
+            NumberAnimation {
+                target: card
+                property: "scale"
+                to: 0.38
+                duration: 480
+                easing.type: Easing.OutCubic
+            }
+            NumberAnimation {
+                target: card
+                property: "rotation"
+                to: 4
+                duration: 480
+                easing.type: Easing.OutCubic
+            }
+        }
+
+        // 2. A short breath before going in.
+        PauseAnimation { duration: 180 }
+
+        // 3. Slide into the slot; the lower half hides behind the dock.
+        ParallelAnimation {
+            NumberAnimation {
+                target: card
+                property: "y"
+                to: root.target.y + 14 - card.height / 2
+                duration: 220
                 easing.type: Easing.InCubic
             }
             NumberAnimation {
                 target: card
                 property: "scale"
-                to: 0.18
-                duration: 460
+                to: 0.30
+                duration: 220
                 easing.type: Easing.InCubic
             }
             NumberAnimation {
                 target: card
                 property: "rotation"
-                to: 7
-                duration: 460
-                easing.type: Easing.InOutCubic
+                to: 0
+                duration: 220
+                easing.type: Easing.OutCubic
             }
         }
 
+        // 4. A tiny settle back up, like the cartridge finding its stop.
+        NumberAnimation {
+            target: card
+            property: "y"
+            to: root.target.y + 7 - card.height / 2
+            duration: 120
+            easing.type: Easing.OutCubic
+        }
+
+        // 5. Rest with the cartridge slightly protruding.
+        PauseAnimation { duration: 520 }
+
+        // 5. Hand over to the session chip.
         NumberAnimation {
             target: card
             property: "opacity"
             to: 0
-            duration: 110
+            duration: 180
             easing.type: Easing.InCubic
         }
 

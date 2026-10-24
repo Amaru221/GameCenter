@@ -3,7 +3,7 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.6.0** — Steam, Epic, GOG, Battle.net y Riot. Sin cuentas, sin telemetría.
+> Estado: **v0.6.1** — Steam, Epic, GOG, Battle.net y Riot. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 

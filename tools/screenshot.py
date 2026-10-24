@@ -86,6 +86,17 @@ def main() -> int:
         library._update_dismissed = False
         library.updatesChanged.emit()
 
+    if os.environ.get("GC_INSERT") and library._visible:
+        from gamecenter.core.sessions import SessionTracker
+        from gamecenter.ui import covers
+
+        tracker = SessionTracker(running=lambda session: True)
+        library._sessions = tracker
+        game = library._visible[0]
+        tracker.start(
+            game, None, "image://cover/" + covers.cover_key(game.title, game.app_id)
+        )
+
     if os.environ.get("GC_SESSION") and library._visible:
         # A fake running session, so the dock can be reviewed without launching.
         from gamecenter.core.sessions import SessionTracker
