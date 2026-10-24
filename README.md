@@ -29,6 +29,26 @@ la muestra como una estantería y lanza los juegos con un doble clic.
 - Python 3.10+
 - PySide6 6.6+
 
+## Instalador (Windows)
+
+El instalador se genera con **PyInstaller + Inno Setup**:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File packaging\build_windows.ps1
+```
+
+Salidas:
+
+- `dist\GameCenter\GameCenter.exe` — versión portable (carpeta completa).
+- `dist\GameCenter-<version>-setup.exe` — instalador.
+
+El instalador es **por usuario** (no pide administrador), instala en
+`%LOCALAPPDATA%\Programs\GameCenter` y crea accesos directos. No está firmado
+digitalmente, así que SmartScreen puede mostrar un aviso la primera vez.
+
+El workflow `.github/workflows/release.yml` compila y publica el instalador al
+empujar un tag `v*`.
+
 ## Ejecutar
 
 ```bash
@@ -76,6 +96,7 @@ gamecenter/
     qml/                Main, TopBar, Toolbar, Cartridge, GameDetail, Dock
     fonts/              Sora y Chakra Petch (SIL OFL 1.1)
 tools/screenshot.py     render de la ventana a PNG (desarrollo)
+packaging/              PyInstaller, Inno Setup, icono y build de Windows
 tests/                  parser, escáner, modelo y carga del QML
 docs/CLEANROOM.md       política de reimplementación limpia
 ```
