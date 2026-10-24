@@ -34,8 +34,9 @@ def games() -> list[Game]:
 @pytest.fixture
 def model(app, monkeypatch, games, tmp_path):
     monkeypatch.setattr(library_model, "scan_all", lambda: games)
+    monkeypatch.setattr(library_model.credentials, "get_key", lambda: "")
     return library_model.LibraryModel(
-        download_art=False, favorites_path=tmp_path / "settings.json"
+        download_art=False, settings_path=tmp_path / "settings.json"
     )
 
 
@@ -111,6 +112,19 @@ def test_favorites_toggle_and_filter(model) -> None:
     assert model.data(model.index(0, 0), library_model.ROLE_FAVORITE) is False
 
 
+def test_appearance_properties(model) -> None:
+    model.setAccent("#ff6b6b")
+    assert model.accent == "#ff6b6b"
+    assert len(model.palette) >= 12
+    assert all(colour.startswith("#") for colour in model.palette)
+
+    model.setCartridgeStyle("ds")
+    assert model.cartridgeStyle == "ds"
+
+    model.setCartridgeStyle("nope")
+    assert model.cartridgeStyle == "ds"
+
+
 def test_source_options_have_labels(model) -> None:
     options = model.sourceOptions
     assert {option["value"] for option in options} == {"steam", "epic"}
@@ -126,6 +140,36 @@ def test_game_at_returns_detail_data(model) -> None:
     assert detail["cover"].startswith("image://cover/")
     assert detail["hasFolder"] is False
     assert detail["lastPlayed"].startswith("Played")
+
+
+def test_art_provider_loads_a_chosen_file(app, tmp_path) -> None:
+    from PySide6.QtGui import QColor, QImage
+
+    path = tmp_path / "chosen.png"
+    image = QImage(120, 180, QImage.Format_RGB32)
+    image.fill(QColor("#00ff00"))
+    assert image.save(str(path))
+
+    key = covers.art_key(str(path))
+    loaded = covers.ArtProvider().request(key)
+
+    assert (loaded.width(), loaded.height()) == (120, 180)
+
+
+def test_steamgrid_key_is_saved(model, monkeypatch) -> None:
+    saved = {}
+
+    def fake_set(key):
+        saved["key"] = key
+        return True
+
+    monkeypatch.setattr(library_model.credentials, "set_key", fake_set)
+
+    model.saveSteamGridKey("  abc123  ")
+
+    assert saved["key"] == "abc123"
+    assert model.hasSteamGridKey is True
+    assert "Saved" in model.credentialsMessage
 
 
 def test_provider_prefers_cached_art(app, tmp_path, monkeypatch) -> None:

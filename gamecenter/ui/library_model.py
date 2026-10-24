@@ -20,9 +20,11 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QGuiApplication
 
-from ..core.favorites import Favorites
+from .. import __version__
+from ..core import credentials, steamgriddb
 from ..core.launch import LaunchError, launch as launch_game, open_folder
 from ..core.models import SOURCE_LABELS, Game
+from ..core.preferences import CARTRIDGE_STYLES, PALETTE, Preferences
 from ..core.sessions import SessionTracker
 from ..core.sources import scan_all
 from . import artwork, covers
@@ -79,9 +81,16 @@ class LibraryModel(QAbstractListModel):
     changed = Signal()
     failed = Signal(str)
     artReady = Signal(str)
+    appearanceChanged = Signal()
+    artOptionsChanged = Signal()
+    artChanged = Signal()
+    credentialsChanged = Signal()
+    _artOptionsReady = Signal(object)
+    _artDownloaded = Signal(str, str)
+    _artFailed = Signal(str)
 
     def __init__(
-        self, download_art: bool = True, favorites_path: Path | None = None
+        self, download_art: bool = True, settings_path: Path | None = None
     ) -> None:
         super().__init__()
         self._all: list[Game] = scan_all()
@@ -89,8 +98,16 @@ class LibraryModel(QAbstractListModel):
         self._query = ""
         self._source = ""
         self._sort = "recent"
-        self._favorites = Favorites(favorites_path)
+        self._prefs = Preferences(settings_path)
         self._favorites_only = False
+        self._art_options: list[dict] = []
+        self._art_loading = False
+        self._art_error = ""
+        self._credentials_message = ""
+        self._has_key = bool(credentials.get_key())
+        self._artOptionsReady.connect(self._on_art_options, Qt.QueuedConnection)
+        self._artDownloaded.connect(self._on_art_downloaded, Qt.QueuedConnection)
+        self._artFailed.connect(self._on_art_failed, Qt.QueuedConnection)
         self._sessions = SessionTracker()
         self._session_timer = QTimer(self)
         self._session_timer.setInterval(1000)
@@ -122,8 +139,7 @@ class LibraryModel(QAbstractListModel):
         if role == ROLE_META:
             return f"{game.source_label.upper()} · {game.app_id or '—'} · {_tag(game.title)}"
         if role == ROLE_COVER:
-            key = covers.cover_key(game.title, game.app_id, self._art_revision)
-            return "image://cover/" + key
+            return self._cover_url(game)
         if role == ROLE_INSTALLED:
             return game.installed
         if role == ROLE_SIZE:
@@ -131,7 +147,7 @@ class LibraryModel(QAbstractListModel):
         if role == ROLE_HAS_FOLDER:
             return bool(game.install_dir and game.install_dir.is_dir())
         if role == ROLE_FAVORITE:
-            return game.id in self._favorites
+            return self._prefs.is_favorite(game.id)
         if role == Qt.DisplayRole:
             return game.title
         return None
@@ -175,6 +191,175 @@ class LibraryModel(QAbstractListModel):
     def favoritesOnly(self) -> bool:
         return self._favorites_only
 
+    @Property(str, notify=appearanceChanged)
+    def accent(self) -> str:
+        return self._prefs.accent
+
+    @Slot(str)
+    def setAccent(self, value: str) -> None:
+        self._prefs.accent = value
+        self.appearanceChanged.emit()
+
+    @Property("QVariantList", constant=True)
+    def palette(self) -> list[str]:
+        return list(PALETTE)
+
+    @Property(str, notify=appearanceChanged)
+    def accentText(self) -> str:
+        value = self._prefs.accent.lstrip("#")
+        try:
+            red, green, blue = (int(value[i : i + 2], 16) for i in (0, 2, 4))
+        except (ValueError, IndexError):
+            return "#08131a"
+        luminance = 0.299 * red + 0.587 * green + 0.114 * blue
+        return "#08131a" if luminance > 150 else "#ffffff"
+
+    @Property(str, constant=True)
+    def version(self) -> str:
+        return __version__
+
+    @Property("QVariantList", notify=artOptionsChanged)
+    def artOptions(self) -> list[dict]:
+        return self._art_options
+
+    @Property(bool, notify=artOptionsChanged)
+    def artLoading(self) -> bool:
+        return self._art_loading
+
+    @Property(str, notify=artOptionsChanged)
+    def artError(self) -> str:
+        return self._art_error
+
+    @Property(bool, notify=credentialsChanged)
+    def hasSteamGridKey(self) -> bool:
+        return self._has_key
+
+    @Property(str, notify=credentialsChanged)
+    def credentialsMessage(self) -> str:
+        return self._credentials_message
+
+    @Property(str, notify=appearanceChanged)
+    def cartridgeStyle(self) -> str:
+        return self._prefs.cartridge_style
+
+    @Slot(str)
+    def setCartridgeStyle(self, value: str) -> None:
+        if value in CARTRIDGE_STYLES:
+            self._prefs.cartridge_style = value
+            self.appearanceChanged.emit()
+
+    @Slot(str)
+    def saveSteamGridKey(self, value: str) -> None:
+        value = (value or "").strip()
+        if not value:
+            return
+        saved = credentials.set_key(value)
+        self._has_key = saved
+        self._credentials_message = (
+            "Saved to the system credential store."
+            if saved
+            else "Couldn't save to the credential store."
+        )
+        self.credentialsChanged.emit()
+
+    @Slot()
+    def clearSteamGridKey(self) -> None:
+        credentials.clear_key()
+        self._has_key = False
+        self._credentials_message = "Key removed."
+        self.credentialsChanged.emit()
+
+    @Slot(int)
+    def loadArtOptions(self, row: int) -> None:
+        game = self._at(row)
+        if game is None:
+            return
+        if not self._has_key:
+            self._art_error = "Add a SteamGridDB API key in Settings first."
+            self._art_loading = False
+            self._art_options = []
+            self.artOptionsChanged.emit()
+            return
+
+        key = credentials.get_key()
+        self._art_loading = True
+        self._art_error = ""
+        self._art_options = []
+        self.artOptionsChanged.emit()
+
+        def work():
+            try:
+                options = steamgriddb.grids_for(game, key)
+            except Exception as exc:  # noqa: BLE001 - reported to the UI
+                self._artFailed.emit(str(exc))
+                return
+            self._artOptionsReady.emit(options)
+
+        threading.Thread(target=work, daemon=True).start()
+
+    @Slot(int, str)
+    def chooseArt(self, row: int, url: str) -> None:
+        game = self._at(row)
+        if game is None or not url:
+            return
+
+        self._art_loading = True
+        self._art_error = ""
+        self.artOptionsChanged.emit()
+
+        def work():
+            try:
+                path = steamgriddb.download(url, artwork.CACHE / "sgdb")
+            except Exception as exc:  # noqa: BLE001
+                self._artFailed.emit(str(exc))
+                return
+            self._artDownloaded.emit(game.id, str(path))
+
+        threading.Thread(target=work, daemon=True).start()
+
+    @Slot(int)
+    def resetArt(self, row: int) -> None:
+        game = self._at(row)
+        if game is None:
+            return
+        self._prefs.set_cover(game.id, None)
+        self._art_options = []
+        self._art_error = ""
+        self.artOptionsChanged.emit()
+        self._notify_cover(game.id)
+        self.artChanged.emit()
+
+    def _notify_cover(self, game_id: str) -> None:
+        for row, game in enumerate(self._visible):
+            if game.id == game_id:
+                index = self.index(row, 0)
+                self.dataChanged.emit(index, index, [ROLE_COVER])
+                break
+
+    @Slot(object)
+    def _on_art_options(self, options) -> None:
+        self._art_loading = False
+        self._art_error = ""
+        self._art_options = list(options) if isinstance(options, list) else []
+        if not self._art_options:
+            self._art_error = "No portrait artwork found for this game."
+        self.artOptionsChanged.emit()
+
+    @Slot(str, str)
+    def _on_art_downloaded(self, game_id: str, path: str) -> None:
+        self._prefs.set_cover(game_id, path)
+        self._art_loading = False
+        self._art_options = []
+        self.artOptionsChanged.emit()
+        self._notify_cover(game_id)
+        self.artChanged.emit()
+
+    @Slot(str)
+    def _on_art_failed(self, message: str) -> None:
+        self._art_loading = False
+        self._art_error = message
+        self.artOptionsChanged.emit()
+
     @Property(QObject, constant=True)
     def sessions(self) -> SessionTracker:
         return self._sessions
@@ -196,7 +381,7 @@ class LibraryModel(QAbstractListModel):
             for game in self._all
             if (not query or query in game.title.casefold())
             and (not self._source or game.source == self._source)
-            and (not self._favorites_only or game.id in self._favorites)
+            and (not self._favorites_only or self._prefs.is_favorite(game.id))
         ]
         if self._sort == "title":
             rows.sort(key=lambda g: g.title.casefold())
@@ -295,6 +480,14 @@ class LibraryModel(QAbstractListModel):
             return self._visible[row]
         return None
 
+    def _cover_url(self, game: Game) -> str:
+        override = self._prefs.cover_for(game.id)
+        if override and Path(override).is_file():
+            return "image://art/" + covers.art_key(override)
+        return "image://cover/" + covers.cover_key(
+            game.title, game.app_id, self._art_revision
+        )
+
     @Slot(int)
     def launch(self, row: int) -> None:
         game = self._at(row)
@@ -306,8 +499,7 @@ class LibraryModel(QAbstractListModel):
             self.failed.emit(str(exc))
             return
 
-        key = covers.cover_key(game.title, game.app_id, self._art_revision)
-        self._sessions.start(game, pid, "image://cover/" + key)
+        self._sessions.start(game, pid, self._cover_url(game))
 
     @Slot(int)
     def openFolder(self, row: int) -> None:
@@ -334,8 +526,8 @@ class LibraryModel(QAbstractListModel):
         game = self._at(row)
         if game is None:
             return
-        self._favorites.toggle(game.id)
-        if self._favorites_only and game.id not in self._favorites:
+        self._prefs.toggle_favorite(game.id)
+        if self._favorites_only and not self._prefs.is_favorite(game.id):
             self._refresh_rows()
             return
         index = self.index(row, 0)
@@ -347,15 +539,14 @@ class LibraryModel(QAbstractListModel):
         game = self._at(row)
         if game is None:
             return {}
-        key = covers.cover_key(game.title, game.app_id, self._art_revision)
         return {
             "title": game.title,
             "source": game.source_label,
             "appId": game.app_id,
             "meta": f"{game.source_label.upper()} · {game.app_id or '—'} · {_tag(game.title)}",
-            "cover": "image://cover/" + key,
+            "cover": self._cover_url(game),
             "installed": game.installed,
-            "favorite": game.id in self._favorites,
+            "favorite": self._prefs.is_favorite(game.id),
             "sizeText": f"{game.size_gb:.1f} GB" if game.size_gb else "",
             "playtimeText": _playtime_text(game.playtime_minutes),
             "lastPlayed": _played_text(game.last_played),

@@ -6,6 +6,7 @@ Item {
     id: root
     height: 62
     signal toastRequested(string message)
+    signal settingsRequested()
 
     function focusSearch() {
         search.forceActiveFocus();
@@ -59,7 +60,7 @@ Item {
                     width: 16
                     height: 10
                     radius: 2
-                    color: "#4cc9f0"
+                    color: Library.accent
                     anchors.centerIn: parent
                     anchors.verticalCenterOffset: 4
                 }
@@ -83,7 +84,7 @@ Item {
             radius: 20
             color: "#0d0f14"
             border.width: 1
-            border.color: search.activeFocus ? "#3a4250" : "#232833"
+            border.color: search.activeFocus ? Library.accent : "#232833"
 
             RowLayout {
                 anchors.fill: parent
@@ -177,6 +178,45 @@ Item {
                         onClicked: root.toastRequested("Store coming in v0.2")
                     }
                 }
+            }
+        }
+
+        Rectangle {
+            width: 38
+            height: 38
+            radius: 19
+            color: "#0d0f14"
+            border.width: 1
+            border.color: "#232833"
+
+            Canvas {
+                width: 18
+                height: 18
+                anchors.centerIn: parent
+
+                onPaint: {
+                    var ctx = getContext("2d");
+                    ctx.reset();
+                    ctx.strokeStyle = "#c9d2e0";
+                    ctx.lineWidth = 1.6;
+                    ctx.lineCap = "round";
+                    ctx.beginPath();
+                    ctx.arc(9, 9, 3.2, 0, Math.PI * 2);
+                    ctx.stroke();
+                    for (var i = 0; i < 8; i++) {
+                        var angle = i * Math.PI / 4;
+                        ctx.beginPath();
+                        ctx.moveTo(9 + Math.cos(angle) * 5.3, 9 + Math.sin(angle) * 5.3);
+                        ctx.lineTo(9 + Math.cos(angle) * 7.2, 9 + Math.sin(angle) * 7.2);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.settingsRequested()
             }
         }
 

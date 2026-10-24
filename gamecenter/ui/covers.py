@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import random
 import urllib.parse
+from pathlib import Path
 
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt
 from PySide6.QtGui import (
@@ -269,6 +270,40 @@ def _pixmap(image: QImage):
 
 
 _COVER_KEYS: dict[str, tuple[str, str]] = {}
+_ART_KEYS: dict[str, str] = {}
+
+
+def art_key(path: str) -> str:
+    """A stable key for a downloaded cover file, used by the ``art`` provider."""
+    key = hashlib.sha1(f"art|{path}".encode("utf-8")).hexdigest()[:16]
+    _ART_KEYS[key] = str(path)
+    return key
+
+
+class ArtProvider:
+    """Loads a user-selected cover from disk, with a small mtime cache."""
+
+    def __init__(self) -> None:
+        self._files: dict[str, tuple[int, QImage]] = {}
+
+    def request(self, image_id: str) -> QImage:
+        path = _ART_KEYS.get(image_id)
+        if not path:
+            return QImage()
+        try:
+            stamp = Path(path).stat().st_mtime_ns
+        except OSError:
+            return QImage()
+        hit = self._files.get(path)
+        if hit is not None and hit[0] == stamp:
+            return hit[1]
+        image = QImage(path)
+        if image.isNull():
+            return QImage()
+        if len(self._files) >= 200:
+            self._files.clear()
+        self._files[path] = (stamp, image)
+        return image
 
 
 def cover_key(title: str, app_id: str = "", revision: int = 0) -> str:

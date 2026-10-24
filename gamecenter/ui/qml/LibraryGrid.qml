@@ -40,6 +40,7 @@ Item {
             coverUrl: model.cover
             gameInstalled: model.installed
             favorite: model.favorite
+            style: Library.cartridgeStyle
 
             onLaunchRequested: Library.launch(index)
             onFavoriteRequested: Library.toggleFavorite(index)

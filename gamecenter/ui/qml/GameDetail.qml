@@ -12,6 +12,7 @@ Item {
     signal folderRequested()
     signal copyRequested()
     signal favoriteRequested()
+    signal artRequested()
 
     visible: opacity > 0
     opacity: opened ? 1 : 0
@@ -58,6 +59,7 @@ Item {
                     anchors.centerIn: parent
                     scale: 1.7
                     showTitle: false
+                    style: Library.cartridgeStyle
                     gameTitle: root.game.title || ""
                     gameSource: root.game.source || ""
                     gameMeta: root.game.meta || ""
@@ -125,7 +127,7 @@ Item {
                     Layout.maximumWidth: 380
                     height: 46
                     radius: 10
-                    color: playArea.pressed ? "#285fc9" : "#2f6fed"
+                    color: playArea.pressed ? Qt.darker(Library.accent, 1.2) : Library.accent
 
                     Row {
                         anchors.centerIn: parent
@@ -149,7 +151,7 @@ Item {
 
                         Text {
                             text: "Play"
-                            color: "#ffffff"
+                            color: Library.accentText
                             font.family: "Sora"
                             font.pixelSize: 14
                             font.weight: Font.DemiBold
@@ -257,6 +259,31 @@ Item {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: root.copyRequested()
+                        }
+                    }
+
+                    Rectangle {
+                        width: 132
+                        height: 36
+                        radius: 9
+                        color: artArea.containsMouse ? "#202633" : "#171b23"
+                        border.width: 1
+                        border.color: "#2a3140"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "Choose art"
+                            color: "#cfd6e2"
+                            font.family: "Sora"
+                            font.pixelSize: 12
+                        }
+
+                        MouseArea {
+                            id: artArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.artRequested()
                         }
                     }
                 }

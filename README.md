@@ -19,6 +19,12 @@ la muestra como una estantería y lanza los juegos con un doble clic.
 - **Favoritos** persistentes, con filtro en la barra.
 - **Dock de sesiones**: al lanzar un juego aparece con su tiempo en marcha y se
   retira solo cuando el proceso termina (o con la ×).
+- **Ajustes** (engranaje o `Ctrl+,`): color de acento entre 24 opciones y tres
+  estilos de cartucho: clásico, **Nintendo DS** (gira en 3D y muestra los
+  contactos metálicos) y **PS2**.
+- **Carátulas por juego con SteamGridDB**: hasta 5 opciones verticales o la
+  carátula por defecto. La clave se guarda en el almacén de credenciales del
+  sistema, nunca en el repositorio.
 - Busca por título y filtra por tienda; ordena por reciente, título o tamaño.
 - Lanza cada juego con el método de su tienda (URI de Steam/Epic, ejecutable o
   cliente de Riot).
@@ -112,7 +118,12 @@ docs/CLEANROOM.md       política de reimplementación limpia
 | 0.5 | Vista de detalle y cartuchos 3D | hecho |
 | 0.6 | Dock de sesiones y seguimiento de procesos | hecho |
 | 0.7 | Heroic y Lutris (Linux) | pendiente |
-| 0.8 | Empaquetado (PyInstaller/Inno Setup) y actualizaciones firmadas | pendiente |
+| 0.8 | Empaquetado (PyInstaller/Inno Setup) y actualizaciones firmadas | hecho |
+
+> **Nota:** Heroic Games Launcher y Lutris son launchers de Linux y se añadirán
+> en una **versión posterior**. La v0.3 se centra en Windows y en las tiendas que
+> ya exponen manifiestos o claves de registro locales. Ver
+> [CHANGELOG.md](CHANGELOG.md).
 
 ## Seguridad
 

@@ -35,6 +35,21 @@ class CoverImageProvider(QQuickImageProvider):
         return image
 
 
+class ArtImageProvider(QQuickImageProvider):
+    """Serves ``image://art/<key>`` for covers chosen from SteamGridDB."""
+
+    def __init__(self) -> None:
+        super().__init__(QQuickImageProvider.Image)
+        self._art = covers.ArtProvider()
+
+    def requestImage(self, image_id: str, size: QSize, requested_size: QSize) -> QImage:
+        image = self._art.request(image_id)
+        if size is not None:
+            size.setWidth(image.width())
+            size.setHeight(image.height())
+        return image
+
+
 class BackgroundImageProvider(QQuickImageProvider):
     """Serves the blurred mesh background, rendered once."""
 
@@ -62,6 +77,7 @@ def create_engine(library: LibraryModel) -> QQmlApplicationEngine:
 
     engine = QQmlApplicationEngine()
     engine.addImageProvider("cover", CoverImageProvider())
+    engine.addImageProvider("art", ArtImageProvider())
     engine.addImageProvider("bg", BackgroundImageProvider())
     engine.rootContext().setContextProperty("Library", library)
     engine.rootContext().setContextProperty("Sessions", library.sessions)

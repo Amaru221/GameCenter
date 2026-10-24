@@ -57,8 +57,14 @@ def main() -> int:
 
     library = LibraryModel(
         download_art=not demo,
-        favorites_path=Path(os.environ.get("TEMP", ".")) / "gamecenter-preview.json",
+        settings_path=Path(os.environ.get("TEMP", ".")) / "gamecenter-preview.json",
     )
+
+    if os.environ.get("GC_STYLE"):
+        library.setCartridgeStyle(os.environ["GC_STYLE"])
+
+    if os.environ.get("GC_ACCENT"):
+        library.setAccent(os.environ["GC_ACCENT"])
 
     if os.environ.get("GC_SESSION") and library._visible:
         # A fake running session, so the dock can be reviewed without launching.
@@ -90,6 +96,20 @@ def main() -> int:
         name = "screenshot-detail.png"
     elif os.environ.get("GC_SESSION"):
         name = "screenshot-session.png"
+    elif os.environ.get("GC_FLIP"):
+        name = "screenshot-ds-back.png"
+    elif os.environ.get("GC_STYLE"):
+        name = f"screenshot-{os.environ['GC_STYLE']}.png"
+    elif os.environ.get("GC_SETTINGS"):
+        name = "screenshot-settings.png"
+    elif os.environ.get("GC_ART"):
+        name = (
+            "screenshot-art-error.png"
+            if os.environ["GC_ART"] == "error"
+            else "screenshot-art.png"
+        )
+    elif os.environ.get("GC_ACCENT"):
+        name = "screenshot-accent.png"
     out = Path(__file__).resolve().parents[1] / name
 
     if os.environ.get("GC_HOVER"):
@@ -102,6 +122,56 @@ def main() -> int:
                 window, Qt.LeftButton, Qt.NoModifier, QPoint(140, 220)
             ),
         )
+    if os.environ.get("GC_SETTINGS"):
+        QTimer.singleShot(1200, lambda: window.setProperty("settingsOpen", True))
+
+    if os.environ.get("GC_ART") and library._visible:
+        from gamecenter.core import steamgriddb
+        from gamecenter.ui import covers
+
+        if os.environ["GC_ART"] != "error":
+            def fake_grids(game, key, limit=5):
+                return [
+                    {
+                        "id": i,
+                        "url": "image://cover/"
+                        + covers.cover_key(f"{game.title} art {i}", game.app_id, i),
+                        "thumb": "image://cover/"
+                        + covers.cover_key(f"{game.title} art {i}", game.app_id, i),
+                    }
+                    for i in range(5)
+                ]
+
+            steamgriddb.grids_for = fake_grids
+            library._has_key = True
+        else:
+            library._has_key = False
+
+        def open_art():
+            window.setProperty("detailIndex", 0)
+            window.setProperty("detailGame", library.gameAt(0))
+            window.setProperty("detailOpen", True)
+            window.setProperty("artOpen", True)
+            library.loadArtOptions(0)
+
+        QTimer.singleShot(1200, open_art)
+
+    if os.environ.get("GC_FLIP"):
+        def flip_first_card():
+            def find(item, name):
+                if item.objectName() == name:
+                    return item
+                for child in item.childItems():
+                    hit = find(child, name)
+                    if hit is not None:
+                        return hit
+                return None
+
+            target = find(window.contentItem(), "dsFlip")
+            if target is not None:
+                target.setProperty("flipped", True)
+
+        QTimer.singleShot(1400, flip_first_card)
 
     def grab() -> None:
         image = window.grabWindow()

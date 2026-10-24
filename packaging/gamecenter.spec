@@ -3,6 +3,8 @@
 
 from pathlib import Path
 
+from PyInstaller.utils.hooks import collect_submodules
+
 ROOT = Path(SPECPATH).parent
 
 DATAS = [
@@ -19,7 +21,7 @@ a = Analysis(
     pathex=[str(ROOT)],
     binaries=[],
     datas=DATAS,
-    hiddenimports=[],
+    hiddenimports=collect_submodules("keyring.backends"),
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

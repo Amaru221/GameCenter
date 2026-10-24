@@ -14,6 +14,8 @@ Window {
     property var detailGame: ({})
     property int detailIndex: -1
     property bool detailOpen: false
+    property bool settingsOpen: false
+    property bool artOpen: false
 
     Image {
         anchors.fill: parent
@@ -36,6 +38,7 @@ Window {
         width: parent.width
         anchors.top: parent.top
         onToastRequested: (message) => toast.show(message)
+        onSettingsRequested: settingsOpen = true
     }
 
     Toolbar {
@@ -120,11 +123,40 @@ Window {
             Library.toggleFavorite(detailIndex);
             detailGame = Library.gameAt(detailIndex);
         }
+        onArtRequested: {
+            artOpen = true;
+            Library.loadArtOptions(detailIndex);
+        }
+    }
+
+    ArtPicker {
+        id: artPicker
+        anchors.fill: parent
+        opened: artOpen
+        index: detailIndex
+        onCloseRequested: artOpen = false
+        onSettingsRequested: {
+            artOpen = false;
+            settingsOpen = true;
+        }
+    }
+
+    SettingsPanel {
+        id: settingsPanel
+        anchors.fill: parent
+        opened: settingsOpen
+        onCloseRequested: settingsOpen = false
     }
 
     Connections {
         target: Library
         function onFailed(message) { toast.show(message) }
+        function onArtChanged() {
+            if (detailOpen) {
+                detailGame = Library.gameAt(detailIndex);
+            }
+            artOpen = false;
+        }
     }
 
     Shortcut {
@@ -134,7 +166,20 @@ Window {
 
     Shortcut {
         sequence: "Escape"
-        onActivated: if (detailOpen) detailOpen = false
+        onActivated: {
+            if (settingsOpen) {
+                settingsOpen = false;
+            } else if (artOpen) {
+                artOpen = false;
+            } else if (detailOpen) {
+                detailOpen = false;
+            }
+        }
+    }
+
+    Shortcut {
+        sequence: "Ctrl+,"
+        onActivated: settingsOpen = true
     }
 
     Shortcut {
