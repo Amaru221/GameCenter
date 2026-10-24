@@ -85,7 +85,7 @@ Item {
             radius: 20
             color: "#0d0f14"
             border.width: 1
-            border.color: search.activeFocus ? Library.accent : "#232833"
+            border.color: "#232833"
 
             RowLayout {
                 anchors.fill: parent

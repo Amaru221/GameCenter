@@ -127,5 +127,16 @@ Item {
             text: "Copy App ID"
             onTriggered: Library.copyAppId(contextMenu.row)
         }
+        MenuSeparator {
+            contentItem: Rectangle {
+                implicitHeight: 1
+                color: "#232936"
+            }
+        }
+        MenuItem {
+            text: "Remove from library"
+            visible: Library.isManual(contextMenu.row)
+            onTriggered: Library.removeManualGame(contextMenu.row)
+        }
     }
 }

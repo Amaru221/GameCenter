@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.7.0
+
+- Add games manually with the **+** button: title, root folder and executable.
+  They are stored in `manual.json`, shown as **Local**, filterable and removable.
+- Dynamic toolbar heading: the selected category and the number of games.
+- Game titles are now bold; the persistent selection ring and the search focus
+  border were removed.
+- The Nintendo DS cartridge has side walls, a spine and a bottom lip.
+
 ## v0.6.1
 
 - More natural insertion: the cartridge approaches the dock, pauses, slides in

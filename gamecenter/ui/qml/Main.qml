@@ -17,6 +17,7 @@ Window {
     property bool settingsOpen: false
     property bool artOpen: false
     property bool updateOpen: false
+    property bool addOpen: false
     property bool demoInsert: false
 
     onDemoInsertChanged: {
@@ -59,6 +60,7 @@ Window {
         width: parent.width
         anchors.top: topBar.bottom
         onToastRequested: (message) => toast.show(message)
+        onAddRequested: addOpen = true
     }
 
     LibraryGrid {
@@ -166,6 +168,18 @@ Window {
         anchors.fill: parent
     }
 
+    AddGameDialog {
+        id: addGameDialog
+        z: 35
+        anchors.fill: parent
+        opened: addOpen
+        onCloseRequested: addOpen = false
+        onAdded: {
+            addOpen = false;
+            toast.show("Game added to your library");
+        }
+    }
+
     ArtPicker {
         id: artPicker
         z: 30
@@ -222,6 +236,8 @@ Window {
                 updateOpen = false;
             } else if (settingsOpen) {
                 settingsOpen = false;
+            } else if (addOpen) {
+                addOpen = false;
             } else if (artOpen) {
                 artOpen = false;
             } else if (detailOpen) {

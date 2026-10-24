@@ -29,6 +29,7 @@ def _demo_games():
         ("Night Shift", "battlenet", "Pro", 0.0, 0, 0, True),
         ("Pixel Rally", "riot", "pixel_rally.live", 3.9, 320, 1789000000, True),
         ("Hollow Circuit", "steam", "900004", 15.0, 0, 0, False),
+        ("My Indie Game", "local", "my-indie", 1.2, 90, 1791500000, True),
     )
     return [
         Game(
@@ -65,6 +66,9 @@ def main() -> int:
 
     if os.environ.get("GC_ACCENT"):
         library.setAccent(os.environ["GC_ACCENT"])
+
+    if os.environ.get("GC_SOURCE"):
+        library.setSourceFilter(os.environ["GC_SOURCE"])
 
     if os.environ.get("GC_SURFACE"):
         library.setSurfaceColor(os.environ["GC_SURFACE"])
@@ -135,6 +139,10 @@ def main() -> int:
         name = "screenshot-ds-drag-left.png"
     elif os.environ.get("GC_UPDATE_DIALOG"):
         name = "screenshot-update-dialog.png"
+    elif os.environ.get("GC_ADD"):
+        name = "screenshot-add.png"
+    elif os.environ.get("GC_SOURCE"):
+        name = "screenshot-filter.png"
     elif os.environ.get("GC_SURFACE") or os.environ.get("GC_CARTRIDGE"):
         name = "screenshot-colors.png"
     elif os.environ.get("GC_INSERT"):
@@ -172,6 +180,9 @@ def main() -> int:
 
     if os.environ.get("GC_UPDATE_DIALOG"):
         QTimer.singleShot(1200, lambda: window.setProperty("updateOpen", True))
+
+    if os.environ.get("GC_ADD"):
+        QTimer.singleShot(1200, lambda: window.setProperty("addOpen", True))
 
     if os.environ.get("GC_ART") and library._visible:
         from gamecenter.core import steamgriddb

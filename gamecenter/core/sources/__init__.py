@@ -9,11 +9,11 @@ from __future__ import annotations
 import logging
 
 from ..models import Game
-from . import battlenet, epic, gog, riot, steam
+from . import battlenet, epic, gog, local, riot, steam
 
 log = logging.getLogger("gamecenter.sources")
 
-SOURCES = (steam, epic, gog, battlenet, riot)
+SOURCES = (steam, epic, gog, battlenet, riot, local)
 
 
 def scan_all() -> list[Game]:

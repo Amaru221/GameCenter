@@ -162,7 +162,6 @@ Item {
                         card.flipAngle = 0;
                     }
                 } else {
-                    card.selected = !card.selected;
                     card.clicked();
                 }
             }
@@ -170,7 +169,6 @@ Item {
                 if (mouse.button === Qt.RightButton) {
                     card.contextRequested();
                 } else if (card.style !== "ds") {
-                    card.selected = !card.selected;
                     card.clicked();
                 }
             }
@@ -232,7 +230,8 @@ Item {
         color: "#e9eef6"
         font.family: "Sora"
         font.pixelSize: 14
-        font.weight: Font.Medium
+        font.weight: Font.Bold
+        font.letterSpacing: 0.2
         elide: Text.ElideRight
         maximumLineCount: 1
     }

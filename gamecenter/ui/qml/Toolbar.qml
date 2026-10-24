@@ -6,6 +6,44 @@ Item {
     height: 54
 
     signal toastRequested(string message)
+    signal addRequested()
+
+    readonly property string heading: {
+        if (Library.favoritesOnly) {
+            return "FAVORITES";
+        }
+        var key = Library.sourceFilter;
+        if (!key) {
+            return "ALL GAMES";
+        }
+        var options = Library.sourceOptions;
+        for (var i = 0; i < options.length; i++) {
+            if (options[i].value === key) {
+                return options[i].text.toUpperCase();
+            }
+        }
+        return key === "local" ? "LOCAL" : key.toUpperCase();
+    }
+
+    readonly property var sourceEntries: {
+        var out = [{ text: "All stores", value: "" }, { text: "Local", value: "local" }];
+        var options = Library.sourceOptions;
+        for (var i = 0; i < options.length; i++) {
+            if (options[i].value !== "local") {
+                out.push(options[i]);
+            }
+        }
+        return out;
+    }
+
+    Connections {
+        target: Library
+        function onChanged() {
+            if (sourceCombo.value !== Library.sourceFilter) {
+                sourceCombo.value = Library.sourceFilter;
+            }
+        }
+    }
 
     RowLayout {
         anchors.fill: parent
@@ -14,7 +52,7 @@ Item {
         spacing: 10
 
         Text {
-            text: "ALL GAMES"
+            text: root.heading
             color: "#e8edf5"
             font.family: "Chakra Petch"
             font.pixelSize: 14
@@ -23,7 +61,7 @@ Item {
         }
 
         Text {
-            text: Library.total === 1 ? "1 game" : Library.total + " games"
+            text: Library.count === 1 ? "1 game" : Library.count + " games"
             color: "#8b95a5"
             font.family: "Sora"
             font.pixelSize: 12
@@ -35,8 +73,8 @@ Item {
         PillCombo {
             id: sourceCombo
             Layout.preferredWidth: 150
-            value: ""
-            entries: [{ text: "All stores", value: "" }].concat(Library.sourceOptions)
+            value: Library.sourceFilter
+            entries: root.sourceEntries
             onSelected: (chosen) => Library.setSourceFilter(chosen)
         }
 
@@ -123,7 +161,7 @@ Item {
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
-                onClicked: root.toastRequested("Adding games comes in v0.2")
+                onClicked: root.addRequested()
             }
         }
     }

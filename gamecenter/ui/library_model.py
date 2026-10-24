@@ -22,7 +22,7 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QDesktopServices, QGuiApplication
 
 from .. import __version__
-from ..core import credentials, steamgriddb, updater
+from ..core import credentials, manual, steamgriddb, updater
 from ..core.launch import LaunchError, launch as launch_game, open_folder
 from ..core.models import SOURCE_LABELS, Game
 from ..core.preferences import (
@@ -650,6 +650,40 @@ class LibraryModel(QAbstractListModel):
         if game is None:
             return
         QGuiApplication.clipboard().setText(game.app_id)
+
+    @Slot(str, result=str)
+    def localPath(self, url: str) -> str:
+        return QUrl(url).toLocalFile() if url.startswith("file:") else url
+
+    @Slot(str, result="QStringList")
+    def executablesIn(self, folder_url: str) -> list[str]:
+        folder = QUrl(folder_url).toLocalFile() if folder_url.startswith("file:") else folder_url
+        return [str(path) for path in manual.find_executables(Path(folder))]
+
+    @Slot(str, str, str, result=bool)
+    def addManualGame(self, title: str, folder_url: str, executable: str) -> bool:
+        folder = QUrl(folder_url).toLocalFile() if folder_url.startswith("file:") else folder_url
+        try:
+            manual.ManualLibrary().add(title, folder, executable)
+        except Exception as exc:  # noqa: BLE001 - reported as a toast
+            self.failed.emit(str(exc))
+            return False
+        self._source = "local"
+        self.refresh()
+        return True
+
+    @Slot(int, result=bool)
+    def isManual(self, row: int) -> bool:
+        game = self._at(row)
+        return game is not None and game.source == "local"
+
+    @Slot(int)
+    def removeManualGame(self, row: int) -> None:
+        game = self._at(row)
+        if game is None or game.source != "local":
+            return
+        manual.ManualLibrary().remove(game.id)
+        self.refresh()
 
     @Slot(int)
     def toggleFavorite(self, row: int) -> None:

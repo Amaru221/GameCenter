@@ -29,6 +29,19 @@ Item {
             angle: root.flipAngle
         }
 
+        // Side wall: the cartridge is a solid object, not a flat card.
+        Rectangle {
+            x: 5
+            y: 3
+            width: parent.width
+            height: parent.height
+            radius: 12
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Qt.darker(Library.cartridgeColor, 1.65) }
+                GradientStop { position: 1.0; color: Qt.darker(Library.cartridgeColor, 2.4) }
+            }
+        }
+
         Rectangle {
             anchors.fill: parent
             radius: 12
@@ -38,6 +51,46 @@ Item {
                 GradientStop { position: 0.0; color: root.hovered ? Qt.lighter(Library.cartridgeColor, 1.15) : Library.cartridgeColor }
                 GradientStop { position: 1.0; color: Qt.darker(Library.cartridgeColor, 1.55) }
             }
+        }
+
+        // Spine on the left edge and a thin bottom lip.
+        Rectangle {
+            x: 2
+            y: 10
+            width: 4
+            height: parent.height - 20
+            radius: 2
+            color: Qt.lighter(Library.cartridgeColor, 1.25)
+            opacity: 0.9
+        }
+
+        Rectangle {
+            x: parent.width - 3
+            y: 8
+            width: 2
+            height: parent.height - 16
+            radius: 1
+            color: Qt.darker(Library.cartridgeColor, 1.9)
+            opacity: 0.9
+        }
+
+        Rectangle {
+            x: 6
+            y: parent.height - 5
+            width: parent.width - 12
+            height: 3
+            radius: 1.5
+            color: Qt.darker(Library.cartridgeColor, 1.6)
+        }
+
+        Rectangle {
+            x: 10
+            y: 1
+            width: parent.width - 20
+            height: 1.5
+            radius: 1
+            color: "#ffffff"
+            opacity: 0.14
         }
 
         Rectangle {
@@ -146,6 +199,18 @@ Item {
         }
 
         Rectangle {
+            x: 5
+            y: 3
+            width: parent.width
+            height: parent.height
+            radius: 12
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Qt.darker(Library.cartridgeColor, 1.65) }
+                GradientStop { position: 1.0; color: Qt.darker(Library.cartridgeColor, 2.4) }
+            }
+        }
+
+        Rectangle {
             anchors.fill: parent
             radius: 12
             border.width: 1
@@ -154,6 +219,45 @@ Item {
                 GradientStop { position: 0.0; color: Qt.darker(Library.cartridgeColor, 1.05) }
                 GradientStop { position: 1.0; color: Qt.darker(Library.cartridgeColor, 1.8) }
             }
+        }
+
+        Rectangle {
+            x: 2
+            y: 10
+            width: 4
+            height: parent.height - 20
+            radius: 2
+            color: Qt.lighter(Library.cartridgeColor, 1.15)
+            opacity: 0.8
+        }
+
+        Rectangle {
+            x: parent.width - 3
+            y: 8
+            width: 2
+            height: parent.height - 16
+            radius: 1
+            color: Qt.darker(Library.cartridgeColor, 1.9)
+            opacity: 0.8
+        }
+
+        Rectangle {
+            x: 6
+            y: parent.height - 5
+            width: parent.width - 12
+            height: 3
+            radius: 1.5
+            color: Qt.darker(Library.cartridgeColor, 1.6)
+        }
+
+        Rectangle {
+            x: 10
+            y: 1
+            width: parent.width - 20
+            height: 1.5
+            radius: 1
+            color: "#ffffff"
+            opacity: 0.10
         }
 
         Rectangle {

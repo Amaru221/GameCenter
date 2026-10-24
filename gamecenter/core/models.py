@@ -11,6 +11,7 @@ SOURCE_LABELS = {
     "gog": "GOG",
     "battlenet": "Battle.net",
     "riot": "Riot",
+    "local": "Local",
 }
 
 
