@@ -3,7 +3,7 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.3** — Steam, Epic, GOG, Battle.net y Riot. Sin cuentas, sin telemetría.
+> Estado: **v0.4.1** — Steam, Epic, GOG, Battle.net y Riot. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 
@@ -20,8 +20,13 @@ la muestra como una estantería y lanza los juegos con un doble clic.
 - **Dock de sesiones**: al lanzar un juego aparece con su tiempo en marcha y se
   retira solo cuando el proceso termina (o con la ×).
 - **Ajustes** (engranaje o `Ctrl+,`): color de acento entre 24 opciones y tres
-  estilos de cartucho: clásico, **Nintendo DS** (gira en 3D y muestra los
-  contactos metálicos) y **PS2**.
+  estilos de cartucho: clásico, **Nintendo DS** y **PS2**.
+  - En el estilo DS puedes **agarrar el cartucho con el ratón y girarlo**
+    manteniendo pulsado; el reverso muestra los contactos metálicos en el borde
+    inferior. Los cartuchos llevan la marca **GC**.
+- **Animación de inserción**: al pulsar Play, el cartucho vuela desde el detalle
+  y se inserta en la ranura central del dock “Ready”, que se ilumina mientras
+  muestra “Inserting…”.
 - **Carátulas por juego con SteamGridDB**: hasta 5 opciones verticales o la
   carátula por defecto. La clave se guarda en el almacén de credenciales del
   sistema, nunca en el repositorio.

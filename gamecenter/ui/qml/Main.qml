@@ -16,6 +16,17 @@ Window {
     property bool detailOpen: false
     property bool settingsOpen: false
     property bool artOpen: false
+    property bool demoInsert: false
+
+    onDemoInsertChanged: {
+        if (!demoInsert) {
+            return;
+        }
+        var from = detail.cartridgeCenter();
+        var to = Qt.point(dock.x + dock.width / 2, dock.y + 4);
+        insertEffect.play(detailGame, -1, from, to);
+        detailOpen = false;
+    }
 
     Image {
         anchors.fill: parent
@@ -66,6 +77,8 @@ Window {
 
     Dock {
         id: dock
+        z: 20
+        inserting: insertEffect.running
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 10
@@ -77,6 +90,7 @@ Window {
         width: label.implicitWidth + 36
         height: 38
         radius: 19
+        z: 25
         color: "#1a1f29"
         border.width: 1
         border.color: "#2f394b"
@@ -112,11 +126,17 @@ Window {
 
     GameDetail {
         id: detail
+        z: 10
         anchors.fill: parent
         game: detailGame
         opened: detailOpen
         onCloseRequested: detailOpen = false
-        onPlayRequested: Library.launch(detailIndex)
+        onPlayRequested: {
+            var from = detail.cartridgeCenter();
+            var to = Qt.point(dock.x + dock.width / 2, dock.y + 4);
+            insertEffect.play(detailGame, detailIndex, from, to);
+            detailOpen = false;
+        }
         onFolderRequested: Library.openFolder(detailIndex)
         onCopyRequested: Library.copyAppId(detailIndex)
         onFavoriteRequested: {
@@ -129,8 +149,15 @@ Window {
         }
     }
 
+    InsertEffect {
+        id: insertEffect
+        z: 15
+        anchors.fill: parent
+    }
+
     ArtPicker {
         id: artPicker
+        z: 30
         anchors.fill: parent
         opened: artOpen
         index: detailIndex
@@ -143,6 +170,7 @@ Window {
 
     SettingsPanel {
         id: settingsPanel
+        z: 40
         anchors.fill: parent
         opened: settingsOpen
         onCloseRequested: settingsOpen = false

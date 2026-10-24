@@ -14,6 +14,13 @@ Item {
     signal favoriteRequested()
     signal artRequested()
 
+    function cartridgeCenter() {
+        var point = detailCartridge.mapToItem(
+            root, detailCartridge.width / 2, detailCartridge.height / 2
+        );
+        return Qt.point(point.x, point.y);
+    }
+
     visible: opacity > 0
     opacity: opened ? 1 : 0
     Behavior on opacity { NumberAnimation { duration: 180 } }
@@ -56,6 +63,7 @@ Item {
                 Layout.fillHeight: true
 
                 Cartridge {
+                    id: detailCartridge
                     anchors.centerIn: parent
                     scale: 1.7
                     showTitle: false

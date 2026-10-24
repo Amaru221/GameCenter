@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.4.1
+
+- The Nintendo DS cartridge now flips by **dragging it with the mouse**, not
+  with a button.
+- The DS metallic contacts moved to the **bottom edge** of the back.
+- The DS and PS2 cartridges are labelled **GC**.
+- New insertion animation: Play sends the cartridge into the dock slot, with a
+  glow and an “Inserting…” state.
+
 ## v0.4.0
 
 - Settings panel with 24 accent colours and three cartridge styles: classic,

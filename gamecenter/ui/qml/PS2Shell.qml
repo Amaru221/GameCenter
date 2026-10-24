@@ -15,6 +15,7 @@ Item {
     property bool hovered: false
     property real tiltX: 0
     property real tiltY: 0
+    property real flipAngle: 0
 
     Rectangle {
         anchors.fill: parent
@@ -38,7 +39,7 @@ Item {
 
         Text {
             anchors.centerIn: parent
-            text: "PS2"
+            text: "GC"
             color: "#e8eefc"
             font.family: "Chakra Petch"
             font.pixelSize: 12

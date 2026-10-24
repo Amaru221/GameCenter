@@ -98,6 +98,10 @@ def main() -> int:
         name = "screenshot-session.png"
     elif os.environ.get("GC_FLIP"):
         name = "screenshot-ds-back.png"
+    elif os.environ.get("GC_DRAG"):
+        name = "screenshot-ds-drag.png"
+    elif os.environ.get("GC_INSERT"):
+        name = "screenshot-insert.png"
     elif os.environ.get("GC_STYLE"):
         name = f"screenshot-{os.environ['GC_STYLE']}.png"
     elif os.environ.get("GC_SETTINGS"):
@@ -167,11 +171,30 @@ def main() -> int:
                         return hit
                 return None
 
-            target = find(window.contentItem(), "dsFlip")
+            target = find(window.contentItem(), "cartridge")
             if target is not None:
-                target.setProperty("flipped", True)
+                target.setProperty("flipAngle", 180)
 
         QTimer.singleShot(1400, flip_first_card)
+
+    if os.environ.get("GC_DRAG"):
+        def drag_card():
+            QTest.mousePress(window, Qt.LeftButton, Qt.NoModifier, QPoint(140, 220))
+            for x in range(160, 281, 20):
+                QTest.mouseMove(window, QPoint(x, 220))
+                QTest.qWait(40)
+            QTest.mouseRelease(window, Qt.LeftButton, Qt.NoModifier, QPoint(280, 220))
+
+        QTimer.singleShot(1200, drag_card)
+
+    if os.environ.get("GC_INSERT"):
+        def start_insert():
+            window.setProperty("detailIndex", 0)
+            window.setProperty("detailGame", library.gameAt(0))
+            window.setProperty("detailOpen", True)
+            QTimer.singleShot(400, lambda: window.setProperty("demoInsert", True))
+
+        QTimer.singleShot(900, start_insert)
 
     def grab() -> None:
         image = window.grabWindow()

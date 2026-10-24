@@ -4,6 +4,7 @@ import QtQuick.Layouts
 Rectangle {
     id: dock
     readonly property bool idle: Sessions.count === 0
+    property bool inserting: false
     width: idle ? 380 : Math.min(920, 180 + Sessions.count * 204)
     height: 54
     radius: 27
@@ -25,6 +26,17 @@ Rectangle {
         height: 8
         radius: 4
         color: "#10141b"
+    }
+
+    Rectangle {
+        x: (dock.width - width) / 2
+        y: 0
+        width: 90
+        height: 8
+        radius: 4
+        color: Library.accent
+        opacity: dock.inserting ? 0.9 : 0
+        Behavior on opacity { NumberAnimation { duration: 140 } }
     }
 
     Rectangle {
@@ -64,7 +76,29 @@ Rectangle {
         }
 
         Row {
+            visible: dock.inserting
+            Layout.alignment: Qt.AlignVCenter
+            spacing: 8
+
+            Rectangle {
+                width: 8
+                height: 8
+                radius: 4
+                color: Library.accent
+            }
+
+            Text {
+                text: "Inserting..."
+                color: "#dfe6f0"
+                font.family: "Sora"
+                font.pixelSize: 12
+            }
+        }
+
+        Row {
             visible: !dock.idle
+            opacity: dock.inserting ? 0 : 1
+            Behavior on opacity { NumberAnimation { duration: 180 } }
             Layout.alignment: Qt.AlignVCenter
             spacing: 8
 

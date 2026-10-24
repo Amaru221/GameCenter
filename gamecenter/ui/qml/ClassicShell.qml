@@ -15,6 +15,7 @@ Item {
     property bool hovered: false
     property real tiltX: 0
     property real tiltY: 0
+    property real flipAngle: 0
 
     Rectangle {
         id: shell

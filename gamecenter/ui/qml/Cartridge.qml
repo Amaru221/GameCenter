@@ -2,6 +2,7 @@ import QtQuick
 
 Item {
     id: card
+    objectName: "cartridge"
     width: 208
     height: 288
 
@@ -14,9 +15,16 @@ Item {
     property bool showTitle: true
     property bool favorite: false
     property string style: "classic"
+    property bool interactive: true
 
     property real tiltX: 0
     property real tiltY: 0
+    property real flipAngle: 0
+
+    property real _flipStart: 0
+    property real _pressX: 0
+    property bool _flipping: false
+    property bool _flipMoved: false
 
     signal launchRequested()
     signal contextRequested()
@@ -31,6 +39,12 @@ Item {
 
     Behavior on tiltY { NumberAnimation { duration: 170; easing.type: Easing.OutCubic } }
     Behavior on tiltX { NumberAnimation { duration: 170; easing.type: Easing.OutCubic } }
+    Behavior on flipAngle {
+        enabled: !card._flipping
+        NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
+    }
+
+    onStyleChanged: flipAngle = 0
 
     function bindShell() {
         var item = shellLoader.item;
@@ -46,6 +60,7 @@ Item {
         item.hovered = Qt.binding(function() { return card.hovered; });
         item.tiltX = Qt.binding(function() { return card.tiltX; });
         item.tiltY = Qt.binding(function() { return card.tiltY; });
+        item.flipAngle = Qt.binding(function() { return card.flipAngle; });
     }
 
     Item {
@@ -100,28 +115,59 @@ Item {
         MouseArea {
             id: pointer
             anchors.fill: parent
+            enabled: card.interactive
             hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
+            cursorShape: card._flipping ? Qt.ClosedHandCursor : Qt.PointingHandCursor
             acceptedButtons: Qt.LeftButton | Qt.RightButton
 
-            onClicked: (mouse) => {
-                if (mouse.button === Qt.RightButton) {
-                    card.contextRequested();
+            onPressed: (mouse) => {
+                if (mouse.button === Qt.LeftButton && card.style === "ds") {
+                    card._flipping = true;
+                    card._flipMoved = false;
+                    card._pressX = mouse.x;
+                    card._flipStart = card.flipAngle;
+                }
+            }
+            onPositionChanged: (mouse) => {
+                if (card._flipping) {
+                    var dx = mouse.x - card._pressX;
+                    if (Math.abs(dx) > 4) {
+                        card._flipMoved = true;
+                    }
+                    card.flipAngle = Math.max(0, Math.min(180, card._flipStart + dx * 1.2));
+                } else {
+                    var nx = Math.max(0, Math.min(1, mouse.x / width)) - 0.5;
+                    var ny = Math.max(0, Math.min(1, mouse.y / height)) - 0.5;
+                    card.tiltY = nx * 18;
+                    card.tiltX = ny * 12;
+                }
+            }
+            onReleased: (mouse) => {
+                if (!card._flipping) {
+                    return;
+                }
+                card._flipping = false;
+                if (card._flipMoved) {
+                    card.flipAngle = card.flipAngle > 90 ? 180 : 0;
                 } else {
                     card.selected = !card.selected;
                     card.clicked();
                 }
             }
-            onDoubleClicked: card.launchRequested()
-            onPositionChanged: (mouse) => {
-                var nx = Math.max(0, Math.min(1, mouse.x / width)) - 0.5;
-                var ny = Math.max(0, Math.min(1, mouse.y / height)) - 0.5;
-                card.tiltY = nx * 18;
-                card.tiltX = ny * 12;
+            onClicked: (mouse) => {
+                if (mouse.button === Qt.RightButton) {
+                    card.contextRequested();
+                } else if (card.style !== "ds") {
+                    card.selected = !card.selected;
+                    card.clicked();
+                }
             }
+            onDoubleClicked: card.launchRequested()
             onExited: {
-                card.tiltY = 0;
-                card.tiltX = 0;
+                if (!card._flipping) {
+                    card.tiltY = 0;
+                    card.tiltX = 0;
+                }
             }
         }
 
@@ -145,6 +191,7 @@ Item {
         color: "#0d0f14"
         border.width: 1
         border.color: card.favorite ? "#ffd166" : "#2a3140"
+        visible: card.interactive && (card.favorite || card.hovered)
         opacity: card.favorite || card.hovered ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: 140 } }
 
@@ -157,6 +204,7 @@ Item {
 
         MouseArea {
             anchors.fill: parent
+            enabled: card.interactive
             cursorShape: Qt.PointingHandCursor
             onClicked: card.favoriteRequested()
         }
