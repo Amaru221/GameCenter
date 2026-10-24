@@ -3,7 +3,7 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.4.1** — Steam, Epic, GOG, Battle.net y Riot. Sin cuentas, sin telemetría.
+> Estado: **v0.5.0** — Steam, Epic, GOG, Battle.net y Riot. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 
@@ -135,12 +135,28 @@ docs/CLEANROOM.md       política de reimplementación limpia
 No hay claves, tokens ni cuentas en el repositorio ni en la app. Ver
 [SECURITY.md](SECURITY.md) para los datos locales y cómo reportar un problema.
 
+## Actualizaciones
+
+La app consulta como máximo **una vez al día** la API pública de GitHub
+Releases. Si hay una versión más nueva, muestra un aviso discreto con
+**Download** (abre la página del release) y **Later**. No descarga ni instala
+nada por su cuenta.
+
+Se puede desactivar en **Ajustes → Updates**, o comprobar manualmente con
+**Check now**. La petición solo envía la IP y el `User-Agent` a
+`api.github.com`; no hay telemetría.
+
 ## Privacidad
 
-La única petición de red es la de carátulas: se envía el **AppID** de cada juego
-instalado al CDN público de Steam
-(`shared.akamai.steamstatic.com`) y la imagen se guarda en
-`~/.cache/gamecenter/art`. No se envían cuentas, rutas ni datos del equipo.
+Hay dos peticiones de red, ambas opcionales:
+
+- **Carátulas**: se envía el **AppID** de cada juego instalado al CDN público de
+  Steam (`shared.akamai.steamstatic.com`) y la imagen se guarda en
+  `~/.cache/gamecenter/art`.
+- **Actualizaciones**: como máximo una vez al día se consulta
+  `api.github.com` para ver si hay una versión nueva.
+
+No se envían cuentas, rutas ni datos del equipo.
 
 Para que la app sea 100 % offline:
 

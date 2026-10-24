@@ -15,13 +15,14 @@ from PySide6.QtCore import (
     Property,
     Qt,
     QTimer,
+    QUrl,
     Signal,
     Slot,
 )
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtGui import QDesktopServices, QGuiApplication
 
 from .. import __version__
-from ..core import credentials, steamgriddb
+from ..core import credentials, steamgriddb, updater
 from ..core.launch import LaunchError, launch as launch_game, open_folder
 from ..core.models import SOURCE_LABELS, Game
 from ..core.preferences import CARTRIDGE_STYLES, PALETTE, Preferences
@@ -85,9 +86,11 @@ class LibraryModel(QAbstractListModel):
     artOptionsChanged = Signal()
     artChanged = Signal()
     credentialsChanged = Signal()
+    updatesChanged = Signal()
     _artOptionsReady = Signal(object)
     _artDownloaded = Signal(str, str)
     _artFailed = Signal(str)
+    _updateChecked = Signal(object, str)
 
     def __init__(
         self, download_art: bool = True, settings_path: Path | None = None
@@ -113,6 +116,14 @@ class LibraryModel(QAbstractListModel):
         self._session_timer.setInterval(1000)
         self._session_timer.timeout.connect(self._sessions.poll)
         self._session_timer.start()
+
+        self._update_available: updater.UpdateInfo | None = None
+        self._update_checking = False
+        self._update_error = ""
+        self._update_dismissed = False
+        self._updateChecked.connect(self._on_update_checked, Qt.QueuedConnection)
+        if self._prefs.check_updates and time.time() - self._prefs.last_update_check > 86400:
+            QTimer.singleShot(6000, self.checkForUpdates)
         self._art_revision = 0
         self._art_downloads = download_art and artwork.enabled()
         self._art_running = False
@@ -230,6 +241,41 @@ class LibraryModel(QAbstractListModel):
     def artError(self) -> str:
         return self._art_error
 
+    @Property(bool, notify=updatesChanged)
+    def updateAvailable(self) -> bool:
+        return self._update_available is not None
+
+    @Property(str, notify=updatesChanged)
+    def updateVersion(self) -> str:
+        return self._update_available.version if self._update_available else ""
+
+    @Property(str, notify=updatesChanged)
+    def updateUrl(self) -> str:
+        return self._update_available.url if self._update_available else ""
+
+    @Property(bool, notify=updatesChanged)
+    def updateChecking(self) -> bool:
+        return self._update_checking
+
+    @Property(str, notify=updatesChanged)
+    def updateError(self) -> str:
+        return self._update_error
+
+    @Property(bool, notify=updatesChanged)
+    def updateDismissed(self) -> bool:
+        return self._update_dismissed
+
+    @Property(bool, notify=updatesChanged)
+    def checkUpdatesEnabled(self) -> bool:
+        return self._prefs.check_updates
+
+    @Property(str, notify=updatesChanged)
+    def lastUpdateCheckText(self) -> str:
+        stamp = self._prefs.last_update_check
+        if not stamp:
+            return "Never"
+        return time.strftime("%Y-%m-%d %H:%M", time.localtime(stamp))
+
     @Property(bool, notify=credentialsChanged)
     def hasSteamGridKey(self) -> bool:
         return self._has_key
@@ -247,6 +293,54 @@ class LibraryModel(QAbstractListModel):
         if value in CARTRIDGE_STYLES:
             self._prefs.cartridge_style = value
             self.appearanceChanged.emit()
+
+    @Slot()
+    def checkForUpdates(self) -> None:
+        if self._update_checking:
+            return
+        self._update_checking = True
+        self._update_error = ""
+        self.updatesChanged.emit()
+
+        def work():
+            try:
+                info = updater.check(__version__)
+            except Exception as exc:  # noqa: BLE001 - reported to the UI
+                self._updateChecked.emit(None, str(exc))
+                return
+            self._updateChecked.emit(info, "")
+
+        threading.Thread(target=work, daemon=True).start()
+
+    @Slot(bool)
+    def setCheckUpdates(self, value: bool) -> None:
+        value = bool(value)
+        self._prefs.check_updates = value
+        self.updatesChanged.emit()
+        if value and self._update_available is None:
+            self.checkForUpdates()
+
+    @Slot()
+    def openUpdate(self) -> None:
+        if self._update_available is not None:
+            QDesktopServices.openUrl(QUrl(self._update_available.url))
+
+    @Slot()
+    def dismissUpdate(self) -> None:
+        self._update_dismissed = True
+        self.updatesChanged.emit()
+
+    @Slot(object, str)
+    def _on_update_checked(self, info, error: str) -> None:
+        self._update_checking = False
+        if error:
+            self._update_error = error
+        else:
+            self._update_available = info
+            self._update_error = ""
+            self._update_dismissed = False
+            self._prefs.last_update_check = time.time()
+        self.updatesChanged.emit()
 
     @Slot(str)
     def saveSteamGridKey(self, value: str) -> None:

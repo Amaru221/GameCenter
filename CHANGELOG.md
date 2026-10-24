@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.5.0
+
+- The app checks GitHub Releases once a day (and on demand from Settings) and
+  shows a discreet update banner with Download / Later.
+- Settings → Updates: current version, last check, automatic checks and a
+  manual “Check now”.
+- No automatic download or installation yet; the banner opens the release page.
+
 ## v0.4.1
 
 - The Nintendo DS cartridge now flips by **dragging it with the mouse**, not

@@ -66,6 +66,20 @@ def main() -> int:
     if os.environ.get("GC_ACCENT"):
         library.setAccent(os.environ["GC_ACCENT"])
 
+    if os.environ.get("GC_UPDATE"):
+        from gamecenter.core.updater import UpdateInfo
+
+        library._update_available = UpdateInfo(
+            version="0.5.0",
+            tag="v0.5.0",
+            url="https://github.com/Amaru221/GameCenter/releases/tag/v0.5.0",
+            name="GameCenter 0.5.0",
+            notes="",
+            published_at="",
+        )
+        library._update_dismissed = False
+        library.updatesChanged.emit()
+
     if os.environ.get("GC_SESSION") and library._visible:
         # A fake running session, so the dock can be reviewed without launching.
         from gamecenter.core.sessions import SessionTracker
@@ -104,8 +118,12 @@ def main() -> int:
         name = "screenshot-insert.png"
     elif os.environ.get("GC_STYLE"):
         name = f"screenshot-{os.environ['GC_STYLE']}.png"
+    elif os.environ.get("GC_SETTINGS") and os.environ.get("GC_UPDATE"):
+        name = "screenshot-settings-update.png"
     elif os.environ.get("GC_SETTINGS"):
         name = "screenshot-settings.png"
+    elif os.environ.get("GC_UPDATE"):
+        name = "screenshot-update.png"
     elif os.environ.get("GC_ART"):
         name = (
             "screenshot-art-error.png"

@@ -19,9 +19,15 @@ No library contents, paths, account names or play history are uploaded.
 
 ## Network
 
-The only request is for cover art: the numeric **AppID** is sent to
-`shared.akamai.steamstatic.com`. Set `GC_NO_ART=1` to disable it and use the
-locally generated covers.
+There are two kinds of requests, both optional:
+
+- **Cover art**: the numeric **AppID** is sent to
+  `shared.akamai.steamstatic.com`. Set `GC_NO_ART=1` to disable it and use the
+  locally generated covers.
+- **Update check**: at most once a day, the app reads
+  `api.github.com/repos/Amaru221/GameCenter/releases/latest`. Only the IP and
+  the `User-Agent` (`GameCenter/<version>`) are sent. It can be disabled in
+  Settings → Updates. The app never downloads or installs an update by itself.
 
 ## Reporting a vulnerability
 

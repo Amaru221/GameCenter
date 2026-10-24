@@ -48,6 +48,21 @@ def test_cover_override_round_trip(tmp_path) -> None:
     assert prefs.cover_for("steam:1") == ""
 
 
+def test_update_preferences_round_trip(tmp_path) -> None:
+    path = tmp_path / "settings.json"
+
+    prefs = Preferences(path)
+    assert prefs.check_updates is True
+    assert prefs.last_update_check == 0
+
+    prefs.check_updates = False
+    prefs.last_update_check = 123.5
+
+    again = Preferences(path)
+    assert again.check_updates is False
+    assert again.last_update_check == 123.5
+
+
 def test_missing_file_is_default(tmp_path) -> None:
     prefs = Preferences(tmp_path / "missing" / "settings.json")
     assert not prefs.is_favorite("steam:1")

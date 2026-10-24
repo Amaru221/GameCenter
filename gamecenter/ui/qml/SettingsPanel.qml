@@ -25,7 +25,7 @@ Item {
     Rectangle {
         id: panel
         width: Math.min(parent.width - 80, 900)
-        height: 620
+        height: 680
         anchors.centerIn: parent
         radius: 20
         border.width: 1
@@ -296,6 +296,148 @@ Item {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: Qt.openUrlExternally("https://www.steamgriddb.com/profile/preferences/api")
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.topMargin: 4
+                height: 1
+                color: "#232936"
+            }
+
+            Text {
+                text: "UPDATES"
+                color: "#8b95a5"
+                font.family: "Chakra Petch"
+                font.pixelSize: 11
+                font.bold: true
+                font.letterSpacing: 2.4
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                Column {
+                    Layout.fillWidth: true
+                    spacing: 2
+
+                    Text {
+                        text: "GameCenter " + Library.version
+                        color: "#dfe6f0"
+                        font.family: "Sora"
+                        font.pixelSize: 12
+                    }
+
+                    Text {
+                        text: "Last checked: " + Library.lastUpdateCheckText
+                        color: "#6f7887"
+                        font.family: "Sora"
+                        font.pixelSize: 10
+                    }
+                }
+
+                Row {
+                    spacing: 8
+                    Layout.alignment: Qt.AlignVCenter
+
+                    Text {
+                        text: "Check automatically"
+                        color: "#98a3b4"
+                        font.family: "Sora"
+                        font.pixelSize: 11
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    Rectangle {
+                        width: 44
+                        height: 24
+                        radius: 12
+                        color: Library.checkUpdatesEnabled ? Library.accent : "#2a3140"
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Rectangle {
+                            width: 18
+                            height: 18
+                            radius: 9
+                            color: "#ffffff"
+                            x: Library.checkUpdatesEnabled ? 23 : 3
+                            anchors.verticalCenter: parent.verticalCenter
+                            Behavior on x { NumberAnimation { duration: 140 } }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Library.setCheckUpdates(!Library.checkUpdatesEnabled)
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: 110
+                    height: 34
+                    radius: 9
+                    color: "#171b23"
+                    border.width: 1
+                    border.color: "#2a3140"
+                    opacity: Library.updateChecking ? 0.6 : 1
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: Library.updateChecking ? "Checking..." : "Check now"
+                        color: "#cfd6e2"
+                        font.family: "Sora"
+                        font.pixelSize: 11
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: !Library.updateChecking
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: Library.checkForUpdates()
+                    }
+                }
+            }
+
+            Text {
+                Layout.fillWidth: true
+                text: Library.updateChecking
+                      ? "Checking for updates..."
+                      : (Library.updateError !== ""
+                         ? Library.updateError
+                         : (Library.updateAvailable
+                            ? "GameCenter " + Library.updateVersion + " is available."
+                            : "You're up to date."))
+                color: Library.updateError !== ""
+                       ? "#ff8a8a"
+                       : (Library.updateAvailable ? Library.accent : "#8b95a5")
+                font.family: "Sora"
+                font.pixelSize: 11
+                wrapMode: Text.WordWrap
+            }
+
+            Rectangle {
+                visible: Library.updateAvailable
+                width: 160
+                height: 34
+                radius: 9
+                color: Library.accent
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "Download update"
+                    color: Library.accentText
+                    font.family: "Sora"
+                    font.pixelSize: 11
+                    font.bold: true
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: Library.openUpdate()
                 }
             }
 

@@ -75,6 +75,15 @@ Window {
         }
     }
 
+    UpdateBanner {
+        id: updateBanner
+        z: 5
+        anchors.left: parent.left
+        anchors.bottom: dock.top
+        anchors.leftMargin: 24
+        anchors.bottomMargin: 12
+    }
+
     Dock {
         id: dock
         z: 20

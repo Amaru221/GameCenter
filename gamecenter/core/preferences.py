@@ -62,6 +62,12 @@ class Preferences:
 
         covers = data.get("covers")
         data["covers"] = covers if isinstance(covers, dict) else {}
+
+        data["checkUpdates"] = bool(data.get("checkUpdates", True))
+        try:
+            data["lastUpdateCheck"] = float(data.get("lastUpdateCheck") or 0)
+        except (TypeError, ValueError):
+            data["lastUpdateCheck"] = 0.0
         return data
 
     def _save(self) -> None:
@@ -110,6 +116,26 @@ class Preferences:
         if value in CARTRIDGE_STYLES:
             self._data["cartridgeStyle"] = value
             self._save()
+
+    # -- updates ----------------------------------------------------------
+
+    @property
+    def check_updates(self) -> bool:
+        return bool(self._data["checkUpdates"])
+
+    @check_updates.setter
+    def check_updates(self, value: bool) -> None:
+        self._data["checkUpdates"] = bool(value)
+        self._save()
+
+    @property
+    def last_update_check(self) -> float:
+        return float(self._data["lastUpdateCheck"])
+
+    @last_update_check.setter
+    def last_update_check(self, value: float) -> None:
+        self._data["lastUpdateCheck"] = float(value)
+        self._save()
 
     # -- per-game cover ---------------------------------------------------
 
