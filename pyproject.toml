@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gamecenter-launcher"
+version = "0.1.0"
+description = "Local-first game library launcher"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = ["PySide6>=6.6"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.gui-scripts]
+gamecenter = "gamecenter.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["gamecenter*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
