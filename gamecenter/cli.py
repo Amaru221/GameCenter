@@ -59,6 +59,6 @@ def main(argv: Sequence[str] | None = None) -> int:
             _print_table(games)
         return 0
 
-    from .ui.main_window import run
+    from .ui.app import run
 
     return run(list(sys.argv if argv is None else argv))

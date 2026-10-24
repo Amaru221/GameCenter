@@ -29,6 +29,10 @@ implementó de forma independiente. Nunca se copia el fragmento.
 
 ## Assets de terceros
 
-La v0.1 no incluye assets de terceros. Si se añaden fuentes o iconos, deben
-tener licencia compatible con MIT (OFL, CC0, Apache-2.0, MIT, BSD) y quedar
-registrados en `THIRD_PARTY_NOTICES.md`.
+- **Fuentes**: Sora y Chakra Petch, SIL Open Font License 1.1. Se incluyen los
+  textos de licencia en `gamecenter/ui/fonts/OFL-*.txt`.
+- **Carátulas**: se descargan en tiempo de ejecución del CDN público de Steam y
+  se cachean en el equipo del usuario. No se incluyen en el repositorio ni se
+  redistribuyen; son obra de sus editores y se usan solo para identificar el
+  juego.
+- **Resto de la interfaz**: dibujada con QPainter/QML, sin assets de terceros.
