@@ -191,21 +191,53 @@ Item {
         }
 
         Rectangle {
+            id: updateButton
             visible: Library.updateAvailable
             width: 38
             height: 38
             radius: 19
-            color: "#0d0f14"
+            color: updateHover.containsMouse ? "#171d27" : "#0d0f14"
             border.width: 1
-            border.color: Library.accent
+            border.color: updateHover.containsMouse ? Library.accent : "#2a3140"
+            scale: updateHover.containsMouse ? 1.06 : 1.0
 
-            Text {
+            Behavior on color { ColorAnimation { duration: 140 } }
+            Behavior on scale { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+
+            Rectangle {
+                anchors.fill: parent
+                radius: parent.radius
+                color: "transparent"
+                border.width: 1
+                border.color: Library.accent
+                opacity: updateHover.containsMouse ? 0.35 : 0
+                Behavior on opacity { NumberAnimation { duration: 140 } }
+            }
+
+            UpdateGlyph {
+                width: 20
+                height: 20
                 anchors.centerIn: parent
-                text: "↑"
                 color: Library.accent
-                font.family: "Sora"
-                font.pixelSize: 16
-                font.bold: true
+            }
+
+            Rectangle {
+                width: 8
+                height: 8
+                radius: 4
+                color: Library.accent
+                border.width: 2
+                border.color: "#0d0f14"
+                anchors.top: parent.top
+                anchors.right: parent.right
+                anchors.topMargin: 3
+                anchors.rightMargin: 3
+
+                SequentialAnimation on scale {
+                    loops: Animation.Infinite
+                    NumberAnimation { to: 1.25; duration: 850; easing.type: Easing.InOutQuad }
+                    NumberAnimation { to: 1.0; duration: 850; easing.type: Easing.InOutQuad }
+                }
             }
 
             MouseArea {
@@ -217,7 +249,7 @@ Item {
             }
 
             ToolTip.visible: updateHover.containsMouse
-            ToolTip.text: "GameCenter " + Library.updateVersion + " is available"
+            ToolTip.text: "GameCenter " + Library.updateVersion + " is available - click to update"
         }
 
         Rectangle {

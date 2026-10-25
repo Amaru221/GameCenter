@@ -11,6 +11,8 @@ Rectangle {
     border.color: "#2a3140"
     visible: Library.updateAvailable && !Library.updateDismissed
 
+    signal openRequested()
+
     RowLayout {
         anchors.fill: parent
         anchors.leftMargin: 16
@@ -52,7 +54,7 @@ Rectangle {
 
             Text {
                 anchors.centerIn: parent
-                text: "Download"
+                text: "Update now"
                 color: Library.accentText
                 font.family: "Sora"
                 font.pixelSize: 11
@@ -62,7 +64,7 @@ Rectangle {
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
-                onClicked: Library.openUpdate()
+                onClicked: banner.openRequested()
             }
         }
 

@@ -1,17 +1,24 @@
-"""Check GitHub Releases for a newer GameCenter.
+"""Check GitHub Releases and install a newer GameCenter.
 
-Read-only: it asks the public API for the latest release and compares versions.
-It never downloads or runs anything; the UI opens the release page so the user
-can install the update consciously.
+The API is used to discover the latest release and its installer. The installer
+is downloaded into a local cache, checked against GitHub's SHA-256 digest and
+then launched silently; the app quits so the installer can replace it.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 import re
+import subprocess
+import sys
+import tempfile
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
+from pathlib import Path
 
 from .. import __version__
 
@@ -106,3 +113,118 @@ def check(current: str = __version__, timeout: int = 10) -> UpdateInfo | None:
         installer_size=int(installer.get("size") or 0),
         digest=str(installer.get("digest") or ""),
     )
+
+
+def download_dir() -> Path:
+    base = Path(os.environ.get("LOCALAPPDATA") or tempfile.gettempdir())
+    return base / "GameCenter" / "updates"
+
+
+def installer_filename(info: UpdateInfo) -> str:
+    name = Path(urllib.parse.urlparse(info.installer_url).path).name
+    return name or f"GameCenter-{info.version}-setup.exe"
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _expected_digest(info: UpdateInfo) -> str:
+    value = (info.digest or "").strip()
+    if value.lower().startswith("sha256:"):
+        value = value[7:].strip()
+    return value.lower() if len(value) == 64 else ""
+
+
+def download_installer(
+    info: UpdateInfo,
+    destination: Path | None = None,
+    progress=None,
+    timeout: int = 30,
+) -> Path:
+    """Download the release installer, verify it and return its local path."""
+    if not info.installer_url:
+        raise UpdateError("This release doesn't include an installer.")
+
+    target = (
+        Path(destination)
+        if destination is not None
+        else download_dir() / installer_filename(info)
+    )
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise UpdateError("Couldn't prepare the update folder.") from exc
+
+    expected_size = int(info.installer_size or 0)
+    expected_digest = _expected_digest(info)
+
+    if target.is_file():
+        try:
+            size_ok = not expected_size or target.stat().st_size == expected_size
+            digest_ok = not expected_digest or _sha256(target) == expected_digest
+            if size_ok and digest_ok:
+                if progress:
+                    size = target.stat().st_size
+                    progress(size, size)
+                return target
+        except OSError:
+            pass
+
+    part = target.with_name(target.name + ".part")
+    request = urllib.request.Request(
+        info.installer_url, headers={"User-Agent": UA}
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            header = response.headers.get("Content-Length") if response.headers else None
+            total = int(header or expected_size or 0)
+            downloaded = 0
+            with part.open("wb") as handle:
+                while True:
+                    chunk = response.read(256 * 1024)
+                    if not chunk:
+                        break
+                    handle.write(chunk)
+                    downloaded += len(chunk)
+                    if progress:
+                        progress(downloaded, total)
+
+        if total and downloaded != total:
+            raise UpdateError("The update download was incomplete.")
+        if expected_digest and _sha256(part) != expected_digest:
+            raise UpdateError("The update file failed its integrity check.")
+        os.replace(part, target)
+        return target
+    except UpdateError:
+        part.unlink(missing_ok=True)
+        raise
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        part.unlink(missing_ok=True)
+        raise UpdateError("Couldn't download the update.") from exc
+
+
+def launch_installer(path: Path) -> None:
+    """Start the downloaded installer silently. The caller quits afterwards."""
+    if sys.platform != "win32":
+        raise UpdateError("Automatic installation is only available on Windows.")
+    installer = Path(path)
+    if not installer.is_file():
+        raise UpdateError("The downloaded installer is missing.")
+    try:
+        subprocess.Popen(
+            [
+                str(installer),
+                "/SILENT",
+                "/SUPPRESSMSGBOXES",
+                "/NORESTART",
+            ],
+            cwd=str(installer.parent),
+            close_fds=True,
+        )
+    except OSError as exc:
+        raise UpdateError("Couldn't start the installer.") from exc

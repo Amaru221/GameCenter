@@ -1,8 +1,50 @@
-"""Update checking: version parsing, release parsing and errors (no network)."""
+"""Update checking and download helpers (no network)."""
+
+import hashlib
 
 import pytest
 
 from gamecenter.core import updater
+
+
+def _info(**overrides) -> updater.UpdateInfo:
+    values = {
+        "version": "0.5.0",
+        "tag": "v0.5.0",
+        "url": "",
+        "name": "",
+        "notes": "",
+        "published_at": "",
+        "installer_url": "https://example.test/GameCenter-setup.exe",
+        "installer_size": 0,
+        "digest": "",
+    }
+    values.update(overrides)
+    return updater.UpdateInfo(**values)
+
+
+class _Response:
+    def __init__(self, data: bytes) -> None:
+        self._data = data
+        self._offset = 0
+        self.headers = {"Content-Length": str(len(data))}
+
+    def read(self, size: int = -1) -> bytes:
+        if self._offset >= len(self._data):
+            return b""
+        if size < 0:
+            chunk = self._data[self._offset :]
+            self._offset = len(self._data)
+            return chunk
+        chunk = self._data[self._offset : self._offset + size]
+        self._offset += len(chunk)
+        return chunk
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
 
 
 def test_parse_version() -> None:
@@ -63,3 +105,56 @@ def test_check_propagates_errors(monkeypatch) -> None:
 
     with pytest.raises(updater.UpdateError):
         updater.check("0.4.1")
+
+
+def test_download_installer_verifies_and_reports_progress(
+    monkeypatch, tmp_path
+) -> None:
+    payload = b"installer-bytes" * 100
+    digest = hashlib.sha256(payload).hexdigest()
+    info = _info(
+        installer_size=len(payload),
+        digest=f"sha256:{digest}",
+    )
+    monkeypatch.setattr(
+        updater.urllib.request,
+        "urlopen",
+        lambda request, timeout=30: _Response(payload),
+    )
+    progress: list[tuple[int, int]] = []
+    target = tmp_path / "GameCenter-setup.exe"
+
+    result = updater.download_installer(
+        info,
+        destination=target,
+        progress=lambda done, total: progress.append((done, total)),
+    )
+
+    assert result == target
+    assert target.read_bytes() == payload
+    assert progress[-1] == (len(payload), len(payload))
+
+
+def test_download_installer_rejects_a_bad_digest(monkeypatch, tmp_path) -> None:
+    payload = b"not-the-real-installer" * 100
+    info = _info(
+        installer_size=len(payload),
+        digest="sha256:" + "0" * 64,
+    )
+    monkeypatch.setattr(
+        updater.urllib.request,
+        "urlopen",
+        lambda request, timeout=30: _Response(payload),
+    )
+    target = tmp_path / "GameCenter-setup.exe"
+
+    with pytest.raises(updater.UpdateError):
+        updater.download_installer(info, destination=target)
+
+    assert not target.exists()
+    assert not target.with_name(target.name + ".part").exists()
+
+
+def test_download_installer_needs_a_url() -> None:
+    with pytest.raises(updater.UpdateError):
+        updater.download_installer(_info(installer_url=""))
