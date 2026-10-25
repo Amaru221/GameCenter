@@ -294,8 +294,8 @@ def main() -> int:
 
                     target = find(window.contentItem(), "ds3d")
                     if target is not None:
-                        target.setProperty("yaw", 180)
-                        target.setProperty("pitch", -8)
+                        target.setProperty("yaw", 205)
+                        target.setProperty("pitch", -22)
 
                 QTimer.singleShot(3000, show_back)
 
