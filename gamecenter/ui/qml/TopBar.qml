@@ -332,6 +332,10 @@ Item {
                     onTriggered: root.scanRequested("battlenet")
                 }
                 MenuItem {
+                    text: "Scan Riot games"
+                    onTriggered: root.scanRequested("riot")
+                }
+                MenuItem {
                     text: "Scan all stores"
                     onTriggered: root.scanRequested("")
                 }

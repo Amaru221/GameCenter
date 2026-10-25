@@ -15,11 +15,19 @@ from . import _registry
 
 SOURCE = "riot"
 
+# Known products get a friendly title. Unknown future products fall back to the
+# registry DisplayName or a title-cased product id, so new Riot games still work.
 _TITLES = {
     "league_of_legends": "League of Legends",
     "valorant": "VALORANT",
     "bacon": "Legends of Runeterra",
     "lor": "Legends of Runeterra",
+    "runeterra": "Legends of Runeterra",
+    "lion": "2XKO",  # 2XKO's Riot product id
+    "2xko": "2XKO",
+    "project_l": "2XKO",
+    "teamfight_tactics": "Teamfight Tactics",
+    "wild_rift": "Wild Rift",
 }
 _SKIP_PRODUCTS = {"riot_client", "riot client"}
 _UNSET = object()

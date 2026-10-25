@@ -116,6 +116,39 @@ def test_riot_uses_the_client_arguments(tmp_path) -> None:
     )
 
 
+def test_riot_supports_future_products(tmp_path) -> None:
+    client = tmp_path / "RiotClientServices.exe"
+    client.write_bytes(b"")
+
+    game = riot.game_from_values(
+        "Riot Game new_title.live",
+        {"DisplayName": "New Title"},
+        client=client,
+    )
+
+    assert game is not None
+    assert game.id == "riot:new_title"
+    assert game.title == "New Title"
+    assert game.launch_args == (
+        "--launch-product=new_title",
+        "--launch-patchline=live",
+    )
+
+
+def test_riot_known_future_title(tmp_path) -> None:
+    client = tmp_path / "RiotClientServices.exe"
+    client.write_bytes(b"")
+
+    game = riot.game_from_values("Riot Game lion.live", {}, client=client)
+
+    assert game is not None
+    assert game.title == "2XKO"
+    assert game.launch_args == (
+        "--launch-product=lion",
+        "--launch-patchline=live",
+    )
+
+
 def test_gog_reads_registry_values(tmp_path) -> None:
     exe = tmp_path / "game.exe"
     exe.write_bytes(b"")

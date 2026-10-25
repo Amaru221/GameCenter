@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.10.1
+
+- The top-bar menu now offers **Scan Riot games**. League of Legends, VALORANT
+  and future Riot products are read from their `Riot Game <product>.<patchline>`
+  entries and launched through Riot Client with the product and patchline
+  arguments. Unknown future products still work and get a readable title.
+
 ## v0.10.0
 
 - The top-bar menu now offers **Scan Steam games**, **Scan Battle.net games** and
