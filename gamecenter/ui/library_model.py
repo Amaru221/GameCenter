@@ -48,6 +48,9 @@ ROLE_INSTALLED = Qt.UserRole + 6
 ROLE_SIZE = Qt.UserRole + 7
 ROLE_HAS_FOLDER = Qt.UserRole + 8
 ROLE_FAVORITE = Qt.UserRole + 9
+ROLE_CARTRIDGE_COLOR = Qt.UserRole + 10
+
+ART_BATCH = 5
 
 _TAG_WORDS = re.compile(r"[A-Z0-9]+")
 
@@ -97,9 +100,9 @@ class LibraryModel(QAbstractListModel):
     credentialsChanged = Signal()
     updatesChanged = Signal()
     playtimeChanged = Signal()
-    _artOptionsReady = Signal(object)
+    _artOptionsReady = Signal(object, int, str, bool)
     _artDownloaded = Signal(str, str)
-    _artFailed = Signal(str)
+    _artFailed = Signal(str, str)
     _updateChecked = Signal(object, str)
 
     def __init__(
@@ -113,8 +116,14 @@ class LibraryModel(QAbstractListModel):
         self._sort = "recent"
         self._prefs = Preferences(settings_path)
         self._favorites_only = False
-        self._art_options: list[dict] = []
+        self._art_options_all: list[dict] = []
+        self._art_visible = 0
+        self._art_page = 0
+        self._art_page_full = False
+        self._art_has_more = False
         self._art_loading = False
+        self._art_loading_more = False
+        self._art_game: Game | None = None
         self._art_error = ""
         self._credentials_message = ""
         self._has_key = bool(credentials.get_key())
@@ -172,6 +181,8 @@ class LibraryModel(QAbstractListModel):
             return bool(game.install_dir and game.install_dir.is_dir())
         if role == ROLE_FAVORITE:
             return self._prefs.is_favorite(game.id)
+        if role == ROLE_CARTRIDGE_COLOR:
+            return self._cartridge_color(game)
         if role == Qt.DisplayRole:
             return game.title
         return None
@@ -187,6 +198,7 @@ class LibraryModel(QAbstractListModel):
             ROLE_SIZE: QByteArray(b"sizeText"),
             ROLE_HAS_FOLDER: QByteArray(b"hasFolder"),
             ROLE_FAVORITE: QByteArray(b"favorite"),
+            ROLE_CARTRIDGE_COLOR: QByteArray(b"cartridgeColor"),
         }
 
     # -- properties -------------------------------------------------------
@@ -253,6 +265,7 @@ class LibraryModel(QAbstractListModel):
     def setCartridgeColor(self, value: str) -> None:
         self._prefs.cartridge_color = value
         self.appearanceChanged.emit()
+        self._refresh_cartridge_colors()
 
     @Property(str, notify=appearanceChanged)
     def accentText(self) -> str:
@@ -270,11 +283,23 @@ class LibraryModel(QAbstractListModel):
 
     @Property("QVariantList", notify=artOptionsChanged)
     def artOptions(self) -> list[dict]:
-        return self._art_options
+        return self._art_options_all[: self._art_visible]
 
     @Property(bool, notify=artOptionsChanged)
     def artLoading(self) -> bool:
         return self._art_loading
+
+    @Property(bool, notify=artOptionsChanged)
+    def artLoadingMore(self) -> bool:
+        return self._art_loading_more
+
+    @Property(bool, notify=artOptionsChanged)
+    def artHasMore(self) -> bool:
+        return self._art_has_more
+
+    @Property(int, notify=artOptionsChanged)
+    def artTotal(self) -> int:
+        return len(self._art_options_all)
 
     @Property(str, notify=artOptionsChanged)
     def artError(self) -> str:
@@ -411,28 +436,75 @@ class LibraryModel(QAbstractListModel):
         game = self._at(row)
         if game is None:
             return
+        self._reset_art_state()
+        self._art_game = game
         if not self._has_key:
             self._art_error = "Add a SteamGridDB API key in Settings first."
             self._art_loading = False
-            self._art_options = []
             self.artOptionsChanged.emit()
             return
 
         key = credentials.get_key()
         self._art_loading = True
         self._art_error = ""
-        self._art_options = []
         self.artOptionsChanged.emit()
 
         def work():
             try:
-                options = steamgriddb.grids_for(game, key)
+                options, page_full = steamgriddb.grids_page(game, key, 0)
             except Exception as exc:  # noqa: BLE001 - reported to the UI
-                self._artFailed.emit(str(exc))
+                self._artFailed.emit(str(exc), game.id)
                 return
-            self._artOptionsReady.emit(options)
+            self._artOptionsReady.emit(options, 0, game.id, page_full)
 
         threading.Thread(target=work, daemon=True).start()
+
+    @Slot()
+    def loadMoreArtOptions(self) -> None:
+        if self._art_loading or self._art_loading_more or not self._art_has_more:
+            return
+
+        if self._art_visible < len(self._art_options_all):
+            self._art_visible = min(
+                self._art_visible + ART_BATCH, len(self._art_options_all)
+            )
+            self._art_has_more = (
+                self._art_page_full or self._art_visible < len(self._art_options_all)
+            )
+            self.artOptionsChanged.emit()
+            return
+
+        game = self._art_game
+        key = credentials.get_key()
+        if game is None or not key:
+            self._art_has_more = False
+            self.artOptionsChanged.emit()
+            return
+
+        page = self._art_page + 1
+        self._art_loading_more = True
+        self.artOptionsChanged.emit()
+
+        def work():
+            try:
+                options, page_full = steamgriddb.grids_page(game, key, page)
+            except Exception as exc:  # noqa: BLE001 - reported as a toast
+                self._artFailed.emit(str(exc), game.id)
+                return
+            self._artOptionsReady.emit(options, page, game.id, page_full)
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def _reset_art_state(self) -> None:
+        self._art_options_all = []
+        self._art_visible = 0
+        self._art_page = 0
+        self._art_page_full = False
+        self._art_has_more = False
+        self._art_loading = False
+        self._art_loading_more = False
+        self._art_game = None
+        self._art_error = ""
 
     @Slot(int, str)
     def chooseArt(self, row: int, url: str) -> None:
@@ -448,7 +520,7 @@ class LibraryModel(QAbstractListModel):
             try:
                 path = steamgriddb.download(url, artwork.CACHE / "sgdb")
             except Exception as exc:  # noqa: BLE001
-                self._artFailed.emit(str(exc))
+                self._artFailed.emit(str(exc), game.id)
                 return
             self._artDownloaded.emit(game.id, str(path))
 
@@ -460,8 +532,7 @@ class LibraryModel(QAbstractListModel):
         if game is None:
             return
         self._prefs.set_cover(game.id, None)
-        self._art_options = []
-        self._art_error = ""
+        self._reset_art_state()
         self.artOptionsChanged.emit()
         self._notify_cover(game.id)
         self.artChanged.emit()
@@ -473,28 +544,61 @@ class LibraryModel(QAbstractListModel):
                 self.dataChanged.emit(index, index, [ROLE_COVER])
                 break
 
-    @Slot(object)
-    def _on_art_options(self, options) -> None:
+    @Slot(object, int, str, bool)
+    def _on_art_options(
+        self, options, page: int, game_id: str, page_full: bool
+    ) -> None:
+        if self._art_game is None or game_id != self._art_game.id:
+            return
+
+        if page == 0:
+            self._art_options_all = []
+            self._art_visible = 0
+
+        known = {str(option.get("id")) for option in self._art_options_all}
+        for option in options or []:
+            key = str(option.get("id"))
+            if key not in known:
+                self._art_options_all.append(option)
+                known.add(key)
+
+        self._art_page = page
+        self._art_page_full = page_full
         self._art_loading = False
+        self._art_loading_more = False
+        if page == 0:
+            self._art_visible = min(ART_BATCH, len(self._art_options_all))
+        else:
+            self._art_visible = min(
+                self._art_visible + ART_BATCH, len(self._art_options_all)
+            )
+        self._art_has_more = (
+            self._art_page_full or self._art_visible < len(self._art_options_all)
+        )
         self._art_error = ""
-        self._art_options = list(options) if isinstance(options, list) else []
-        if not self._art_options:
+        if not self._art_options_all and not self._art_page_full:
             self._art_error = "No portrait artwork found for this game."
         self.artOptionsChanged.emit()
 
     @Slot(str, str)
     def _on_art_downloaded(self, game_id: str, path: str) -> None:
         self._prefs.set_cover(game_id, path)
-        self._art_loading = False
-        self._art_options = []
+        self._reset_art_state()
         self.artOptionsChanged.emit()
         self._notify_cover(game_id)
         self.artChanged.emit()
 
-    @Slot(str)
-    def _on_art_failed(self, message: str) -> None:
+    @Slot(str, str)
+    def _on_art_failed(self, message: str, game_id: str) -> None:
+        if self._art_game is not None and game_id != self._art_game.id:
+            return
+        loading_more = self._art_loading_more
         self._art_loading = False
-        self._art_error = message
+        self._art_loading_more = False
+        if loading_more and self._art_options_all:
+            self.failed.emit(message)
+        else:
+            self._art_error = message
         self.artOptionsChanged.emit()
 
     @Property(QObject, constant=True)
@@ -764,6 +868,39 @@ class LibraryModel(QAbstractListModel):
         manual.ManualLibrary().remove(game.id)
         self.refresh()
 
+    def _cartridge_color(self, game: Game) -> str:
+        return self._prefs.cartridge_color_for(game.id) or self._prefs.cartridge_color
+
+    def _refresh_cartridge_colors(self) -> None:
+        if not self._visible:
+            return
+        top = self.index(0, 0)
+        bottom = self.index(len(self._visible) - 1, 0)
+        self.dataChanged.emit(top, bottom, [ROLE_CARTRIDGE_COLOR])
+
+    @Slot(int, result=str)
+    def cartridgeColorAt(self, row: int) -> str:
+        game = self._at(row)
+        return self._cartridge_color(game) if game is not None else self._prefs.cartridge_color
+
+    @Slot(int, str)
+    def setGameCartridgeColor(self, row: int, value: str) -> None:
+        game = self._at(row)
+        if game is None:
+            return
+        self._prefs.set_cartridge_color(game.id, value)
+        index = self.index(row, 0)
+        self.dataChanged.emit(index, index, [ROLE_CARTRIDGE_COLOR])
+
+    @Slot(int)
+    def resetGameCartridgeColor(self, row: int) -> None:
+        game = self._at(row)
+        if game is None:
+            return
+        self._prefs.set_cartridge_color(game.id, None)
+        index = self.index(row, 0)
+        self.dataChanged.emit(index, index, [ROLE_CARTRIDGE_COLOR])
+
     @Slot(int)
     def toggleFavorite(self, row: int) -> None:
         game = self._at(row)
@@ -788,6 +925,7 @@ class LibraryModel(QAbstractListModel):
             "appId": game.app_id,
             "meta": f"{game.source_label.upper()} · {game.app_id or '—'} · {_tag(game.title)}",
             "cover": self._cover_url(game),
+            "cartridgeColor": self._cartridge_color(game),
             "texture": self._texture_url(game),
             "installed": game.installed,
             "favorite": self._prefs.is_favorite(game.id),

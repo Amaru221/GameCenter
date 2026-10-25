@@ -8,15 +8,13 @@ Item {
     property real yaw: -16
     property real pitch: -10
 
-    // Real DS game cards are almost square but slightly taller, thin, with
-    // three chamfered corners and a rounded bottom-left corner.
+    // Real DS game cards are almost square but slightly taller and thin, with
+    // three pointed corners and a rounded bottom-left corner.
     readonly property real bodyWidth: 1.0
     readonly property real bodyHeight: 1.06
     readonly property real bodyDepth: 0.075
-    readonly property real cornerCut: 0.035
     readonly property real cornerRadius: 0.09
-    readonly property real chamferLength: cornerCut * Math.SQRT2
-    readonly property real chamferThickness: cornerCut / Math.SQRT2
+    property color cartridgeColor: Library.cartridgeColor
 
     signal playRequested()
 
@@ -57,94 +55,33 @@ Item {
             eulerRotation.x: root.pitch
             eulerRotation.y: root.yaw
 
-            // Central slab and side wings. Together they leave the four
-            // corners empty, so the chamfers and the rounded corner fit.
+            // Main slab, down to the tangent of the rounded corner.
             Model {
                 source: "#Cube"
                 scale: Qt.vector3d(
-                    (root.bodyWidth - 2 * root.cornerCut) / 100,
-                    root.bodyHeight / 100,
+                    root.bodyWidth / 100,
+                    (root.bodyHeight - root.cornerRadius) / 100,
                     root.bodyDepth / 100
                 )
+                position: Qt.vector3d(0, root.cornerRadius / 2, 0)
                 materials: [plastic]
             }
+            // Bottom strip, from the rounded corner to the right edge.
             Model {
                 source: "#Cube"
                 scale: Qt.vector3d(
-                    root.cornerCut / 100,
-                    (root.bodyHeight - root.cornerCut - root.cornerRadius) / 100,
+                    (root.bodyWidth - root.cornerRadius) / 100,
+                    root.cornerRadius / 100,
                     root.bodyDepth / 100
                 )
                 position: Qt.vector3d(
-                    -(root.bodyWidth / 2 - root.cornerCut / 2),
-                    (root.cornerRadius - root.cornerCut) / 2,
+                    root.cornerRadius / 2,
+                    -root.bodyHeight / 2 + root.cornerRadius / 2,
                     0
                 )
                 materials: [plastic]
             }
-            Model {
-                source: "#Cube"
-                scale: Qt.vector3d(
-                    root.cornerCut / 100,
-                    (root.bodyHeight - 2 * root.cornerCut) / 100,
-                    root.bodyDepth / 100
-                )
-                position: Qt.vector3d(
-                    root.bodyWidth / 2 - root.cornerCut / 2,
-                    0,
-                    0
-                )
-                materials: [plastic]
-            }
-
-            // Three chamfered corners: top-left, top-right and bottom-right.
-            Model {
-                source: "#Cube"
-                scale: Qt.vector3d(
-                    root.chamferLength / 100,
-                    root.chamferThickness / 100,
-                    root.bodyDepth / 100
-                )
-                position: Qt.vector3d(
-                    -(root.bodyWidth / 2 - root.cornerCut / 2) + root.cornerCut / 4,
-                    root.bodyHeight / 2 - root.cornerCut / 2 - root.cornerCut / 4,
-                    0
-                )
-                eulerRotation.z: 45
-                materials: [plastic]
-            }
-            Model {
-                source: "#Cube"
-                scale: Qt.vector3d(
-                    root.chamferLength / 100,
-                    root.chamferThickness / 100,
-                    root.bodyDepth / 100
-                )
-                position: Qt.vector3d(
-                    root.bodyWidth / 2 - root.cornerCut / 2 - root.cornerCut / 4,
-                    root.bodyHeight / 2 - root.cornerCut / 2 - root.cornerCut / 4,
-                    0
-                )
-                eulerRotation.z: -45
-                materials: [plastic]
-            }
-            Model {
-                source: "#Cube"
-                scale: Qt.vector3d(
-                    root.chamferLength / 100,
-                    root.chamferThickness / 100,
-                    root.bodyDepth / 100
-                )
-                position: Qt.vector3d(
-                    root.bodyWidth / 2 - root.cornerCut / 2 - root.cornerCut / 4,
-                    -(root.bodyHeight / 2 - root.cornerCut / 2) + root.cornerCut / 4,
-                    0
-                )
-                eulerRotation.z: 45
-                materials: [plastic]
-            }
-
-            // Rounded bottom-left corner.
+            // Rounded bottom-left corner, tangent to both slabs.
             Model {
                 source: "#Cylinder"
                 scale: Qt.vector3d(
@@ -222,7 +159,7 @@ Item {
 
     PrincipledMaterial {
         id: plastic
-        baseColor: Library.cartridgeColor
+        baseColor: root.cartridgeColor
         roughness: 0.55
         metalness: 0.05
         cullMode: Material.NoCulling

@@ -11,6 +11,7 @@ Item {
     property string gameMeta: ""
     property string coverUrl: ""
     property bool gameInstalled: true
+    property color cartridgeColor: Library.cartridgeColor
     property bool hovered: false
     property real tiltX: 0
     property real tiltY: 0
@@ -20,13 +21,13 @@ Item {
         anchors.fill: parent
         radius: 19
         border.width: 1
-        border.color: Qt.lighter(Library.cartridgeColor, 1.45)
+        border.color: Qt.lighter(root.cartridgeColor, 1.45)
 
         gradient: Gradient {
-            GradientStop { position: 0.0; color: root.hovered ? Qt.lighter(Library.cartridgeColor, 1.18) : Library.cartridgeColor }
-            GradientStop { position: 0.16; color: Qt.darker(Library.cartridgeColor, 1.08) }
-            GradientStop { position: 0.72; color: Qt.darker(Library.cartridgeColor, 1.35) }
-            GradientStop { position: 1.0; color: Qt.darker(Library.cartridgeColor, 1.5) }
+            GradientStop { position: 0.0; color: root.hovered ? Qt.lighter(root.cartridgeColor, 1.18) : root.cartridgeColor }
+            GradientStop { position: 0.16; color: Qt.darker(root.cartridgeColor, 1.08) }
+            GradientStop { position: 0.72; color: Qt.darker(root.cartridgeColor, 1.35) }
+            GradientStop { position: 1.0; color: Qt.darker(root.cartridgeColor, 1.5) }
         }
 
         Rectangle {
@@ -167,7 +168,7 @@ Item {
 
             ShapePath {
                 strokeColor: "transparent"
-                fillColor: Qt.darker(Library.cartridgeColor, 1.9)
+                fillColor: Qt.darker(root.cartridgeColor, 1.9)
                 startX: 0
                 startY: 0
                 PathLine { x: 42; y: 0 }

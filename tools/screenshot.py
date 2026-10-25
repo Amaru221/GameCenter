@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from PySide6.QtCore import QPoint, Qt, QTimer  # noqa: E402
+from PySide6.QtCore import Q_ARG, QMetaObject, QPoint, Qt, QTimer  # noqa: E402
 from PySide6.QtTest import QTest  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
@@ -135,6 +135,10 @@ def main() -> int:
         name = "screenshot-update-dialog.png"
     elif os.environ.get("GC_ADD"):
         name = "screenshot-add.png"
+    elif os.environ.get("GC_COLOR_SET"):
+        name = "screenshot-color-set.png"
+    elif os.environ.get("GC_COLOR"):
+        name = "screenshot-color.png"
     elif os.environ.get("GC_DS3D_BACK"):
         name = "screenshot-ds3d-back.png"
     elif os.environ.get("GC_DS3D_DRAG"):
@@ -156,11 +160,12 @@ def main() -> int:
     elif os.environ.get("GC_UPDATE"):
         name = "screenshot-update.png"
     elif os.environ.get("GC_ART"):
-        name = (
-            "screenshot-art-error.png"
-            if os.environ["GC_ART"] == "error"
-            else "screenshot-art.png"
-        )
+        if os.environ["GC_ART"] == "error":
+            name = "screenshot-art-error.png"
+        elif os.environ["GC_ART"] == "more":
+            name = "screenshot-art-more.png"
+        else:
+            name = "screenshot-art.png"
     elif os.environ.get("GC_ACCENT"):
         name = "screenshot-accent.png"
     out = Path(__file__).resolve().parents[1] / name
@@ -183,6 +188,30 @@ def main() -> int:
 
     if os.environ.get("GC_ADD"):
         QTimer.singleShot(1200, lambda: window.setProperty("addOpen", True))
+
+    if os.environ.get("GC_COLOR_SET"):
+        QTimer.singleShot(
+            1400, lambda: library.setGameCartridgeColor(0, "#ff6b6b")
+        )
+
+    if os.environ.get("GC_COLOR"):
+        def open_color():
+            def find(item, name):
+                if item.objectName() == name:
+                    return item
+                for child in item.childItems():
+                    hit = find(child, name)
+                    if hit is not None:
+                        return hit
+                return None
+
+            target = find(window.contentItem(), "libraryGrid")
+            if target is not None:
+                QMetaObject.invokeMethod(
+                    target, "openColorPicker", Q_ARG("QVariant", 0)
+                )
+
+        QTimer.singleShot(1400, open_color)
 
     if (
         os.environ.get("GC_DS3D")
@@ -233,7 +262,9 @@ def main() -> int:
         from gamecenter.ui import covers
 
         if os.environ["GC_ART"] != "error":
-            def fake_grids(game, key, limit=5):
+            def fake_grids(game, key, page=0):
+                if page > 0:
+                    return [], False
                 return [
                     {
                         "id": i,
@@ -242,10 +273,10 @@ def main() -> int:
                         "thumb": "image://cover/"
                         + covers.cover_key(f"{game.title} art {i}", game.app_id, i),
                     }
-                    for i in range(5)
-                ]
+                    for i in range(10)
+                ], True
 
-            steamgriddb.grids_for = fake_grids
+            steamgriddb.grids_page = fake_grids
             library._has_key = True
         else:
             library._has_key = False
@@ -258,6 +289,8 @@ def main() -> int:
             library.loadArtOptions(0)
 
         QTimer.singleShot(1200, open_art)
+        if os.environ["GC_ART"] == "more":
+            QTimer.singleShot(2600, library.loadMoreArtOptions)
 
     if os.environ.get("GC_INSERT"):
         def start_insert():

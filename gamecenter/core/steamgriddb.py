@@ -2,7 +2,7 @@
 
 The API needs a personal key (stored by credentials.py). For Steam games the
 numeric AppID is used directly; for the other stores the title is looked up.
-Only the first five portrait grids are returned, which is what the picker shows.
+Results are fetched page by page; the picker shows them in small batches.
 """
 
 from __future__ import annotations
@@ -21,6 +21,7 @@ from .models import Game
 API = "https://www.steamgriddb.com/api/v2"
 UA = f"GameCenter/{__version__}"
 DIMENSIONS = "600x900,342x482"
+PAGE_SIZE = 50
 MAX_OPTIONS = 5
 
 
@@ -53,39 +54,39 @@ def _get(path: str, key: str, params: dict | None = None):
     return payload.get("data")
 
 
-def grids_for(game: Game, key: str, limit: int = MAX_OPTIONS) -> list[dict]:
+def grids_page(game: Game, key: str, page: int = 0) -> tuple[list[dict], bool]:
+    """Portrait grids from one API page, plus whether another page may exist."""
+    params = {"dimensions": DIMENSIONS, "types": "static", "page": page}
     if game.source == "steam" and game.app_id.isdigit():
-        data = _get(
-            f"/grids/steam/{game.app_id}",
-            key,
-            {"dimensions": DIMENSIONS, "types": "static"},
-        )
+        data = _get(f"/grids/steam/{game.app_id}", key, params)
     else:
         found = _get("/search/autocomplete/" + urllib.parse.quote(game.title), key)
         if not isinstance(found, list) or not found:
-            return []
-        data = _get(
-            f"/grids/game/{found[0]['id']}",
-            key,
-            {"dimensions": DIMENSIONS, "types": "static"},
-        )
+            return [], False
+        data = _get(f"/grids/game/{found[0]['id']}", key, params)
 
     if not isinstance(data, list):
-        return []
+        return [], False
 
     portrait = [
         grid
         for grid in data
         if int(grid.get("height") or 0) > int(grid.get("width") or 0)
     ]
-    return [
+    options = [
         {
             "id": grid.get("id"),
             "url": grid.get("url"),
             "thumb": grid.get("thumb") or grid.get("url"),
         }
-        for grid in portrait[:limit]
+        for grid in portrait
     ]
+    return options, len(data) >= PAGE_SIZE
+
+
+def grids_for(game: Game, key: str, limit: int = MAX_OPTIONS) -> list[dict]:
+    options, _ = grids_page(game, key, 0)
+    return options[:limit]
 
 
 def download(url: str, folder: Path) -> Path:

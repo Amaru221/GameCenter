@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 
 Item {
@@ -8,12 +9,16 @@ Item {
 
     readonly property string currentCover: index >= 0 ? (Library.gameAt(index).cover || "") : ""
 
-    signal closeRequested()
-    signal settingsRequested()
+    signal closeRequested
+    signal settingsRequested
 
     visible: opacity > 0
     opacity: opened ? 1 : 0
-    Behavior on opacity { NumberAnimation { duration: 180 } }
+    Behavior on opacity {
+        NumberAnimation {
+            duration: 180
+        }
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -35,14 +40,27 @@ Item {
         border.width: 1
         border.color: "#2a3140"
         scale: root.opened ? 1 : 0.97
-        Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
-
-        gradient: Gradient {
-            GradientStop { position: 0.0; color: "#151a23" }
-            GradientStop { position: 1.0; color: "#0c0f14" }
+        Behavior on scale {
+            NumberAnimation {
+                duration: 200
+                easing.type: Easing.OutCubic
+            }
         }
 
-        MouseArea { anchors.fill: parent }
+        gradient: Gradient {
+            GradientStop {
+                position: 0.0
+                color: "#151a23"
+            }
+            GradientStop {
+                position: 1.0
+                color: "#0c0f14"
+            }
+        }
+
+        MouseArea {
+            anchors.fill: parent
+        }
 
         ColumnLayout {
             anchors.fill: parent
@@ -69,28 +87,6 @@ Item {
                         color: "#8b95a5"
                         font.family: "Sora"
                         font.pixelSize: 11
-                    }
-                }
-
-                Rectangle {
-                    width: 30
-                    height: 30
-                    radius: 15
-                    color: closeArea.containsMouse ? "#232936" : "transparent"
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "✕"
-                        color: "#aeb8c7"
-                        font.pixelSize: 14
-                    }
-
-                    MouseArea {
-                        id: closeArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.closeRequested()
                     }
                 }
             }
@@ -168,99 +164,193 @@ Item {
                     }
                 }
 
-                Item { Layout.fillHeight: true }
+                Item {
+                    Layout.fillHeight: true
+                }
             }
 
-            Flow {
+            Flickable {
+                id: optionsFlick
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                spacing: 12
+                contentWidth: width
+                contentHeight: optionsFlow.height
+                clip: true
                 visible: !Library.artLoading && Library.artError === ""
+                boundsBehavior: Flickable.StopAtBounds
 
-                // The current cover / fallback.
-                Rectangle {
-                    width: 150
-                    height: 210
-                    radius: 10
-                    color: "#0d0f14"
-                    border.width: 1
-                    border.color: defaultArea.containsMouse ? Library.accent : "#2a3140"
-                    clip: true
-
-                    Image {
-                        anchors.fill: parent
-                        anchors.bottomMargin: 28
-                        source: root.currentCover
-                        fillMode: Image.PreserveAspectCrop
-                        asynchronous: true
-                        cache: true
-                    }
-
-                    Rectangle {
-                        anchors.bottom: parent.bottom
-                        width: parent.width
-                        height: 28
-                        color: "#0a0c10"
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "Default"
-                            color: "#dfe6f0"
-                            font.family: "Sora"
-                            font.pixelSize: 11
-                        }
-                    }
-
-                    MouseArea {
-                        id: defaultArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            Library.resetArt(root.index);
-                            root.closeRequested();
-                        }
+                ScrollBar.vertical: ScrollBar {
+                    id: optionsBar
+                    policy: ScrollBar.AsNeeded
+                    width: 8
+                    background: Item {}
+                    contentItem: Rectangle {
+                        implicitWidth: 6
+                        radius: 3
+                        color: "#3a465c"
+                        opacity: optionsBar.pressed ? 1 : 0.55
                     }
                 }
 
-                Repeater {
-                    model: Library.artOptions
+                Flow {
+                    id: optionsFlow
+                    width: Math.max(0, optionsFlick.width - 14)
+                    spacing: 12
 
-                    delegate: Rectangle {
+                    // The current cover / fallback.
+                    Rectangle {
                         width: 150
                         height: 210
                         radius: 10
                         color: "#0d0f14"
                         border.width: 1
-                        border.color: optionArea.containsMouse ? Library.accent : "#2a3140"
+                        border.color: defaultArea.containsMouse ? Library.accent : "#2a3140"
                         clip: true
 
                         Image {
                             anchors.fill: parent
-                            source: modelData.thumb
+                            anchors.bottomMargin: 28
+                            source: root.currentCover
                             fillMode: Image.PreserveAspectCrop
                             asynchronous: true
                             cache: true
                         }
 
+                        Rectangle {
+                            anchors.bottom: parent.bottom
+                            width: parent.width
+                            height: 28
+                            color: "#0a0c10"
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "Default"
+                                color: "#dfe6f0"
+                                font.family: "Sora"
+                                font.pixelSize: 11
+                            }
+                        }
+
                         MouseArea {
-                            id: optionArea
+                            id: defaultArea
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: Library.chooseArt(root.index, modelData.url)
+                            onClicked: {
+                                Library.resetArt(root.index);
+                                root.closeRequested();
+                            }
+                        }
+                    }
+
+                    Repeater {
+                        model: Library.artOptions
+
+                        delegate: Rectangle {
+                            width: 150
+                            height: 210
+                            radius: 10
+                            color: "#0d0f14"
+                            border.width: 1
+                            border.color: optionArea.containsMouse ? Library.accent : "#2a3140"
+                            clip: true
+
+                            Image {
+                                anchors.fill: parent
+                                source: modelData.thumb
+                                fillMode: Image.PreserveAspectCrop
+                                asynchronous: true
+                                cache: true
+                            }
+
+                            MouseArea {
+                                id: optionArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: Library.chooseArt(root.index, modelData.url)
+                            }
                         }
                     }
                 }
             }
 
-            Text {
+            RowLayout {
                 Layout.fillWidth: true
                 visible: !Library.artLoading && Library.artError === ""
-                text: "Up to 5 options. Pick one to replace the current cover, or keep the default."
-                color: "#6f7887"
-                font.family: "Sora"
-                font.pixelSize: 10
+
+                Text {
+                    Layout.fillWidth: true
+                    text: Library.artHasMore ? "Showing " + Library.artOptions.length + " of " + Library.artTotal + " loaded options." : "Showing all " + Library.artOptions.length + " options."
+                    color: "#6f7887"
+                    font.family: "Sora"
+                    font.pixelSize: 10
+                }
+
+                Rectangle {
+                    visible: Library.artHasMore
+                    width: 110
+                    height: 30
+                    radius: 8
+                    color: moreArea.containsMouse ? "#232936" : "#171b23"
+                    border.width: 1
+                    border.color: "#2a3140"
+                    opacity: Library.artLoadingMore ? 0.6 : 1
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: Library.artLoadingMore ? "Loading..." : "Load more"
+                        color: "#cfd6e2"
+                        font.family: "Sora"
+                        font.pixelSize: 11
+                    }
+
+                    MouseArea {
+                        id: moreArea
+                        anchors.fill: parent
+                        enabled: !Library.artLoadingMore
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: Library.loadMoreArtOptions()
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            id: artClose
+            z: 2
+            width: 30
+            height: 30
+            radius: 15
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.topMargin: 16
+            anchors.rightMargin: 16
+            color: closeArea.containsMouse ? "#232936" : "transparent"
+
+            Text {
+                anchors.centerIn: parent
+                text: "✕"
+                color: "#aeb8c7"
+                font.pixelSize: 14
+            }
+
+            MouseArea {
+                id: closeArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.closeRequested()
+            }
+        }
+    }
+
+    Connections {
+        target: Library
+        function onArtOptionsChanged() {
+            if (Library.artLoading) {
+                optionsFlick.contentY = 0;
             }
         }
     }

@@ -152,9 +152,48 @@ def test_game_at_returns_detail_data(model) -> None:
     assert detail["source"] == "Steam"
     assert detail["appId"] == "123"
     assert detail["cover"].startswith("image://cover/")
+    assert detail["cartridgeColor"] == model.cartridgeColor
     assert detail["texture"].startswith("file:///")
     assert detail["hasFolder"] is False
     assert detail["lastPlayed"].startswith("Played")
+
+
+def test_art_pagination_reveals_batches(model) -> None:
+    game = model._at(0)
+    assert game is not None
+    model._art_game = game
+    options = [
+        {"id": index, "url": f"u{index}", "thumb": f"t{index}"}
+        for index in range(7)
+    ]
+
+    model._on_art_options(options, 0, game.id, False)
+    assert len(model.artOptions) == 5
+    assert model.artTotal == 7
+    assert model.artHasMore is True
+
+    model.loadMoreArtOptions()
+    assert len(model.artOptions) == 7
+    assert model.artHasMore is False
+
+
+def test_per_game_cartridge_color(model) -> None:
+    assert model.cartridgeColorAt(0) == model.cartridgeColor
+
+    model.setGameCartridgeColor(0, "#ff6b6b")
+    assert model.cartridgeColorAt(0) == "#ff6b6b"
+    assert model.gameAt(0)["cartridgeColor"] == "#ff6b6b"
+    assert (
+        model.data(model.index(0, 0), library_model.ROLE_CARTRIDGE_COLOR)
+        == "#ff6b6b"
+    )
+
+    model.setCartridgeColor("#123456")
+    assert model.cartridgeColorAt(1) == "#123456"
+    assert model.cartridgeColorAt(0) == "#ff6b6b"
+
+    model.resetGameCartridgeColor(0)
+    assert model.cartridgeColorAt(0) == "#123456"
 
 
 def test_art_provider_loads_a_chosen_file(app, tmp_path) -> None:

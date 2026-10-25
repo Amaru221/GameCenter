@@ -83,6 +83,16 @@ class Preferences:
         covers = data.get("covers")
         data["covers"] = covers if isinstance(covers, dict) else {}
 
+        colors = data.get("cartridgeColors")
+        if isinstance(colors, dict):
+            data["cartridgeColors"] = {
+                str(key): str(value)
+                for key, value in colors.items()
+                if _HEX.match(str(value))
+            }
+        else:
+            data["cartridgeColors"] = {}
+
         data["checkUpdates"] = bool(data.get("checkUpdates", True))
         try:
             data["lastUpdateCheck"] = float(data.get("lastUpdateCheck") or 0)
@@ -187,4 +197,16 @@ class Preferences:
             self._data["covers"][game_id] = str(path)
         else:
             self._data["covers"].pop(game_id, None)
+        self._save()
+
+    # -- per-game cartridge colour ---------------------------------------
+
+    def cartridge_color_for(self, game_id: str) -> str:
+        return str(self._data["cartridgeColors"].get(game_id, ""))
+
+    def set_cartridge_color(self, game_id: str, value: str | None) -> None:
+        if value and _HEX.match(value):
+            self._data["cartridgeColors"][game_id] = value
+        else:
+            self._data["cartridgeColors"].pop(game_id, None)
         self._save()

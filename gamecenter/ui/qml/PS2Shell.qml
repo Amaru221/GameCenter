@@ -11,6 +11,7 @@ Item {
     property string gameMeta: ""
     property string coverUrl: ""
     property bool gameInstalled: true
+    property color cartridgeColor: Library.cartridgeColor
     property bool hovered: false
     property real tiltX: 0
     property real tiltY: 0
@@ -19,11 +20,11 @@ Item {
         anchors.fill: parent
         radius: 8
         border.width: 2
-        border.color: Qt.lighter(Library.cartridgeColor, 1.6)
+        border.color: Qt.lighter(root.cartridgeColor, 1.6)
         gradient: Gradient {
-            GradientStop { position: 0.0; color: Qt.darker(Library.cartridgeColor, 1.2) }
-            GradientStop { position: 0.08; color: Qt.darker(Library.cartridgeColor, 1.0) }
-            GradientStop { position: 1.0; color: Qt.darker(Library.cartridgeColor, 1.9) }
+            GradientStop { position: 0.0; color: Qt.darker(root.cartridgeColor, 1.2) }
+            GradientStop { position: 0.08; color: Qt.darker(root.cartridgeColor, 1.0) }
+            GradientStop { position: 1.0; color: Qt.darker(root.cartridgeColor, 1.9) }
         }
     }
 
@@ -33,7 +34,7 @@ Item {
         width: parent.width - 10
         height: 24
         radius: 4
-        color: Qt.darker(Library.cartridgeColor, 1.45)
+        color: Qt.darker(root.cartridgeColor, 1.45)
 
         Text {
             anchors.centerIn: parent
@@ -93,7 +94,7 @@ Item {
         y: 10
         width: 5
         height: parent.height - 20
-        color: Qt.darker(Library.cartridgeColor, 1.7)
+        color: Qt.darker(root.cartridgeColor, 1.7)
         opacity: 0.95
     }
 

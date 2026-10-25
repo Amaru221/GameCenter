@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.9.2
+
+- The DS cartridge's bottom-left corner is now one continuous round arc with no
+  step, and the other three corners are sharp instead of chamfered.
+- Every cartridge can have its own colour: right-click a library card and choose
+  **Cartridge color...**. **Use default** restores the global cartridge colour.
+- SteamGridDB artwork is now paginated: the picker starts with five options and
+  a **Load more** button, and the grid scrolls as more pages are loaded.
+
 ## v0.9.1
 
 - The 3D DS cartridge now has the real game-card silhouette: almost square but

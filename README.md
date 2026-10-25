@@ -3,7 +3,7 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.9.1** — Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
+> Estado: **v0.9.2** — Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 
@@ -30,9 +30,13 @@ la muestra como una estantería y lanza los juegos con un doble clic.
 - **Animación de inserción**: al pulsar Play, el cartucho vuela desde el detalle
   y se inserta en la ranura central del dock “Ready”, que se ilumina mientras
   muestra “Inserting…”.
-- **Carátulas por juego con SteamGridDB**: hasta 5 opciones verticales o la
-  carátula por defecto. La clave se guarda en el almacén de credenciales del
-  sistema, nunca en el repositorio.
+- **Carátulas por juego con SteamGridDB**: opciones verticales paginadas, con
+  cinco iniciales y **Load more** para seguir explorando; la cuadrícula se
+  desplaza. La clave se guarda en el almacén de credenciales del sistema, nunca
+  en el repositorio.
+- **Color por cartucho**: clic derecho en una tarjeta de la biblioteca →
+  **Cartridge color…** para elegir un color solo para ese juego. **Use default**
+  recupera el color global.
 - **Juegos manuales**: el **+** de la barra superior abre un diálogo para poner
   título, carpeta raíz y ejecutable. Se guardan en
   `%APPDATA%\GameCenter\manual.json`, llevan la etiqueta **Local**, aparecen en

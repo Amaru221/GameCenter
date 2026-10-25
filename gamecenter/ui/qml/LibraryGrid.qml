@@ -3,9 +3,15 @@ import QtQuick.Controls
 
 Item {
     id: root
+    objectName: "libraryGrid"
     clip: true
 
     signal detailRequested(int index)
+
+    function openColorPicker(row) {
+        colorPopup.row = row;
+        colorPopup.open();
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -49,6 +55,7 @@ Item {
             gameInstalled: model.installed
             favorite: model.favorite
             style: Library.cartridgeStyle
+            cartridgeColor: model.cartridgeColor
 
             onLaunchRequested: Library.launch(index)
             onFavoriteRequested: Library.toggleFavorite(index)
@@ -127,6 +134,13 @@ Item {
             text: "Copy App ID"
             onTriggered: Library.copyAppId(contextMenu.row)
         }
+        MenuItem {
+            text: "Cartridge color..."
+            onTriggered: {
+                colorPopup.row = contextMenu.row;
+                colorPopup.open();
+            }
+        }
         MenuSeparator {
             contentItem: Rectangle {
                 implicitHeight: 1
@@ -137,6 +151,84 @@ Item {
             text: "Remove from library"
             visible: Library.isManual(contextMenu.row)
             onTriggered: Library.removeManualGame(contextMenu.row)
+        }
+    }
+
+    Popup {
+        id: colorPopup
+        property int row: -1
+        parent: root.Window.window ? root.Window.window.contentItem : root
+        anchors.centerIn: parent
+        width: 340
+        height: 190
+        modal: true
+        focus: true
+        padding: 0
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        background: Rectangle {
+            color: "#12151b"
+            radius: 14
+            border.width: 1
+            border.color: "#2a3140"
+        }
+
+        contentItem: Column {
+            anchors.fill: parent
+            anchors.margins: 18
+            spacing: 12
+
+            Text {
+                text: "Cartridge color"
+                color: "#f2f5fa"
+                font.family: "Sora"
+                font.pixelSize: 15
+                font.bold: true
+            }
+
+            Flow {
+                width: parent.width
+                spacing: 8
+
+                Repeater {
+                    model: Library.cartridgePalette
+
+                    delegate: ColorSwatch {
+                        colour: modelData
+                        selected: Library.cartridgeColorAt(colorPopup.row).toLowerCase() === modelData.toLowerCase()
+                        onClicked: {
+                            Library.setGameCartridgeColor(colorPopup.row, modelData);
+                            colorPopup.close();
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 124
+                height: 32
+                radius: 8
+                color: "#171b23"
+                border.width: 1
+                border.color: "#2a3140"
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "Use default"
+                    color: "#cfd6e2"
+                    font.family: "Sora"
+                    font.pixelSize: 11
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        Library.resetGameCartridgeColor(colorPopup.row);
+                        colorPopup.close();
+                    }
+                }
+            }
         }
     }
 }

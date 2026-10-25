@@ -54,6 +54,19 @@ def test_cover_override_round_trip(tmp_path) -> None:
     assert prefs.cover_for("steam:1") == ""
 
 
+def test_game_cartridge_color_round_trip(tmp_path) -> None:
+    path = tmp_path / "settings.json"
+    prefs = Preferences(path)
+
+    assert prefs.cartridge_color_for("steam:1") == ""
+    prefs.set_cartridge_color("steam:1", "#ff6b6b")
+    assert prefs.cartridge_color_for("steam:1") == "#ff6b6b"
+    assert Preferences(path).cartridge_color_for("steam:1") == "#ff6b6b"
+
+    prefs.set_cartridge_color("steam:1", None)
+    assert prefs.cartridge_color_for("steam:1") == ""
+
+
 def test_update_preferences_round_trip(tmp_path) -> None:
     path = tmp_path / "settings.json"
 

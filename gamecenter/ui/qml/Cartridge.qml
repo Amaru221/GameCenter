@@ -15,6 +15,7 @@ Item {
     property bool favorite: false
     property string style: "classic"
     property bool interactive: true
+    property color cartridgeColor: Library.cartridgeColor
 
     property real tiltX: 0
     property real tiltY: 0
@@ -43,6 +44,7 @@ Item {
         item.gameMeta = Qt.binding(function() { return card.gameMeta; });
         item.coverUrl = Qt.binding(function() { return card.coverUrl; });
         item.gameInstalled = Qt.binding(function() { return card.gameInstalled; });
+        item.cartridgeColor = Qt.binding(function() { return card.cartridgeColor; });
         item.hovered = Qt.binding(function() { return card.hovered; });
         item.tiltX = Qt.binding(function() { return card.tiltX; });
         item.tiltY = Qt.binding(function() { return card.tiltY; });

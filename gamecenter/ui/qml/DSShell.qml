@@ -11,6 +11,7 @@ Item {
     property string gameMeta: ""
     property string coverUrl: ""
     property bool gameInstalled: true
+    property color cartridgeColor: Library.cartridgeColor
     property bool hovered: false
     property real tiltX: 0
     property real tiltY: 0
@@ -19,10 +20,10 @@ Item {
         anchors.fill: parent
         radius: 12
         border.width: 1
-        border.color: Qt.lighter(Library.cartridgeColor, 1.35)
+        border.color: Qt.lighter(root.cartridgeColor, 1.35)
         gradient: Gradient {
-            GradientStop { position: 0.0; color: root.hovered ? Qt.lighter(Library.cartridgeColor, 1.15) : Library.cartridgeColor }
-            GradientStop { position: 1.0; color: Qt.darker(Library.cartridgeColor, 1.55) }
+            GradientStop { position: 0.0; color: root.hovered ? Qt.lighter(root.cartridgeColor, 1.15) : root.cartridgeColor }
+            GradientStop { position: 1.0; color: Qt.darker(root.cartridgeColor, 1.55) }
         }
     }
 

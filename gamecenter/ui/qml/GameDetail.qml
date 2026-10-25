@@ -330,6 +330,7 @@ Item {
             gameMeta: root.game.meta || ""
             coverUrl: root.game.cover || ""
             gameInstalled: root.game.installed !== false
+            cartridgeColor: root.game.cartridgeColor || Library.cartridgeColor
             onLaunchRequested: root.playRequested()
         }
     }
@@ -341,6 +342,7 @@ Item {
             width: 330
             height: 416
             textureUrl: root.game.texture || ""
+            cartridgeColor: root.game.cartridgeColor || Library.cartridgeColor
             onPlayRequested: root.playRequested()
         }
     }

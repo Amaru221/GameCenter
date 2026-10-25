@@ -37,6 +37,7 @@ Item {
         gameSource: root.game.source || ""
         gameMeta: root.game.meta || ""
         coverUrl: root.game.cover || ""
+        cartridgeColor: root.game.cartridgeColor || Library.cartridgeColor
         gameInstalled: true
         transformOrigin: Item.Center
     }
