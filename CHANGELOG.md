@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.10.0
+
+- The top-bar menu now offers **Scan Steam games**, **Scan Battle.net games** and
+  **Scan all stores**, so installed games can be refreshed without restarting.
+  A scan only replaces the games from that store and keeps the rest.
+- Any game can be removed from the library from its right-click menu. Store
+  games are hidden (and can be restored with **Restore removed games**); manual
+  games are deleted from `manual.json`. This also clears stale entries such as a
+  Battle.net folder whose game is no longer installed.
+
 ## v0.9.2
 
 - The DS cartridge's bottom-left corner is now one continuous round arc with no

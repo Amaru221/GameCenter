@@ -135,6 +135,16 @@ def main() -> int:
         name = "screenshot-update-dialog.png"
     elif os.environ.get("GC_ADD"):
         name = "screenshot-add.png"
+    elif os.environ.get("GC_SCAN"):
+        name = "screenshot-scan.png"
+    elif os.environ.get("GC_RESTORE"):
+        name = "screenshot-restore.png"
+    elif os.environ.get("GC_REMOVE"):
+        name = "screenshot-remove.png"
+    elif os.environ.get("GC_CONTEXT"):
+        name = "screenshot-context.png"
+    elif os.environ.get("GC_MENU"):
+        name = "screenshot-menu.png"
     elif os.environ.get("GC_COLOR_SET"):
         name = "screenshot-color-set.png"
     elif os.environ.get("GC_COLOR"):
@@ -188,6 +198,40 @@ def main() -> int:
 
     if os.environ.get("GC_ADD"):
         QTimer.singleShot(1200, lambda: window.setProperty("addOpen", True))
+
+    if os.environ.get("GC_SCAN"):
+        QTimer.singleShot(1800, lambda: library.scanStore(""))
+
+    if os.environ.get("GC_RESTORE"):
+        QTimer.singleShot(1400, library.restoreHiddenGames)
+
+    if os.environ.get("GC_REMOVE"):
+        QTimer.singleShot(1400, lambda: library.removeGame(0))
+
+    if os.environ.get("GC_CONTEXT"):
+        QTimer.singleShot(
+            1400,
+            lambda: QTest.mouseClick(
+                window, Qt.RightButton, Qt.NoModifier, QPoint(140, 220)
+            ),
+        )
+
+    if os.environ.get("GC_MENU"):
+        def open_menu():
+            def find(item, name):
+                if item.objectName() == name:
+                    return item
+                for child in item.childItems():
+                    hit = find(child, name)
+                    if hit is not None:
+                        return hit
+                return None
+
+            target = find(window.contentItem(), "topBar")
+            if target is not None:
+                QMetaObject.invokeMethod(target, "openMenu")
+
+        QTimer.singleShot(1400, open_menu)
 
     if os.environ.get("GC_COLOR_SET"):
         QTimer.singleShot(

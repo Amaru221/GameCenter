@@ -67,6 +67,19 @@ def test_game_cartridge_color_round_trip(tmp_path) -> None:
     assert prefs.cartridge_color_for("steam:1") == ""
 
 
+def test_hidden_games_round_trip(tmp_path) -> None:
+    path = tmp_path / "settings.json"
+    prefs = Preferences(path)
+
+    assert not prefs.is_hidden("steam:1")
+    prefs.hide_game("steam:1")
+    assert prefs.is_hidden("steam:1")
+    assert Preferences(path).is_hidden("steam:1")
+
+    assert prefs.clear_hidden_games() == 1
+    assert not Preferences(path).is_hidden("steam:1")
+
+
 def test_update_preferences_round_trip(tmp_path) -> None:
     path = tmp_path / "settings.json"
 

@@ -149,8 +149,7 @@ Item {
         }
         MenuItem {
             text: "Remove from library"
-            visible: Library.isManual(contextMenu.row)
-            onTriggered: Library.removeManualGame(contextMenu.row)
+            onTriggered: Library.removeGame(contextMenu.row)
         }
     }
 

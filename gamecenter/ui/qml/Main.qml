@@ -53,6 +53,9 @@ Window {
         onToastRequested: (message) => toast.show(message)
         onSettingsRequested: settingsOpen = true
         onUpdateRequested: updateOpen = true
+        onScanRequested: (source) => Library.scanStore(source)
+        onRestoreHiddenRequested: Library.restoreHiddenGames()
+        onAddRequested: addOpen = true
     }
 
     Toolbar {
@@ -216,6 +219,7 @@ Window {
     Connections {
         target: Library
         function onFailed(message) { toast.show(message) }
+        function onNotice(message) { toast.show(message) }
         function onArtChanged() {
             if (detailOpen) {
                 detailGame = Library.gameAt(detailIndex);

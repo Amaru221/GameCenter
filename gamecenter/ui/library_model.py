@@ -36,7 +36,7 @@ from ..core.preferences import (
     Preferences,
 )
 from ..core.sessions import SessionTracker
-from ..core.sources import scan_all
+from ..core.sources import scan_all, scan_source
 from . import artwork, covers
 
 ROLE_TITLE = Qt.UserRole + 1
@@ -93,6 +93,7 @@ def _played_text(timestamp: int) -> str:
 class LibraryModel(QAbstractListModel):
     changed = Signal()
     failed = Signal(str)
+    notice = Signal(str)
     artReady = Signal(str)
     appearanceChanged = Signal()
     artOptionsChanged = Signal()
@@ -109,12 +110,15 @@ class LibraryModel(QAbstractListModel):
         self, download_art: bool = True, settings_path: Path | None = None
     ) -> None:
         super().__init__()
-        self._all: list[Game] = scan_all()
+        self._all: list[Game] = []
         self._visible: list[Game] = []
         self._query = ""
         self._source = ""
         self._sort = "recent"
         self._prefs = Preferences(settings_path)
+        self._all = [
+            game for game in scan_all() if not self._prefs.is_hidden(game.id)
+        ]
         self._favorites_only = False
         self._art_options_all: list[dict] = []
         self._art_visible = 0
@@ -222,6 +226,10 @@ class LibraryModel(QAbstractListModel):
     @Property(int, notify=changed)
     def total(self) -> int:
         return len(self._all)
+
+    @Property(int, notify=changed)
+    def hiddenCount(self) -> int:
+        return len(self._prefs.hidden_games)
 
     @Property(bool, notify=changed)
     def favoritesOnly(self) -> bool:
@@ -665,9 +673,41 @@ class LibraryModel(QAbstractListModel):
 
     @Slot()
     def refresh(self) -> None:
-        self._all = scan_all()
+        self._all = [
+            game for game in scan_all() if not self._prefs.is_hidden(game.id)
+        ]
         self._refresh_rows()
         self._start_art()
+
+    @Slot(str)
+    def scanStore(self, source: str) -> None:
+        if not source:
+            self.refresh()
+            self.notice.emit(f"Library rescanned: {len(self._all)} game(s).")
+            return
+
+        label = SOURCE_LABELS.get(source, source.title())
+        try:
+            games = scan_source(source)
+        except Exception as exc:  # noqa: BLE001 - reported as a toast
+            self.failed.emit(f"Couldn't scan {label}: {exc}")
+            return
+
+        games = [game for game in games if not self._prefs.is_hidden(game.id)]
+        self._all = [game for game in self._all if game.source != source] + games
+        self._all.sort(key=lambda game: (not game.installed, game.title.casefold()))
+        self._refresh_rows()
+        self._start_art()
+        self.notice.emit(f"{label}: {len(games)} game(s) found.")
+
+    @Slot()
+    def restoreHiddenGames(self) -> None:
+        count = self._prefs.clear_hidden_games()
+        self.refresh()
+        if count:
+            self.notice.emit(f"Restored {count} removed game(s).")
+        else:
+            self.notice.emit("No removed games to restore.")
 
     # -- cover art --------------------------------------------------------
 
@@ -861,12 +901,23 @@ class LibraryModel(QAbstractListModel):
         return game is not None and game.source == "local"
 
     @Slot(int)
+    def removeGame(self, row: int) -> None:
+        game = self._at(row)
+        if game is None:
+            return
+        if game.source == "local":
+            manual.ManualLibrary().remove(game.id)
+        else:
+            self._prefs.hide_game(game.id)
+        self._all = [item for item in self._all if item.id != game.id]
+        self._refresh_rows()
+        self.notice.emit(f"Removed {game.title} from the library.")
+
+    @Slot(int)
     def removeManualGame(self, row: int) -> None:
         game = self._at(row)
-        if game is None or game.source != "local":
-            return
-        manual.ManualLibrary().remove(game.id)
-        self.refresh()
+        if game is not None and game.source == "local":
+            self.removeGame(row)
 
     def _cartridge_color(self, game: Game) -> str:
         return self._prefs.cartridge_color_for(game.id) or self._prefs.cartridge_color

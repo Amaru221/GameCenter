@@ -93,6 +93,11 @@ class Preferences:
         else:
             data["cartridgeColors"] = {}
 
+        hidden = data.get("hiddenGames")
+        data["hiddenGames"] = (
+            [str(item) for item in hidden] if isinstance(hidden, list) else []
+        )
+
         data["checkUpdates"] = bool(data.get("checkUpdates", True))
         try:
             data["lastUpdateCheck"] = float(data.get("lastUpdateCheck") or 0)
@@ -210,3 +215,24 @@ class Preferences:
         else:
             self._data["cartridgeColors"].pop(game_id, None)
         self._save()
+
+    # -- removed games ----------------------------------------------------
+
+    @property
+    def hidden_games(self) -> list[str]:
+        return list(self._data["hiddenGames"])
+
+    def is_hidden(self, game_id: str) -> bool:
+        return game_id in self._data["hiddenGames"]
+
+    def hide_game(self, game_id: str) -> None:
+        if game_id not in self._data["hiddenGames"]:
+            self._data["hiddenGames"].append(game_id)
+            self._save()
+
+    def clear_hidden_games(self) -> int:
+        count = len(self._data["hiddenGames"])
+        if count:
+            self._data["hiddenGames"] = []
+            self._save()
+        return count

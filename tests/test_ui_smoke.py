@@ -158,6 +158,37 @@ def test_game_at_returns_detail_data(model) -> None:
     assert detail["lastPlayed"].startswith("Played")
 
 
+def test_remove_store_game_and_restore(model) -> None:
+    model.setQuery("alpha")
+
+    model.removeGame(0)
+    assert model.rowCount() == 0
+    assert model.hiddenCount == 1
+
+    model.refresh()
+    assert model.rowCount() == 0
+
+    model.restoreHiddenGames()
+    assert model.rowCount() == 1
+    assert model.hiddenCount == 0
+
+
+def test_scan_store_replaces_only_that_source(model, monkeypatch) -> None:
+    replacement = Game(id="steam:9", title="New Steam", source="steam")
+    monkeypatch.setattr(
+        library_model,
+        "scan_source",
+        lambda source: [replacement] if source == "steam" else [],
+    )
+
+    model.scanStore("steam")
+
+    ids = {game.id for game in model._visible}
+    assert "steam:9" in ids
+    assert "steam:1" not in ids
+    assert "epic:3" in ids
+
+
 def test_art_pagination_reveals_batches(model) -> None:
     game = model._at(0)
     assert game is not None

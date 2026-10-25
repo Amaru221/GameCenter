@@ -4,13 +4,21 @@ import QtQuick.Layouts
 
 Item {
     id: root
+    objectName: "topBar"
     height: 62
     signal toastRequested(string message)
     signal settingsRequested()
     signal updateRequested()
+    signal scanRequested(string source)
+    signal restoreHiddenRequested()
+    signal addRequested()
 
     function focusSearch() {
         search.forceActiveFocus();
+    }
+
+    function openMenu() {
+        mainMenu.open();
     }
 
     Rectangle {
@@ -252,6 +260,7 @@ Item {
         }
 
         Rectangle {
+            id: menuButton
             width: 38
             height: 38
             radius: 19
@@ -276,7 +285,81 @@ Item {
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
-                onClicked: root.toastRequested("Menu coming soon")
+                onClicked: mainMenu.open()
+            }
+
+            Menu {
+                id: mainMenu
+                width: 250
+                x: -width + parent.width
+                y: parent.height + 8
+
+                background: Rectangle {
+                    color: "#12151b"
+                    radius: 11
+                    border.width: 1
+                    border.color: "#2a3140"
+                }
+
+                delegate: MenuItem {
+                    id: entry
+                    width: mainMenu.width - 10
+                    implicitHeight: 32
+                    highlighted: mainMenu.currentIndex === index
+
+                    contentItem: Text {
+                        leftPadding: 12
+                        text: entry.text
+                        color: entry.enabled ? "#dfe6f0" : "#5f6a7b"
+                        font.family: "Sora"
+                        font.pixelSize: 12
+                        verticalAlignment: Text.AlignVCenter
+                        elide: Text.ElideRight
+                    }
+
+                    background: Rectangle {
+                        radius: 7
+                        color: entry.highlighted ? "#232936" : "transparent"
+                    }
+                }
+
+                MenuItem {
+                    text: "Scan Steam games"
+                    onTriggered: root.scanRequested("steam")
+                }
+                MenuItem {
+                    text: "Scan Battle.net games"
+                    onTriggered: root.scanRequested("battlenet")
+                }
+                MenuItem {
+                    text: "Scan all stores"
+                    onTriggered: root.scanRequested("")
+                }
+                MenuSeparator {
+                    contentItem: Rectangle {
+                        implicitHeight: 1
+                        color: "#232936"
+                    }
+                }
+                MenuItem {
+                    text: "Restore removed games"
+                    enabled: Library.hiddenCount > 0
+                    onTriggered: root.restoreHiddenRequested()
+                }
+                MenuSeparator {
+                    contentItem: Rectangle {
+                        implicitHeight: 1
+                        color: "#232936"
+                    }
+                }
+                MenuItem {
+                    text: "Add game manually..."
+                    onTriggered: root.addRequested()
+                }
+                MenuItem {
+                    text: "Settings"
+                    onTriggered: root.settingsRequested()
+                }
             }
         }
     }

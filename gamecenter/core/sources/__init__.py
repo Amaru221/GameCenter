@@ -18,31 +18,56 @@ log = logging.getLogger("gamecenter.sources")
 SOURCES = (steam, epic, gog, battlenet, riot, local)
 
 
-def scan_all() -> list[Game]:
+def _with_playtime(games: list[Game]) -> list[Game]:
+    out: list[Game] = []
+    for game in games:
+        if game.source != "steam":
+            playtime.restore_to_root(game)
+            summary = playtime.summary_for(game)
+            if summary:
+                try:
+                    seconds = int(summary.get("seconds") or 0)
+                except (TypeError, ValueError):
+                    seconds = 0
+                try:
+                    last_played = int(summary.get("last_played") or 0)
+                except (TypeError, ValueError):
+                    last_played = 0
+                game = replace(
+                    game,
+                    playtime_minutes=seconds // 60,
+                    last_played=last_played or game.last_played,
+                )
+        out.append(game)
+    return out
+
+
+def _dedupe(games: list[Game]) -> list[Game]:
     found: dict[str, Game] = {}
+    for game in games:
+        found.setdefault(game.id, game)
+    return list(found.values())
+
+
+def scan_all() -> list[Game]:
+    found: list[Game] = []
     for module in SOURCES:
         try:
             games = module.scan()
         except Exception:  # noqa: BLE001 - a broken store must not break the app
             log.exception("Couldn't scan %s", module.__name__)
             continue
-        for game in games:
-            if game.source != "steam":
-                playtime.restore_to_root(game)
-                summary = playtime.summary_for(game)
-                if summary:
-                    try:
-                        seconds = int(summary.get("seconds") or 0)
-                    except (TypeError, ValueError):
-                        seconds = 0
-                    try:
-                        last_played = int(summary.get("last_played") or 0)
-                    except (TypeError, ValueError):
-                        last_played = 0
-                    game = replace(
-                        game,
-                        playtime_minutes=seconds // 60,
-                        last_played=last_played or game.last_played,
-                    )
-            found.setdefault(game.id, game)
-    return sorted(found.values(), key=lambda g: (not g.installed, g.title.casefold()))
+        found.extend(_with_playtime(games))
+    return sorted(
+        _dedupe(found), key=lambda g: (not g.installed, g.title.casefold())
+    )
+
+
+def scan_source(source: str) -> list[Game]:
+    """Scan one store without touching the games from the other stores."""
+    module = next(
+        (item for item in SOURCES if getattr(item, "SOURCE", "") == source), None
+    )
+    if module is None:
+        return []
+    return _dedupe(_with_playtime(module.scan()))

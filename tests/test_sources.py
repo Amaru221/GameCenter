@@ -194,6 +194,32 @@ def test_scan_all_restores_a_fallback_after_reinstall(tmp_path, monkeypatch) -> 
     assert games[0].playtime_minutes == 120
 
 
+def test_scan_source_only_scans_the_requested_store(monkeypatch) -> None:
+    from gamecenter.core import sources
+    from gamecenter.core.models import Game
+
+    class Steam:
+        SOURCE = "steam"
+
+        @staticmethod
+        def scan():
+            return [Game(id="steam:1", title="Alpha", source="steam")]
+
+    class BattleNet:
+        SOURCE = "battlenet"
+
+        @staticmethod
+        def scan():
+            return [Game(id="battlenet:2", title="Beta", source="battlenet")]
+
+    monkeypatch.setattr(sources, "SOURCES", (Steam, BattleNet))
+
+    games = sources.scan_source("steam")
+
+    assert [game.id for game in games] == ["steam:1"]
+    assert sources.scan_source("nope") == []
+
+
 def test_scan_all_survives_a_broken_source(monkeypatch) -> None:
     from gamecenter.core import sources
 
