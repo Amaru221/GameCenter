@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.9.1
+
+- The 3D DS cartridge now has the real game-card silhouette: almost square but
+  slightly taller, noticeably thinner, with pointed top-left, top-right and
+  bottom-right corners and a rounded bottom-left corner. The label covers more
+  of the front and the top notch is smaller.
+
 ## v0.9.0
 
 - The Nintendo DS cartridge is now a real 3D object (Qt Quick 3D) in the game

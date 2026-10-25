@@ -8,6 +8,16 @@ Item {
     property real yaw: -16
     property real pitch: -10
 
+    // Real DS game cards are almost square but slightly taller, thin, with
+    // three chamfered corners and a rounded bottom-left corner.
+    readonly property real bodyWidth: 1.0
+    readonly property real bodyHeight: 1.06
+    readonly property real bodyDepth: 0.075
+    readonly property real cornerCut: 0.035
+    readonly property real cornerRadius: 0.09
+    readonly property real chamferLength: cornerCut * Math.SQRT2
+    readonly property real chamferThickness: cornerCut / Math.SQRT2
+
     signal playRequested()
 
     View3D {
@@ -47,42 +57,106 @@ Item {
             eulerRotation.x: root.pitch
             eulerRotation.y: root.yaw
 
-            // Solid rounded body: two slabs plus four corner cylinders.
+            // Central slab and side wings. Together they leave the four
+            // corners empty, so the chamfers and the rounded corner fit.
             Model {
                 source: "#Cube"
-                scale: Qt.vector3d(0.0085, 0.0106, 0.0011)
+                scale: Qt.vector3d(
+                    (root.bodyWidth - 2 * root.cornerCut) / 100,
+                    root.bodyHeight / 100,
+                    root.bodyDepth / 100
+                )
                 materials: [plastic]
             }
             Model {
                 source: "#Cube"
-                scale: Qt.vector3d(0.01, 0.0091, 0.0011)
+                scale: Qt.vector3d(
+                    root.cornerCut / 100,
+                    (root.bodyHeight - root.cornerCut - root.cornerRadius) / 100,
+                    root.bodyDepth / 100
+                )
+                position: Qt.vector3d(
+                    -(root.bodyWidth / 2 - root.cornerCut / 2),
+                    (root.cornerRadius - root.cornerCut) / 2,
+                    0
+                )
                 materials: [plastic]
             }
             Model {
-                source: "#Cylinder"
-                scale: Qt.vector3d(0.0015, 0.0011, 0.0015)
-                position: Qt.vector3d(0.425, 0.455, 0)
-                eulerRotation.x: 90
+                source: "#Cube"
+                scale: Qt.vector3d(
+                    root.cornerCut / 100,
+                    (root.bodyHeight - 2 * root.cornerCut) / 100,
+                    root.bodyDepth / 100
+                )
+                position: Qt.vector3d(
+                    root.bodyWidth / 2 - root.cornerCut / 2,
+                    0,
+                    0
+                )
+                materials: [plastic]
+            }
+
+            // Three chamfered corners: top-left, top-right and bottom-right.
+            Model {
+                source: "#Cube"
+                scale: Qt.vector3d(
+                    root.chamferLength / 100,
+                    root.chamferThickness / 100,
+                    root.bodyDepth / 100
+                )
+                position: Qt.vector3d(
+                    -(root.bodyWidth / 2 - root.cornerCut / 2) + root.cornerCut / 4,
+                    root.bodyHeight / 2 - root.cornerCut / 2 - root.cornerCut / 4,
+                    0
+                )
+                eulerRotation.z: 45
                 materials: [plastic]
             }
             Model {
-                source: "#Cylinder"
-                scale: Qt.vector3d(0.0015, 0.0011, 0.0015)
-                position: Qt.vector3d(-0.425, 0.455, 0)
-                eulerRotation.x: 90
+                source: "#Cube"
+                scale: Qt.vector3d(
+                    root.chamferLength / 100,
+                    root.chamferThickness / 100,
+                    root.bodyDepth / 100
+                )
+                position: Qt.vector3d(
+                    root.bodyWidth / 2 - root.cornerCut / 2 - root.cornerCut / 4,
+                    root.bodyHeight / 2 - root.cornerCut / 2 - root.cornerCut / 4,
+                    0
+                )
+                eulerRotation.z: -45
                 materials: [plastic]
             }
             Model {
-                source: "#Cylinder"
-                scale: Qt.vector3d(0.0015, 0.0011, 0.0015)
-                position: Qt.vector3d(0.425, -0.455, 0)
-                eulerRotation.x: 90
+                source: "#Cube"
+                scale: Qt.vector3d(
+                    root.chamferLength / 100,
+                    root.chamferThickness / 100,
+                    root.bodyDepth / 100
+                )
+                position: Qt.vector3d(
+                    root.bodyWidth / 2 - root.cornerCut / 2 - root.cornerCut / 4,
+                    -(root.bodyHeight / 2 - root.cornerCut / 2) + root.cornerCut / 4,
+                    0
+                )
+                eulerRotation.z: 45
                 materials: [plastic]
             }
+
+            // Rounded bottom-left corner.
             Model {
                 source: "#Cylinder"
-                scale: Qt.vector3d(0.0015, 0.0011, 0.0015)
-                position: Qt.vector3d(-0.425, -0.455, 0)
+                scale: Qt.vector3d(
+                    root.cornerRadius * 2 / 100,
+                    root.bodyDepth / 100,
+                    root.cornerRadius * 2 / 100
+                )
+                position: Qt.vector3d(
+                    -root.bodyWidth / 2 + root.cornerRadius,
+                    -root.bodyHeight / 2 + root.cornerRadius,
+                    0
+                )
                 eulerRotation.x: 90
                 materials: [plastic]
             }
@@ -90,56 +164,56 @@ Item {
             // Front label (the same art, store strip and meta strip as the 2D card).
             Model {
                 source: "#Rectangle"
-                scale: Qt.vector3d(0.0078, 0.0086, 0.01)
-                position: Qt.vector3d(0, 0, 0.057)
+                scale: Qt.vector3d(0.0086, 0.0094, 0.01)
+                position: Qt.vector3d(0, 0, root.bodyDepth / 2 + 0.001)
                 materials: [label]
             }
 
             // Notch slot near the top edge.
             Model {
                 source: "#Cube"
-                scale: Qt.vector3d(0.0032, 0.00022, 0.00008)
-                position: Qt.vector3d(0, 0.49, 0.058)
+                scale: Qt.vector3d(0.0020, 0.00014, 0.00002)
+                position: Qt.vector3d(0, 0.505, root.bodyDepth / 2 + 0.001)
                 materials: [dark]
             }
 
             // Five metallic contacts on the back.
             Model {
                 source: "#Cube"
-                scale: Qt.vector3d(0.0006, 0.0018, 0.00008)
-                position: Qt.vector3d(-0.28, -0.36, -0.058)
+                scale: Qt.vector3d(0.0006, 0.0018, 0.00002)
+                position: Qt.vector3d(-0.28, -0.36, -(root.bodyDepth / 2 + 0.001))
                 materials: [gold]
             }
             Model {
                 source: "#Cube"
-                scale: Qt.vector3d(0.0006, 0.0018, 0.00008)
-                position: Qt.vector3d(-0.14, -0.36, -0.058)
+                scale: Qt.vector3d(0.0006, 0.0018, 0.00002)
+                position: Qt.vector3d(-0.14, -0.36, -(root.bodyDepth / 2 + 0.001))
                 materials: [gold]
             }
             Model {
                 source: "#Cube"
-                scale: Qt.vector3d(0.0006, 0.0018, 0.00008)
-                position: Qt.vector3d(0, -0.36, -0.058)
+                scale: Qt.vector3d(0.0006, 0.0018, 0.00002)
+                position: Qt.vector3d(0, -0.36, -(root.bodyDepth / 2 + 0.001))
                 materials: [gold]
             }
             Model {
                 source: "#Cube"
-                scale: Qt.vector3d(0.0006, 0.0018, 0.00008)
-                position: Qt.vector3d(0.14, -0.36, -0.058)
+                scale: Qt.vector3d(0.0006, 0.0018, 0.00002)
+                position: Qt.vector3d(0.14, -0.36, -(root.bodyDepth / 2 + 0.001))
                 materials: [gold]
             }
             Model {
                 source: "#Cube"
-                scale: Qt.vector3d(0.0006, 0.0018, 0.00008)
-                position: Qt.vector3d(0.28, -0.36, -0.058)
+                scale: Qt.vector3d(0.0006, 0.0018, 0.00002)
+                position: Qt.vector3d(0.28, -0.36, -(root.bodyDepth / 2 + 0.001))
                 materials: [gold]
             }
 
             // Screw on the back.
             Model {
                 source: "#Cylinder"
-                scale: Qt.vector3d(0.00045, 0.0001, 0.00045)
-                position: Qt.vector3d(0, 0.36, -0.058)
+                scale: Qt.vector3d(0.00045, 0.00002, 0.00045)
+                position: Qt.vector3d(0, 0.36, -(root.bodyDepth / 2 + 0.001))
                 eulerRotation.x: 90
                 materials: [dark]
             }

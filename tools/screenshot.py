@@ -224,7 +224,7 @@ def main() -> int:
                         target.setProperty("yaw", 180)
                         target.setProperty("pitch", -8)
 
-                QTimer.singleShot(900, show_back)
+                QTimer.singleShot(3000, show_back)
 
         QTimer.singleShot(1200, open_ds3d)
 
@@ -277,7 +277,7 @@ def main() -> int:
     if os.environ.get("GC_DS3D_DRAG"):
         default_wait = "6500"
     elif os.environ.get("GC_DS3D_BACK"):
-        default_wait = "5500"
+        default_wait = "6500"
     else:
         default_wait = "4000"
     QTimer.singleShot(int(os.environ.get("GC_WAIT", default_wait)), grab)
