@@ -328,6 +328,14 @@ Item {
                     onTriggered: root.scanRequested("steam")
                 }
                 MenuItem {
+                    text: "Scan Epic games"
+                    onTriggered: root.scanRequested("epic")
+                }
+                MenuItem {
+                    text: "Scan GOG games"
+                    onTriggered: root.scanRequested("gog")
+                }
+                MenuItem {
                     text: "Scan Battle.net games"
                     onTriggered: root.scanRequested("battlenet")
                 }

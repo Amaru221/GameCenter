@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.10.2
+
+- The top-bar menu now exposes **Scan Epic games** and **Scan GOG games**. Both
+  stores were already supported and included in the automatic scan; they now
+  have dedicated refresh actions too.
+
 ## v0.10.1
 
 - The top-bar menu now offers **Scan Riot games**. League of Legends, VALORANT
