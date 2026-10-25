@@ -22,7 +22,7 @@ from PySide6.QtCore import (
     Signal,
     Slot,
 )
-from PySide6.QtGui import QDesktopServices, QGuiApplication, QImage
+from PySide6.QtGui import QGuiApplication, QImage
 
 from .. import __version__
 from ..core import credentials, manual, playtime, steamgriddb, updater
@@ -105,6 +105,9 @@ class LibraryModel(QAbstractListModel):
     _artDownloaded = Signal(str, str)
     _artFailed = Signal(str, str)
     _updateChecked = Signal(object, str)
+    _updateProgress = Signal(int, int)
+    _updateDownloaded = Signal(str)
+    _updateFailed = Signal(str)
 
     def __init__(
         self, download_art: bool = True, settings_path: Path | None = None
@@ -147,7 +150,17 @@ class LibraryModel(QAbstractListModel):
         self._update_checking = False
         self._update_error = ""
         self._update_dismissed = False
+        self._update_downloading = False
+        self._update_installing = False
+        self._update_progress = 0.0
+        self._update_downloaded_bytes = 0
+        self._update_total_bytes = 0
+        self._update_installer = ""
+        self._update_status = ""
         self._updateChecked.connect(self._on_update_checked, Qt.QueuedConnection)
+        self._updateProgress.connect(self._on_update_progress, Qt.QueuedConnection)
+        self._updateDownloaded.connect(self._on_update_downloaded, Qt.QueuedConnection)
+        self._updateFailed.connect(self._on_update_failed, Qt.QueuedConnection)
         if self._prefs.check_updates and time.time() - self._prefs.last_update_check > 86400:
             QTimer.singleShot(6000, self.checkForUpdates)
         self._art_revision = 0
@@ -342,6 +355,49 @@ class LibraryModel(QAbstractListModel):
         return self._update_dismissed
 
     @Property(bool, notify=updatesChanged)
+    def updateDownloading(self) -> bool:
+        return self._update_downloading
+
+    @Property(bool, notify=updatesChanged)
+    def updateInstalling(self) -> bool:
+        return self._update_installing
+
+    @Property(bool, notify=updatesChanged)
+    def updateReady(self) -> bool:
+        return (
+            bool(self._update_installer)
+            and not self._update_downloading
+            and not self._update_installing
+        )
+
+    @Property(float, notify=updatesChanged)
+    def updateProgress(self) -> float:
+        return self._update_progress
+
+    @Property(str, notify=updatesChanged)
+    def updateStatus(self) -> str:
+        return self._update_status
+
+    @Property(str, notify=updatesChanged)
+    def updateBytesText(self) -> str:
+        if self._update_installing:
+            return "Installing..."
+        if self._update_downloading:
+            done = self._update_downloaded_bytes / (1024 * 1024)
+            if self._update_total_bytes:
+                total = self._update_total_bytes / (1024 * 1024)
+                return f"{done:.1f} / {total:.1f} MB"
+            return f"{done:.1f} MB"
+        return ""
+
+    @Property(str, notify=updatesChanged)
+    def updateSizeText(self) -> str:
+        info = self._update_available
+        if info is None or not info.installer_size:
+            return ""
+        return f"{info.installer_size / (1024 * 1024):.1f} MB"
+
+    @Property(bool, notify=updatesChanged)
     def checkUpdatesEnabled(self) -> bool:
         return self._prefs.check_updates
 
@@ -397,13 +453,105 @@ class LibraryModel(QAbstractListModel):
             self.checkForUpdates()
 
     @Slot()
-    def openUpdate(self) -> None:
-        if self._update_available is not None:
-            QDesktopServices.openUrl(QUrl(self._update_available.url))
+    def downloadUpdate(self) -> None:
+        info = self._update_available
+        if info is None:
+            self._update_error = "No update available."
+            self.updatesChanged.emit()
+            return
+        if self._update_downloading or self._update_installing:
+            return
+        if not info.installer_url:
+            self._update_error = "This release doesn't include a Windows installer."
+            self.updatesChanged.emit()
+            return
+
+        self._update_downloading = True
+        self._update_installing = False
+        self._update_progress = 0.0
+        self._update_downloaded_bytes = 0
+        self._update_total_bytes = int(info.installer_size or 0)
+        self._update_installer = ""
+        self._update_status = "Downloading update..."
+        self._update_error = ""
+        self.updatesChanged.emit()
+
+        def work():
+            try:
+                path = updater.download_installer(
+                    info,
+                    progress=lambda done, total: self._updateProgress.emit(
+                        done, total
+                    ),
+                )
+            except Exception as exc:  # noqa: BLE001 - reported to the UI
+                self._updateFailed.emit(str(exc))
+                return
+            self._updateDownloaded.emit(str(path))
+
+        threading.Thread(target=work, daemon=True).start()
+
+    @Slot()
+    def installUpdate(self) -> None:
+        if self._update_installing:
+            return
+        installer = Path(self._update_installer) if self._update_installer else None
+        if installer is None or not installer.is_file():
+            self._on_update_failed("The update file is missing.")
+            return
+
+        self._update_downloading = False
+        self._update_installing = True
+        self._update_progress = 1.0
+        self._update_status = "Installing update. GameCenter will restart..."
+        self._update_error = ""
+        self.updatesChanged.emit()
+
+        try:
+            updater.launch_installer(installer)
+        except Exception as exc:  # noqa: BLE001 - reported to the UI
+            self._on_update_failed(str(exc))
+            return
+        QTimer.singleShot(900, QCoreApplication.quit)
 
     @Slot()
     def dismissUpdate(self) -> None:
+        if self._update_downloading or self._update_installing:
+            return
         self._update_dismissed = True
+        self.updatesChanged.emit()
+
+    @Slot(int, int)
+    def _on_update_progress(self, downloaded: int, total: int) -> None:
+        if not self._update_downloading:
+            return
+        self._update_downloaded_bytes = max(0, int(downloaded))
+        if total:
+            self._update_total_bytes = int(total)
+        if self._update_total_bytes:
+            self._update_progress = min(
+                1.0, self._update_downloaded_bytes / self._update_total_bytes
+            )
+        else:
+            self._update_progress = 0.0
+        self.updatesChanged.emit()
+
+    @Slot(str)
+    def _on_update_downloaded(self, path: str) -> None:
+        self._update_downloading = False
+        self._update_installer = path
+        self._update_progress = 1.0
+        self._update_status = "Update downloaded. Installing..."
+        self.updatesChanged.emit()
+        QTimer.singleShot(600, self.installUpdate)
+
+    @Slot(str)
+    def _on_update_failed(self, message: str) -> None:
+        self._update_downloading = False
+        self._update_installing = False
+        self._update_progress = 0.0
+        self._update_status = ""
+        self._update_error = message
         self.updatesChanged.emit()
 
     @Slot(object, str)
@@ -415,6 +563,13 @@ class LibraryModel(QAbstractListModel):
             self._update_available = info
             self._update_error = ""
             self._update_dismissed = False
+            self._update_downloading = False
+            self._update_installing = False
+            self._update_progress = 0.0
+            self._update_downloaded_bytes = 0
+            self._update_total_bytes = int(info.installer_size or 0) if info else 0
+            self._update_installer = ""
+            self._update_status = ""
             self._prefs.last_update_check = time.time()
         self.updatesChanged.emit()
 

@@ -80,14 +80,25 @@ def main() -> int:
         from gamecenter.core.updater import UpdateInfo
 
         library._update_available = UpdateInfo(
-            version="0.6.1",
-            tag="v0.6.1",
-            url="https://github.com/Amaru221/GameCenter/releases/tag/v0.6.1",
-            name="GameCenter 0.6.1",
-            notes="",
+            version="0.12.0",
+            tag="v0.12.0",
+            url="https://github.com/Amaru221/GameCenter/releases/tag/v0.12.0",
+            name="GameCenter 0.12.0",
+            notes=(
+                "• In-app updates with download progress\n"
+                "• Improved update icon in the navbar\n"
+                "• SHA-256 integrity check before installing"
+            ),
             published_at="",
+            installer_size=117_000_000,
         )
         library._update_dismissed = False
+        if os.environ.get("GC_UPDATE_PROGRESS"):
+            library._update_downloading = True
+            library._update_progress = 0.42
+            library._update_downloaded_bytes = 49_000_000
+            library._update_total_bytes = 117_000_000
+            library._update_status = "Downloading update..."
         library.updatesChanged.emit()
 
     if os.environ.get("GC_INSERT") and library._visible:
@@ -131,6 +142,8 @@ def main() -> int:
         name = "screenshot-detail.png"
     elif os.environ.get("GC_SESSION"):
         name = "screenshot-session.png"
+    elif os.environ.get("GC_UPDATE_PROGRESS"):
+        name = "screenshot-update-progress.png"
     elif os.environ.get("GC_UPDATE_DIALOG"):
         name = "screenshot-update-dialog.png"
     elif os.environ.get("GC_ADD"):

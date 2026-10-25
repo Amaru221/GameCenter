@@ -89,6 +89,7 @@ Window {
         anchors.bottom: dock.top
         anchors.leftMargin: 24
         anchors.bottomMargin: 12
+        onOpenRequested: updateOpen = true
     }
 
     Dock {
@@ -202,6 +203,10 @@ Window {
         anchors.fill: parent
         opened: settingsOpen
         onCloseRequested: settingsOpen = false
+        onUpdateRequested: {
+            settingsOpen = false;
+            updateOpen = true;
+        }
     }
 
     UpdateDialog {
@@ -210,10 +215,7 @@ Window {
         anchors.fill: parent
         opened: updateOpen
         onCloseRequested: updateOpen = false
-        onDownloadRequested: {
-            Library.openUpdate();
-            updateOpen = false;
-        }
+        onDownloadRequested: Library.downloadUpdate()
     }
 
     Connections {

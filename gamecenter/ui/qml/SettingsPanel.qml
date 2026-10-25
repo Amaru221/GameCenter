@@ -6,6 +6,7 @@ Item {
     id: root
     property bool opened: false
     signal closeRequested()
+    signal updateRequested()
 
     visible: opacity > 0
     opacity: opened ? 1 : 0
@@ -454,7 +455,7 @@ Item {
 
                 Text {
                     anchors.centerIn: parent
-                    text: "Download update"
+                    text: "Update now"
                     color: Library.accentText
                     font.family: "Sora"
                     font.pixelSize: 11
@@ -464,7 +465,7 @@ Item {
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: Library.openUpdate()
+                    onClicked: root.updateRequested()
                 }
             }
 
