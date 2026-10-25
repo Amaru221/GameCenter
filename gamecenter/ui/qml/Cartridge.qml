@@ -35,6 +35,10 @@ Item {
     readonly property bool hovered: pointer.containsMouse
     readonly property int shellHeight: style === "ds" ? 210 : (style === "ps2" ? 232 : 230)
     readonly property int shellY: style === "ds" ? 14 : (style === "ps2" ? 3 : 0)
+    readonly property real flatDepthOpacity:
+        style === "ds"
+        ? Math.max(0, 1 - Math.abs(Math.sin(flipAngle * Math.PI / 180)))
+        : 1
 
     z: card.hovered ? 1 : 0
 
@@ -91,26 +95,31 @@ Item {
             }
         ]
 
-        Rectangle {
-            x: 6
-            y: card.shellY + 16
-            width: parent.width - 12
-            height: card.shellHeight - 2
-            radius: 20
-            color: "#000000"
-            opacity: card.hovered ? 0.62 : 0.46
-            Behavior on opacity { NumberAnimation { duration: 180 } }
-        }
+        Item {
+            anchors.fill: parent
+            opacity: card.flatDepthOpacity
 
-        Rectangle {
-            x: 0
-            y: card.shellY + 5
-            width: parent.width
-            height: card.shellHeight - 6
-            radius: 19
-            color: "#101216"
-            border.width: 1
-            border.color: "#191c21"
+            Rectangle {
+                x: 6
+                y: card.shellY + 16
+                width: parent.width - 12
+                height: card.shellHeight - 2
+                radius: 20
+                color: "#000000"
+                opacity: card.hovered ? 0.62 : 0.46
+                Behavior on opacity { NumberAnimation { duration: 180 } }
+            }
+
+            Rectangle {
+                x: 0
+                y: card.shellY + 5
+                width: parent.width
+                height: card.shellHeight - 6
+                radius: 19
+                color: "#101216"
+                border.width: 1
+                border.color: "#191c21"
+            }
         }
 
         MouseArea {

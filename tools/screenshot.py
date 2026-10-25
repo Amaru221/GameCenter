@@ -137,6 +137,8 @@ def main() -> int:
         name = "screenshot-ds-drag.png"
     elif os.environ.get("GC_DRAG_LEFT"):
         name = "screenshot-ds-drag-left.png"
+    elif os.environ.get("GC_SIDE"):
+        name = "screenshot-ds-side.png"
     elif os.environ.get("GC_UPDATE_DIALOG"):
         name = "screenshot-update-dialog.png"
     elif os.environ.get("GC_ADD"):
@@ -241,6 +243,23 @@ def main() -> int:
             QTest.mouseRelease(window, Qt.LeftButton, Qt.NoModifier, QPoint(280, 220))
 
         QTimer.singleShot(1200, drag_card)
+
+    if os.environ.get("GC_SIDE"):
+        def side_card():
+            def find(item, name):
+                if item.objectName() == name:
+                    return item
+                for child in item.childItems():
+                    hit = find(child, name)
+                    if hit is not None:
+                        return hit
+                return None
+
+            target = find(window.contentItem(), "cartridge")
+            if target is not None:
+                target.setProperty("flipAngle", float(os.environ.get("GC_SIDE", "90")))
+
+        QTimer.singleShot(1400, side_card)
 
     if os.environ.get("GC_DRAG_LEFT"):
         def drag_left_card():

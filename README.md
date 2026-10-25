@@ -3,7 +3,7 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.8.1** — Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
+> Estado: **v0.8.2** — Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 
@@ -39,8 +39,9 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   se elige después con SteamGridDB.
 - **Cabecera dinámica**: al elegir una tienda o **Local**, la cabecera muestra
   la categoría y el número de juegos visibles.
-- El cartucho **DS** tiene canto, lomo y borde inferior para darle volumen, y
-  los títulos de los juegos van en negrita.
+- El cartucho **DS** tiene canto, lomo y borde inferior para darle volumen. Al
+  girarlo 90° se ve un **perfil lateral sólido**, no una hoja plana. Los títulos
+  de los juegos van en negrita.
 - **Tiempo jugado propio** para las tiendas que no lo registran: las sesiones
   lanzadas desde GameCenter se guardan en la raíz del juego (ver abajo).
 - Busca por título y filtra por tienda; ordena por reciente, título o tamaño.

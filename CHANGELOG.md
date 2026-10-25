@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.8.2
+
+- The Nintendo DS cartridge now shows a solid side profile when turned: the flat
+  backing fades out and a thickness strip follows the edge, so a 90° view looks
+  like a real cartridge edge instead of a sheet.
+
 ## v0.8.1
 
 - The playtime fallback is now a mirror. After an uninstall/reinstall, the next

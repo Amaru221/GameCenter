@@ -17,6 +17,33 @@ Item {
     property real tiltY: 0
     property real flipAngle: 0
 
+    // Side profile: a thin strip that shows the cartridge's thickness when it
+    // is turned. It is a 2D projection, so it renders reliably at any angle.
+    Rectangle {
+        id: sideProfile
+        readonly property real radians: root.flipAngle * Math.PI / 180
+        readonly property real sideWidth: 14 * Math.abs(Math.sin(radians))
+        x: (root.width - sideWidth) / 2
+           + (root.width / 2) * Math.cos(radians) * (Math.sin(radians) >= 0 ? 1 : -1)
+        y: 0
+        width: sideWidth
+        height: root.height
+        radius: 3
+        opacity: Math.min(1, Math.abs(Math.sin(radians)) * 4)
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: Qt.lighter(Library.cartridgeColor, 1.25) }
+            GradientStop { position: 0.45; color: Qt.darker(Library.cartridgeColor, 1.35) }
+            GradientStop { position: 1.0; color: Qt.darker(Library.cartridgeColor, 1.9) }
+        }
+
+        Rectangle {
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: 1
+            height: parent.height
+            color: "#000000"
+            opacity: 0.25
+        }
+    }
     Item {
         id: frontFace
         anchors.fill: parent
