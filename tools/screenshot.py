@@ -131,18 +131,16 @@ def main() -> int:
         name = "screenshot-detail.png"
     elif os.environ.get("GC_SESSION"):
         name = "screenshot-session.png"
-    elif os.environ.get("GC_FLIP"):
-        name = "screenshot-ds-back.png"
-    elif os.environ.get("GC_DRAG"):
-        name = "screenshot-ds-drag.png"
-    elif os.environ.get("GC_DRAG_LEFT"):
-        name = "screenshot-ds-drag-left.png"
-    elif os.environ.get("GC_SIDE"):
-        name = "screenshot-ds-side.png"
     elif os.environ.get("GC_UPDATE_DIALOG"):
         name = "screenshot-update-dialog.png"
     elif os.environ.get("GC_ADD"):
         name = "screenshot-add.png"
+    elif os.environ.get("GC_DS3D_BACK"):
+        name = "screenshot-ds3d-back.png"
+    elif os.environ.get("GC_DS3D_DRAG"):
+        name = "screenshot-ds3d-drag.png"
+    elif os.environ.get("GC_DS3D"):
+        name = "screenshot-ds3d.png"
     elif os.environ.get("GC_SOURCE"):
         name = "screenshot-filter.png"
     elif os.environ.get("GC_SURFACE") or os.environ.get("GC_CARTRIDGE"):
@@ -186,6 +184,50 @@ def main() -> int:
     if os.environ.get("GC_ADD"):
         QTimer.singleShot(1200, lambda: window.setProperty("addOpen", True))
 
+    if (
+        os.environ.get("GC_DS3D")
+        or os.environ.get("GC_DS3D_BACK")
+        or os.environ.get("GC_DS3D_DRAG")
+    ):
+        def open_ds3d():
+            window.setProperty("detailIndex", 0)
+            window.setProperty("detailGame", library.gameAt(0))
+            window.setProperty("detailOpen", True)
+            if os.environ.get("GC_DS3D_DRAG"):
+                def drag_3d():
+                    QTest.mousePress(
+                        window, Qt.LeftButton, Qt.NoModifier, QPoint(280, 360)
+                    )
+                    for i in range(1, 9):
+                        QTest.mouseMove(
+                            window, QPoint(280 + i * 14, 360 - i * 3)
+                        )
+                        QTest.qWait(40)
+                    QTest.mouseRelease(
+                        window, Qt.LeftButton, Qt.NoModifier, QPoint(392, 336)
+                    )
+
+                QTimer.singleShot(3200, drag_3d)
+            if os.environ.get("GC_DS3D_BACK"):
+                def show_back():
+                    def find(item, name):
+                        if item.objectName() == name:
+                            return item
+                        for child in item.childItems():
+                            hit = find(child, name)
+                            if hit is not None:
+                                return hit
+                        return None
+
+                    target = find(window.contentItem(), "ds3d")
+                    if target is not None:
+                        target.setProperty("yaw", 180)
+                        target.setProperty("pitch", -8)
+
+                QTimer.singleShot(900, show_back)
+
+        QTimer.singleShot(1200, open_ds3d)
+
     if os.environ.get("GC_ART") and library._visible:
         from gamecenter.core import steamgriddb
         from gamecenter.ui import covers
@@ -217,60 +259,6 @@ def main() -> int:
 
         QTimer.singleShot(1200, open_art)
 
-    if os.environ.get("GC_FLIP"):
-        def flip_first_card():
-            def find(item, name):
-                if item.objectName() == name:
-                    return item
-                for child in item.childItems():
-                    hit = find(child, name)
-                    if hit is not None:
-                        return hit
-                return None
-
-            target = find(window.contentItem(), "cartridge")
-            if target is not None:
-                target.setProperty("flipAngle", 180)
-
-        QTimer.singleShot(1400, flip_first_card)
-
-    if os.environ.get("GC_DRAG"):
-        def drag_card():
-            QTest.mousePress(window, Qt.LeftButton, Qt.NoModifier, QPoint(140, 220))
-            for x in range(160, 281, 20):
-                QTest.mouseMove(window, QPoint(x, 220))
-                QTest.qWait(40)
-            QTest.mouseRelease(window, Qt.LeftButton, Qt.NoModifier, QPoint(280, 220))
-
-        QTimer.singleShot(1200, drag_card)
-
-    if os.environ.get("GC_SIDE"):
-        def side_card():
-            def find(item, name):
-                if item.objectName() == name:
-                    return item
-                for child in item.childItems():
-                    hit = find(child, name)
-                    if hit is not None:
-                        return hit
-                return None
-
-            target = find(window.contentItem(), "cartridge")
-            if target is not None:
-                target.setProperty("flipAngle", float(os.environ.get("GC_SIDE", "90")))
-
-        QTimer.singleShot(1400, side_card)
-
-    if os.environ.get("GC_DRAG_LEFT"):
-        def drag_left_card():
-            QTest.mousePress(window, Qt.LeftButton, Qt.NoModifier, QPoint(140, 220))
-            for x in range(120, -1, -20):
-                QTest.mouseMove(window, QPoint(x, 220))
-                QTest.qWait(40)
-            QTest.mouseRelease(window, Qt.LeftButton, Qt.NoModifier, QPoint(0, 220))
-
-        QTimer.singleShot(1200, drag_left_card)
-
     if os.environ.get("GC_INSERT"):
         def start_insert():
             window.setProperty("detailIndex", 0)
@@ -286,7 +274,13 @@ def main() -> int:
         print(f"saved {out} ({image.width()}x{image.height()})")
         app.quit()
 
-    QTimer.singleShot(int(os.environ.get("GC_WAIT", "4000")), grab)
+    if os.environ.get("GC_DS3D_DRAG"):
+        default_wait = "6500"
+    elif os.environ.get("GC_DS3D_BACK"):
+        default_wait = "5500"
+    else:
+        default_wait = "4000"
+    QTimer.singleShot(int(os.environ.get("GC_WAIT", default_wait)), grab)
     return app.exec()
 
 

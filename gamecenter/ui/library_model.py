@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 import threading
 import time
@@ -21,7 +22,7 @@ from PySide6.QtCore import (
     Signal,
     Slot,
 )
-from PySide6.QtGui import QDesktopServices, QGuiApplication
+from PySide6.QtGui import QDesktopServices, QGuiApplication, QImage
 
 from .. import __version__
 from ..core import credentials, manual, playtime, steamgriddb, updater
@@ -660,6 +661,42 @@ class LibraryModel(QAbstractListModel):
             game.title, game.app_id, self._art_revision
         )
 
+    def _art_image(self, game: Game) -> QImage:
+        override = self._prefs.cover_for(game.id)
+        if override and Path(override).is_file():
+            image = QImage(override)
+            if not image.isNull():
+                return image
+        if game.source == "steam" and game.app_id.isdigit():
+            path = artwork.cached_path(game.app_id)
+            if path is not None:
+                image = QImage(str(path))
+                if not image.isNull():
+                    return image
+        return covers.render_cover(game.title)
+
+    def _texture_url(self, game: Game) -> str:
+        """A PNG label for the 3D cartridge, cached by art + metadata."""
+        if self._prefs.cartridge_style != "ds":
+            return ""
+        override = self._prefs.cover_for(game.id)
+        meta = f"{game.source_label.upper()} · {game.app_id or '—'} · {_tag(game.title)}"
+        key = hashlib.sha1(
+            f"{game.id}|{game.title}|{game.app_id}|{self._art_revision}|{override}|{meta}".encode(
+                "utf-8"
+            )
+        ).hexdigest()[:16]
+        path = artwork.CACHE / "labels" / f"{key}.png"
+        if not path.is_file():
+            try:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                covers.render_label(
+                    self._art_image(game), game.source_label, meta
+                ).save(str(path), "PNG")
+            except OSError:
+                return ""
+        return path.as_uri()
+
     @Slot(int)
     def launch(self, row: int) -> None:
         game = self._at(row)
@@ -751,6 +788,7 @@ class LibraryModel(QAbstractListModel):
             "appId": game.app_id,
             "meta": f"{game.source_label.upper()} · {game.app_id or '—'} · {_tag(game.title)}",
             "cover": self._cover_url(game),
+            "texture": self._texture_url(game),
             "installed": game.installed,
             "favorite": self._prefs.is_favorite(game.id),
             "sizeText": f"{game.size_gb:.1f} GB" if game.size_gb else "",

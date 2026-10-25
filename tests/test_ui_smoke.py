@@ -38,6 +38,7 @@ def model(app, monkeypatch, games, tmp_path):
     monkeypatch.setattr(
         library_model.playtime, "_fallback_path", lambda: tmp_path / "playtime.json"
     )
+    monkeypatch.setattr(library_model.artwork, "CACHE", tmp_path / "art")
     return library_model.LibraryModel(
         download_art=False, settings_path=tmp_path / "settings.json"
     )
@@ -143,11 +144,15 @@ def test_source_options_have_labels(model) -> None:
 
 def test_game_at_returns_detail_data(model) -> None:
     model.setQuery("alpha")
+    model.setCartridgeStyle("classic")
+    assert model.gameAt(0)["texture"] == ""
+    model.setCartridgeStyle("ds")
     detail = model.gameAt(0)
     assert detail["title"] == "Alpha Quest"
     assert detail["source"] == "Steam"
     assert detail["appId"] == "123"
     assert detail["cover"].startswith("image://cover/")
+    assert detail["texture"].startswith("file:///")
     assert detail["hasFolder"] is False
     assert detail["lastPlayed"].startswith("Played")
 

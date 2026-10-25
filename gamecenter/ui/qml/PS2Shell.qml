@@ -11,11 +11,9 @@ Item {
     property string gameMeta: ""
     property string coverUrl: ""
     property bool gameInstalled: true
-    property bool selected: false
     property bool hovered: false
     property real tiltX: 0
     property real tiltY: 0
-    property real flipAngle: 0
 
     Rectangle {
         anchors.fill: parent
@@ -110,14 +108,5 @@ Item {
             GradientStop { position: 0.0; color: "#ffffff" }
             GradientStop { position: 1.0; color: "#00ffffff" }
         }
-    }
-
-    Rectangle {
-        anchors.fill: parent
-        radius: 8
-        color: "transparent"
-        border.width: 2
-        border.color: Library.accent
-        visible: root.selected
     }
 }

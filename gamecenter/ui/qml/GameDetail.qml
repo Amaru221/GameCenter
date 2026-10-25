@@ -15,9 +15,11 @@ Item {
     signal artRequested()
 
     function cartridgeCenter() {
-        var point = detailCartridge.mapToItem(
-            root, detailCartridge.width / 2, detailCartridge.height / 2
-        );
+        if (!detailCard.item) {
+            return Qt.point(0, 0);
+        }
+        var item = detailCard.item;
+        var point = item.mapToItem(root, item.width / 2, item.height / 2);
         return Qt.point(point.x, point.y);
     }
 
@@ -62,18 +64,11 @@ Item {
                 Layout.preferredWidth: 330
                 Layout.fillHeight: true
 
-                Cartridge {
-                    id: detailCartridge
+                Loader {
+                    id: detailCard
                     anchors.centerIn: parent
-                    scale: 1.7
-                    showTitle: false
-                    style: Library.cartridgeStyle
-                    gameTitle: root.game.title || ""
-                    gameSource: root.game.source || ""
-                    gameMeta: root.game.meta || ""
-                    coverUrl: root.game.cover || ""
-                    gameInstalled: root.game.installed !== false
-                    onLaunchRequested: root.playRequested()
+                    active: root.opened
+                    sourceComponent: Library.cartridgeStyle === "ds" ? ds3dCard : flatCard
                 }
             }
 
@@ -320,6 +315,33 @@ Item {
                 cursorShape: Qt.PointingHandCursor
                 onClicked: root.closeRequested()
             }
+        }
+    }
+
+    Component {
+        id: flatCard
+
+        Cartridge {
+            scale: 1.7
+            showTitle: false
+            style: Library.cartridgeStyle
+            gameTitle: root.game.title || ""
+            gameSource: root.game.source || ""
+            gameMeta: root.game.meta || ""
+            coverUrl: root.game.cover || ""
+            gameInstalled: root.game.installed !== false
+            onLaunchRequested: root.playRequested()
+        }
+    }
+
+    Component {
+        id: ds3dCard
+
+        DsCartridge3D {
+            width: 330
+            height: 416
+            textureUrl: root.game.texture || ""
+            onPlayRequested: root.playRequested()
         }
     }
 }

@@ -11,363 +11,111 @@ Item {
     property string gameMeta: ""
     property string coverUrl: ""
     property bool gameInstalled: true
-    property bool selected: false
     property bool hovered: false
     property real tiltX: 0
     property real tiltY: 0
-    property real flipAngle: 0
 
-    // Side profile: a thin strip that shows the cartridge's thickness when it
-    // is turned. It is a 2D projection, so it renders reliably at any angle.
     Rectangle {
-        id: sideProfile
-        readonly property real radians: root.flipAngle * Math.PI / 180
-        readonly property real sideWidth: 14 * Math.abs(Math.sin(radians))
-        x: (root.width - sideWidth) / 2
-           + (root.width / 2) * Math.cos(radians) * (Math.sin(radians) >= 0 ? 1 : -1)
-        y: 0
-        width: sideWidth
-        height: root.height
-        radius: 3
-        opacity: Math.min(1, Math.abs(Math.sin(radians)) * 4)
+        anchors.fill: parent
+        radius: 12
+        border.width: 1
+        border.color: Qt.lighter(Library.cartridgeColor, 1.35)
         gradient: Gradient {
-            GradientStop { position: 0.0; color: Qt.lighter(Library.cartridgeColor, 1.25) }
-            GradientStop { position: 0.45; color: Qt.darker(Library.cartridgeColor, 1.35) }
-            GradientStop { position: 1.0; color: Qt.darker(Library.cartridgeColor, 1.9) }
-        }
-
-        Rectangle {
-            anchors.horizontalCenter: parent.horizontalCenter
-            width: 1
-            height: parent.height
-            color: "#000000"
-            opacity: 0.25
-        }
-    }
-    Item {
-        id: frontFace
-        anchors.fill: parent
-        visible: root.flipAngle >= -90 && root.flipAngle <= 90
-
-        transform: Rotation {
-            origin.x: frontFace.width / 2
-            origin.y: frontFace.height / 2
-            axis { x: 0; y: 1; z: 0 }
-            angle: root.flipAngle
-        }
-
-        // Side wall: the cartridge is a solid object, not a flat card.
-        Rectangle {
-            x: 5
-            y: 3
-            width: parent.width
-            height: parent.height
-            radius: 12
-            gradient: Gradient {
-                GradientStop { position: 0.0; color: Qt.darker(Library.cartridgeColor, 1.65) }
-                GradientStop { position: 1.0; color: Qt.darker(Library.cartridgeColor, 2.4) }
-            }
-        }
-
-        Rectangle {
-            anchors.fill: parent
-            radius: 12
-            border.width: 1
-            border.color: Qt.lighter(Library.cartridgeColor, 1.35)
-            gradient: Gradient {
-                GradientStop { position: 0.0; color: root.hovered ? Qt.lighter(Library.cartridgeColor, 1.15) : Library.cartridgeColor }
-                GradientStop { position: 1.0; color: Qt.darker(Library.cartridgeColor, 1.55) }
-            }
-        }
-
-        // Spine on the left edge and a thin bottom lip.
-        Rectangle {
-            x: 2
-            y: 10
-            width: 4
-            height: parent.height - 20
-            radius: 2
-            color: Qt.lighter(Library.cartridgeColor, 1.25)
-            opacity: 0.9
-        }
-
-        Rectangle {
-            x: parent.width - 3
-            y: 8
-            width: 2
-            height: parent.height - 16
-            radius: 1
-            color: Qt.darker(Library.cartridgeColor, 1.9)
-            opacity: 0.9
-        }
-
-        Rectangle {
-            x: 6
-            y: parent.height - 5
-            width: parent.width - 12
-            height: 3
-            radius: 1.5
-            color: Qt.darker(Library.cartridgeColor, 1.6)
-        }
-
-        Rectangle {
-            x: 10
-            y: 1
-            width: parent.width - 20
-            height: 1.5
-            radius: 1
-            color: "#ffffff"
-            opacity: 0.14
-        }
-
-        Rectangle {
-            width: 54
-            height: 8
-            radius: 4
-            color: "#0b0d10"
-            anchors.top: parent.top
-            anchors.topMargin: 7
-            anchors.horizontalCenter: parent.horizontalCenter
-        }
-
-        Rectangle {
-            id: label
-            x: 14
-            y: 24
-            width: parent.width - 28
-            height: parent.height - 46
-            radius: 6
-            color: "#0b0d10"
-            border.width: 1
-            border.color: "#15181d"
-            clip: true
-
-            Image {
-                anchors.fill: parent
-                source: root.coverUrl
-                fillMode: Image.PreserveAspectCrop
-                verticalAlignment: Image.AlignBottom
-                asynchronous: true
-                cache: true
-                smooth: true
-            }
-
-            Rectangle {
-                width: parent.width
-                height: 20
-                color: "#0a0c10"
-                opacity: 0.94
-            }
-
-            Text {
-                x: 8
-                y: 5
-                text: "GC"
-                color: "#eef2f7"
-                font.family: "Chakra Petch"
-                font.pixelSize: 9
-                font.bold: true
-                font.letterSpacing: 2.4
-            }
-
-            Rectangle {
-                anchors.bottom: parent.bottom
-                width: parent.width
-                height: 18
-                color: "#0a0c10"
-                opacity: 0.94
-            }
-
-            Text {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                anchors.leftMargin: 7
-                anchors.rightMargin: 7
-                anchors.bottomMargin: 5
-                text: root.gameMeta
-                color: "#c3ccda"
-                font.family: "Chakra Petch"
-                font.pixelSize: 7
-                elide: Text.ElideRight
-            }
-        }
-
-        Rectangle {
-            width: 30
-            height: 5
-            radius: 2.5
-            color: "#171a1f"
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 9
-            anchors.horizontalCenter: parent.horizontalCenter
-        }
-
-        Rectangle {
-            anchors.fill: parent
-            radius: 12
-            color: "transparent"
-            border.width: 2
-            border.color: Library.accent
-            visible: root.selected
+            GradientStop { position: 0.0; color: root.hovered ? Qt.lighter(Library.cartridgeColor, 1.15) : Library.cartridgeColor }
+            GradientStop { position: 1.0; color: Qt.darker(Library.cartridgeColor, 1.55) }
         }
     }
 
-    Item {
-        id: backFace
-        anchors.fill: parent
-        visible: root.flipAngle > 90 || root.flipAngle < -90
+    Rectangle {
+        x: 10
+        y: 1
+        width: parent.width - 20
+        height: 1.5
+        radius: 1
+        color: "#ffffff"
+        opacity: 0.14
+    }
 
-        transform: Rotation {
-            origin.x: backFace.width / 2
-            origin.y: backFace.height / 2
-            axis { x: 0; y: 1; z: 0 }
-            angle: root.flipAngle > 90 ? root.flipAngle + 180 : root.flipAngle - 180
+    Rectangle {
+        width: 54
+        height: 8
+        radius: 4
+        color: "#0b0d10"
+        anchors.top: parent.top
+        anchors.topMargin: 7
+        anchors.horizontalCenter: parent.horizontalCenter
+    }
+
+    Rectangle {
+        id: label
+        x: 14
+        y: 24
+        width: parent.width - 28
+        height: parent.height - 46
+        radius: 6
+        color: "#0b0d10"
+        border.width: 1
+        border.color: "#15181d"
+        clip: true
+
+        Image {
+            anchors.fill: parent
+            source: root.coverUrl
+            fillMode: Image.PreserveAspectCrop
+            verticalAlignment: Image.AlignBottom
+            asynchronous: true
+            cache: true
+            smooth: true
         }
 
         Rectangle {
-            x: 5
-            y: 3
             width: parent.width
-            height: parent.height
-            radius: 12
-            gradient: Gradient {
-                GradientStop { position: 0.0; color: Qt.darker(Library.cartridgeColor, 1.65) }
-                GradientStop { position: 1.0; color: Qt.darker(Library.cartridgeColor, 2.4) }
-            }
+            height: 20
+            color: "#0a0c10"
+            opacity: 0.94
+        }
+
+        Text {
+            x: 8
+            y: 5
+            text: "GC"
+            color: "#eef2f7"
+            font.family: "Chakra Petch"
+            font.pixelSize: 9
+            font.bold: true
+            font.letterSpacing: 2.4
         }
 
         Rectangle {
-            anchors.fill: parent
-            radius: 12
-            border.width: 1
-            border.color: Qt.lighter(Library.cartridgeColor, 1.25)
-            gradient: Gradient {
-                GradientStop { position: 0.0; color: Qt.darker(Library.cartridgeColor, 1.05) }
-                GradientStop { position: 1.0; color: Qt.darker(Library.cartridgeColor, 1.8) }
-            }
-        }
-
-        Rectangle {
-            x: 2
-            y: 10
-            width: 4
-            height: parent.height - 20
-            radius: 2
-            color: Qt.lighter(Library.cartridgeColor, 1.15)
-            opacity: 0.8
-        }
-
-        Rectangle {
-            x: parent.width - 3
-            y: 8
-            width: 2
-            height: parent.height - 16
-            radius: 1
-            color: Qt.darker(Library.cartridgeColor, 1.9)
-            opacity: 0.8
-        }
-
-        Rectangle {
-            x: 6
-            y: parent.height - 5
-            width: parent.width - 12
-            height: 3
-            radius: 1.5
-            color: Qt.darker(Library.cartridgeColor, 1.6)
-        }
-
-        Rectangle {
-            x: 10
-            y: 1
-            width: parent.width - 20
-            height: 1.5
-            radius: 1
-            color: "#ffffff"
-            opacity: 0.10
-        }
-
-        Rectangle {
-            width: 54
-            height: 8
-            radius: 4
-            color: "#0b0d10"
-            anchors.top: parent.top
-            anchors.topMargin: 7
-            anchors.horizontalCenter: parent.horizontalCenter
-        }
-
-        Rectangle {
-            width: 14
-            height: 14
-            radius: 7
-            color: "#0d0f12"
-            border.width: 1
-            border.color: "#4a505a"
-            anchors.top: parent.top
-            anchors.topMargin: 30
-            anchors.horizontalCenter: parent.horizontalCenter
-        }
-
-        Column {
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: 92
-            anchors.horizontalCenter: parent.horizontalCenter
-            spacing: 4
-
-            Repeater {
-                model: 3
-                Rectangle {
-                    width: 60
-                    height: 2
-                    radius: 1
-                    color: "#12151a"
-                }
-            }
+            width: parent.width
+            height: 18
+            color: "#0a0c10"
+            opacity: 0.94
         }
 
-        // The metallic contact slots sit along the bottom edge of a DS card.
-        Rectangle {
-            x: 14
-            width: parent.width - 28
-            height: 68
-            radius: 6
-            color: "#111419"
-            border.width: 1
-            border.color: "#2a2e35"
+        Text {
+            anchors.left: parent.left
+            anchors.right: parent.right
             anchors.bottom: parent.bottom
-            anchors.bottomMargin: 12
-
-            Row {
-                anchors.centerIn: parent
-                spacing: 6
-
-                Repeater {
-                    model: 5
-
-                    Rectangle {
-                        width: 18
-                        height: 52
-                        radius: 3
-                        border.width: 1
-                        border.color: "#d8b25e"
-                        gradient: Gradient {
-                            GradientStop { position: 0.0; color: "#f7df9c" }
-                            GradientStop { position: 0.45; color: "#b8862f" }
-                            GradientStop { position: 1.0; color: "#6f4d14" }
-                        }
-                    }
-                }
-            }
+            anchors.leftMargin: 7
+            anchors.rightMargin: 7
+            anchors.bottomMargin: 5
+            text: root.gameMeta
+            color: "#c3ccda"
+            font.family: "Chakra Petch"
+            font.pixelSize: 7
+            elide: Text.ElideRight
         }
+    }
 
-        Rectangle {
-            anchors.fill: parent
-            radius: 12
-            color: "transparent"
-            border.width: 2
-            border.color: Library.accent
-            visible: root.selected
-        }
+    Rectangle {
+        width: 30
+        height: 5
+        radius: 2.5
+        color: "#171a1f"
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 9
+        anchors.horizontalCenter: parent.horizontalCenter
     }
 }

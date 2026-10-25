@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.9.0
+
+- The Nintendo DS cartridge is now a real 3D object (Qt Quick 3D) in the game
+  detail view: a solid rounded body, textured label, notch, five gold contacts
+  and a screw. Drag it to rotate it freely; the back is fully modelled.
+- DS cartridges no longer flip or show a fake side strip in the library. They
+  stay flat and front-facing there, and only rotate when a game is open.
+- Classic and PS2 cartridges keep their previous look and behaviour.
+
 ## v0.8.2
 
 - The Nintendo DS cartridge now shows a solid side profile when turned: the flat

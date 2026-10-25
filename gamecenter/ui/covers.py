@@ -154,6 +154,54 @@ def _draw_title(painter: QPainter, text: str, rect: QRectF) -> None:
     )
 
 
+def render_label(art: QImage, source: str, meta: str, width: int = 512, height: int = 560) -> QImage:
+    """The label texture applied to the front of the 3D DS cartridge."""
+    image = QImage(width, height, QImage.Format_ARGB32_Premultiplied)
+    image.fill(QColor("#0a0c10"))
+    painter = QPainter(image)
+    painter.setRenderHint(QPainter.Antialiasing, True)
+    painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+
+    scaled = art.scaled(
+        width, height, Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation
+    )
+    sx = (scaled.width() - width) / 2
+    sy = (scaled.height() - height) / 2
+    painter.drawImage(QRectF(0, 0, width, height), scaled, QRectF(sx, sy, width, height))
+
+    painter.fillRect(QRectF(0, 0, width, 52), QColor(10, 12, 16, 235))
+    painter.setPen(Qt.NoPen)
+    painter.setBrush(QColor("#eef2f7"))
+    painter.drawEllipse(QPointF(28, 26), 14, 14)
+
+    font = QFont("Chakra Petch")
+    font.setPixelSize(15)
+    font.setBold(True)
+    painter.setFont(font)
+    painter.setPen(QColor("#0b0d10"))
+    painter.drawText(QRectF(14, 12, 28, 28), Qt.AlignCenter, (source or "?")[:1].upper())
+    painter.setPen(QColor("#eef2f7"))
+    painter.drawText(
+        QRectF(52, 0, width - 64, 52),
+        Qt.AlignVCenter | Qt.AlignLeft,
+        (source or "").upper(),
+    )
+
+    painter.fillRect(QRectF(0, height - 44, width, 44), QColor(10, 12, 16, 235))
+    font.setPixelSize(12)
+    font.setBold(False)
+    painter.setFont(font)
+    painter.setPen(QColor("#c3ccda"))
+    painter.drawText(
+        QRectF(18, height - 44, width - 36, 44),
+        Qt.AlignVCenter | Qt.AlignLeft,
+        meta,
+    )
+
+    painter.end()
+    return image
+
+
 def render_background(width: int = 1920, height: int = 1200) -> QImage:
     """The blurred mesh behind the glass: soft coloured blobs on near-black."""
     image = QImage(width, height, QImage.Format_ARGB32_Premultiplied)

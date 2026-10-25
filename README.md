@@ -3,7 +3,7 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.8.2** — Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
+> Estado: **v0.9.0** — Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 
@@ -22,10 +22,11 @@ la muestra como una estantería y lanza los juegos con un doble clic.
 - **Ajustes** (engranaje o `Ctrl+,`): color de acento entre 24 opciones,
   **color de superficie** para la barra superior, el dock Ready y la estantería,
   **color de los cartuchos** y tres estilos: clásico, **Nintendo DS** y **PS2**.
-  - En el estilo DS puedes **agarrar el cartucho con el ratón y girarlo en
-    cualquier dirección** manteniendo pulsado; también se inclina arriba/abajo
-    mientras arrastras. El reverso muestra los contactos metálicos en el borde
-    inferior. Los cartuchos llevan la marca **GC**.
+  - En la vista de detalle de un juego DS puedes **agarrar el cartucho con el
+    ratón y girarlo en cualquier dirección** manteniendo pulsado; también se
+    inclina arriba/abajo mientras arrastras. El reverso muestra los contactos
+    metálicos. En la biblioteca los cartuchos DS se muestran de frente y no
+    giran. Los cartuchos llevan la marca **GC**.
 - **Animación de inserción**: al pulsar Play, el cartucho vuela desde el detalle
   y se inserta en la ranura central del dock “Ready”, que se ilumina mientras
   muestra “Inserting…”.
@@ -39,9 +40,9 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   se elige después con SteamGridDB.
 - **Cabecera dinámica**: al elegir una tienda o **Local**, la cabecera muestra
   la categoría y el número de juegos visibles.
-- El cartucho **DS** tiene canto, lomo y borde inferior para darle volumen. Al
-  girarlo 90° se ve un **perfil lateral sólido**, no una hoja plana. Los títulos
-  de los juegos van en negrita.
+- El cartucho **DS** es un objeto **3D real** (Qt Quick 3D): cuerpo sólido con
+  esquinas redondeadas, etiqueta texturizada, muesca, contactos y tornillo. Solo
+  se puede girar al abrir el detalle del juego. Los títulos van en negrita.
 - **Tiempo jugado propio** para las tiendas que no lo registran: las sesiones
   lanzadas desde GameCenter se guardan en la raíz del juego (ver abajo).
 - Busca por título y filtra por tienda; ordena por reciente, título o tamaño.

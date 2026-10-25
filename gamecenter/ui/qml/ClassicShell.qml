@@ -11,11 +11,9 @@ Item {
     property string gameMeta: ""
     property string coverUrl: ""
     property bool gameInstalled: true
-    property bool selected: false
     property bool hovered: false
     property real tiltX: 0
     property real tiltY: 0
-    property real flipAngle: 0
 
     Rectangle {
         id: shell
@@ -178,15 +176,5 @@ Item {
                 PathLine { x: 0; y: 0 }
             }
         }
-    }
-
-    Rectangle {
-        anchors.fill: shell
-        radius: shell.radius
-        color: "transparent"
-        border.width: 2
-        border.color: Library.accent
-        opacity: root.selected ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: 140 } }
     }
 }
