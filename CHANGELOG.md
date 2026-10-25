@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.11.0
+
+- The DS cartridge back now has **18 gold contacts**. The two end pads and the
+  centre-most pad are slightly longer than the rest.
+- The contacts sit in a pocket **two levels below the back surface**, surrounded
+  by a three-layer plastic frame that is open at the bottom.
+- Plastic dividers at the middle layer separate the contacts all the way down to
+  the cartridge edge.
+- The back shell is a separate layer and the rounded bottom-left corner keeps a
+  continuous arc without a step.
+
 ## v0.10.2
 
 - The top-bar menu now exposes **Scan Epic games** and **Scan GOG games**. Both

@@ -3,7 +3,7 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.10.2** — Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
+> Estado: **v0.11.0** — Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 
@@ -54,8 +54,10 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   la categoría y el número de juegos visibles.
 - El cartucho **DS** es un objeto **3D real** (Qt Quick 3D): cuerpo fino casi
   cuadrado, con tres esquinas en pico y la inferior izquierda redondeada,
-  etiqueta texturizada, muesca, contactos y tornillo. Solo se puede girar al
-  abrir el detalle del juego. Los títulos van en negrita.
+  etiqueta texturizada, muesca, **18 contactos dorados en un hueco de dos
+  niveles**, marco de plástico de tres capas y separadores hasta el borde
+  inferior. Solo se puede girar al abrir el detalle del juego. Los títulos van
+  en negrita.
 - **Tiempo jugado propio** para las tiendas que no lo registran: las sesiones
   lanzadas desde GameCenter se guardan en la raíz del juego (ver abajo).
 - Busca por título y filtra por tienda; ordena por reciente, título o tamaño.
