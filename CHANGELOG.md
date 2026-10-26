@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.15.0
+
+- Added **Big Picture**, a couch-friendly mode with a large cover and game
+  summary, a full-screen layout, a cinematic carousel where the selected game is
+  much wider than the rest, All/Recent/Favorites filters and an exit
+  confirmation. It is fully usable with an Xbox/XInput controller
+  (D-pad/stick, A, B, LB/RB, X, Y, Start), keyboard or mouse. **Start** enters
+  and exits Big Picture, **Y** opens the game detail with description and
+  timeline, and the **Details** button does the same with a mouse.
+
 ## v0.14.0
 
 - The running game's cartridge now **stays protruding from the dock slot** while
@@ -34,13 +44,6 @@
 - Added the **Month by Month** river chart (stacked game areas), a horizontal
   carousel of month cards with top games, progress bars, daily activity and
   “Open month”, plus a “Watch” auto-scroll mode.
-- Added **Big Picture**, a couch-friendly mode with a large cover and game
-  summary, a full-screen layout, a cinematic carousel where the selected game is
-  much wider than the rest, All/Recent/Favorites filters and an exit
-  confirmation. It is fully usable with an Xbox/XInput controller
-  (D-pad/stick, A, B, LB/RB, X, Y, Start), keyboard or mouse. **Start** enters
-  and exits Big Picture, **Y** opens the game detail with description and
-  timeline, and the **Details** button does the same with a mouse.
 
 ## v0.13.0
 
