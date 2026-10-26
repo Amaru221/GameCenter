@@ -197,10 +197,7 @@ class LibraryModel(QAbstractListModel):
         if role == ROLE_APP_ID:
             return game.app_id
         if role == ROLE_META:
-            return (
-                f"{self._source_label(game).upper()} · "
-                f"{game.app_id or '—'} · {_tag(game.title)}"
-            )
+            return self._meta_line(game)
         if role == ROLE_COVER:
             return self._cover_url(game)
         if role == ROLE_INSTALLED:
@@ -802,6 +799,12 @@ class LibraryModel(QAbstractListModel):
             return tr("Local")
         return SOURCE_LABELS.get(game.source, game.source.capitalize())
 
+    def _meta_line(self, game: Game) -> str:
+        return (
+            f"{self._source_label(game).upper()} · "
+            f"{game.app_id or '—'} · {_tag(game.title)}"
+        )
+
     def _on_language_changed(self) -> None:
         if self._visible:
             top = self.index(0, 0)
@@ -1020,10 +1023,7 @@ class LibraryModel(QAbstractListModel):
         if self._prefs.cartridge_style != "ds":
             return ""
         override = self._prefs.cover_for(game.id)
-        meta = (
-            f"{self._source_label(game).upper()} · "
-            f"{game.app_id or '—'} · {_tag(game.title)}"
-        )
+        meta = self._meta_line(game)
         key = hashlib.sha1(
             f"{game.id}|{game.title}|{game.app_id}|{self._art_revision}|{override}|{meta}".encode(
                 "utf-8"
@@ -1040,18 +1040,19 @@ class LibraryModel(QAbstractListModel):
                 return ""
         return path.as_uri()
 
-    @Slot(int)
-    def launch(self, row: int) -> None:
+    @Slot(int, result=str)
+    def launch(self, row: int) -> str:
         game = self._at(row)
         if game is None:
-            return
+            return ""
         try:
             pid = launch_game(game)
         except (LaunchError, OSError) as exc:
             self.failed.emit(str(exc))
-            return
+            return ""
 
-        self._sessions.start(game, pid, self._cover_url(game))
+        session = self._sessions.start(game, pid, self._cover_url(game))
+        return session.id
 
     @Slot(int)
     def openFolder(self, row: int) -> None:
@@ -1173,10 +1174,7 @@ class LibraryModel(QAbstractListModel):
             "title": game.title,
             "source": self._source_label(game),
             "appId": game.app_id,
-            "meta": (
-                f"{self._source_label(game).upper()} · "
-                f"{game.app_id or '—'} · {_tag(game.title)}"
-            ),
+            "meta": self._meta_line(game),
             "cover": self._cover_url(game),
             "cartridgeColor": self._cartridge_color(game),
             "texture": self._texture_url(game),
@@ -1187,4 +1185,20 @@ class LibraryModel(QAbstractListModel):
             "lastPlayed": _played_text(game.last_played),
             "installDir": str(game.install_dir) if game.install_dir else "",
             "hasFolder": bool(game.install_dir and game.install_dir.is_dir()),
+        }
+
+    @Slot(str, result="QVariantMap")
+    def sessionCard(self, game_id: str) -> dict:
+        """Cartridge data for a running session, looked up by game id."""
+        game = next((entry for entry in self._all if entry.id == game_id), None)
+        if game is None:
+            return {}
+        return {
+            "title": game.title,
+            "source": self._source_label(game),
+            "appId": game.app_id,
+            "meta": self._meta_line(game),
+            "cover": self._cover_url(game),
+            "cartridgeColor": self._cartridge_color(game),
+            "installed": game.installed,
         }

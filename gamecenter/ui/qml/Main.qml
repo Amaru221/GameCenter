@@ -19,6 +19,60 @@ Window {
     property bool updateOpen: false
     property bool addOpen: false
     property bool demoInsert: false
+    property var slotGame: ({})
+    property string slotSessionId: ""
+
+    function latestSession() {
+        var list = Sessions.list;
+        return list.length > 0 ? list[list.length - 1] : null;
+    }
+
+    function sessionById(sessionId) {
+        var list = Sessions.list;
+        for (var i = 0; i < list.length; i++) {
+            if (list[i].id === sessionId) {
+                return list[i];
+            }
+        }
+        return null;
+    }
+
+    function setSlotSession(session) {
+        if (!session) {
+            slotSessionId = "";
+            slotGame = ({});
+            return;
+        }
+        slotSessionId = session.id;
+        slotGame = Library.sessionCard(session.gameId);
+    }
+
+    function commitSlot(sessionId) {
+        var session = sessionById(sessionId);
+        if (!session) {
+            session = latestSession();
+        }
+        setSlotSession(session);
+    }
+
+    function refreshSlot(force) {
+        if (insertEffect.running) {
+            return;
+        }
+        var latest = latestSession();
+        if (!latest) {
+            if (slotSessionId !== "" || force) {
+                slotSessionId = "";
+                slotGame = ({});
+            }
+            return;
+        }
+        if (force || latest.id !== slotSessionId || !slotGame.title) {
+            setSlotSession(latest);
+        }
+    }
+
+    Component.onCompleted: refreshSlot(true)
 
     onDemoInsertChanged: {
         if (!demoInsert) {
@@ -73,7 +127,7 @@ Window {
         anchors.bottom: parent.bottom
         anchors.leftMargin: 24
         anchors.rightMargin: 24
-        anchors.bottomMargin: 78
+        anchors.bottomMargin: 104
 
         onDetailRequested: (index) => {
             detailIndex = index;
@@ -99,6 +153,13 @@ Window {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 10
+    }
+
+    SlotCartridge {
+        id: slotCard
+        x: dock.x + dock.width / 2 - width / 2
+        y: dock.y - height
+        game: window.slotGame
     }
 
     Rectangle {
@@ -170,6 +231,7 @@ Window {
         id: insertEffect
         z: 15
         anchors.fill: parent
+        onInserted: (sessionId) => window.commitSlot(sessionId)
     }
 
     AddGameDialog {
@@ -221,6 +283,7 @@ Window {
     Connections {
         target: Tr
         function onLanguageChanged() {
+            refreshSlot(true);
             if (detailOpen) {
                 detailGame = Library.gameAt(detailIndex);
             }
@@ -228,10 +291,19 @@ Window {
     }
 
     Connections {
+        target: Sessions
+        function onChanged() {
+            refreshSlot();
+        }
+    }
+
+    Connections {
         target: Library
         function onFailed(message) { toast.show(message) }
         function onNotice(message) { toast.show(message) }
+        function onAppearanceChanged() { refreshSlot(true); }
         function onArtChanged() {
+            refreshSlot(true);
             if (detailOpen) {
                 detailGame = Library.gameAt(detailIndex);
             }

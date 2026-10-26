@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- The running game's cartridge now **stays protruding from the dock slot** while
+  the game is running. With several games open, the slot shows the most recent
+  one; when it closes, the next running game takes its place.
+- Launching another game while one is already in the slot keeps the previous
+  cartridge visible during the insertion animation and swaps it when the new
+  cartridge settles.
+
 ## v0.13.0
 
 - **All stores** now always lists Steam, Epic Games, GOG, Battle.net and Riot,
