@@ -80,10 +80,10 @@ def main() -> int:
         from gamecenter.core.updater import UpdateInfo
 
         library._update_available = UpdateInfo(
-            version="0.12.0",
-            tag="v0.12.0",
-            url="https://github.com/Amaru221/GameCenter/releases/tag/v0.12.0",
-            name="GameCenter 0.12.0",
+            version="0.13.0",
+            tag="v0.13.0",
+            url="https://github.com/Amaru221/GameCenter/releases/tag/v0.13.0",
+            name="GameCenter 0.13.0",
             notes=(
                 "• In-app updates with download progress\n"
                 "• Improved update icon in the navbar\n"

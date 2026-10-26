@@ -1,8 +1,8 @@
 ; Inno Setup 6 script for GameCenter.
-; Build with: ISCC.exe /DAppVersion=0.3.0 gamecenter.iss
+; Build with: ISCC.exe /DAppVersion=0.13.0 gamecenter.iss
 
 #ifndef AppVersion
-  #define AppVersion "0.3.0"
+  #define AppVersion "0.13.0"
 #endif
 
 #define AppName "GameCenter"

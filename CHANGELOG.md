@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.13.0
 
 - **All stores** now always lists Steam, Epic Games, GOG, Battle.net and Riot,
   even when a store has no installed games yet.
