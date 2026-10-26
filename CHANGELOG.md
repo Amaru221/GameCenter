@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Big Picture has a more compact top bar so the **game carousel is the main
+  focus**; the selected cover is larger and the side covers keep a readable
+  size.
+- The mouse pointer is hidden as soon as the controller is used in Big Picture
+  and reappears when the mouse moves.
+- **Start** exits Big Picture directly, **B** goes back, and **Y** opens the
+  selected game's detail with description and timeline.
+
 ## v0.15.0
 
 - Added **Big Picture**, a couch-friendly mode with a large cover and game

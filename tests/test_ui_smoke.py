@@ -663,3 +663,13 @@ def test_qml_big_picture_opens_the_game_detail(app, model, monkeypatch) -> None:
         detail = detail.toVariant()
     assert detail["id"] == "steam:1"
     assert detail["description"] == "A tiny space adventure."
+
+
+def test_gamepad_cursor_toggle(app) -> None:
+    from gamecenter.core.gamepad import GamepadManager
+
+    manager = GamepadManager()
+    manager._hide_cursor()
+    assert manager._cursor_hidden is True
+    manager.showCursor()
+    assert manager._cursor_hidden is False

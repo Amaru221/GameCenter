@@ -54,6 +54,9 @@ la muestra como una estantería y lanza los juegos con un doble clic.
     ratón; la ficha del juego se abre con el botón **Details**.
   - La salida con Start es directa; el botón **Exit** de la esquina mantiene
     una confirmación para el ratón.
+  - La barra superior es compacta para que el carrusel domine la pantalla; las
+    carátulas laterales mantienen un tamaño legible.
+  - El puntero del ratón se oculta al usar el mando y vuelve al mover el ratón.
   - El soporte nativo de mando usa **XInput en Windows**; en Linux o sin mando
     la interfaz funciona con teclado y ratón y la barra de pistas se adapta.
 - **Favoritos** persistentes, con filtro en la barra.

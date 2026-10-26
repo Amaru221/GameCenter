@@ -1,5 +1,18 @@
 # WORKFLOW STATE — Big Picture con mando
 
+## Fix 0.15.1
+
+- Barra superior de Big Picture reducida (altura, márgenes, tipografía y botón
+  Exit) para que el carrusel sea el protagonista.
+- Alturas redistribuidas: hero más contenido y carrusel más alto.
+- Carátulas laterales más anchas y con proporción legible; la seleccionada
+  mantiene el foco cinematográfico sin recortes agresivos.
+- El puntero del ratón se oculta al recibir cualquier entrada de mando
+  (`GamepadManager._hide_cursor`) y reaparece al detectar movimiento del ratón
+  (`_poll_cursor`), sin bloquear los clics.
+- `Gamepad.showCursor()` se llama al cerrar Big Picture y al salir de la app.
+- Tests: **125 passed**.
+
 ## Descripción funcional
 
 - Modo **Big Picture** a pantalla completa (sin barra de título ni barra de

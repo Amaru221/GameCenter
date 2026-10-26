@@ -13,7 +13,8 @@ import os
 import sys
 import time
 
-from PySide6.QtCore import Property, QObject, QTimer, Signal
+from PySide6.QtCore import Property, QObject, QTimer, Qt, Signal, Slot
+from PySide6.QtGui import QCursor, QGuiApplication
 
 # XInput button masks.
 DPAD_UP = 0x0001
@@ -115,15 +116,47 @@ class GamepadManager(QObject):
         self._nav_dx = 0
         self._nav_dy = 0
         self._nav_next = 0.0
+        self._cursor_hidden = False
+        self._cursor_pos = QCursor.pos()
         self._timer = QTimer(self)
         self._timer.setInterval(POLL_MS)
         self._timer.timeout.connect(self._poll)
         if self._library is not None:
             self._timer.start()
+        app = QGuiApplication.instance()
+        if app is not None:
+            app.aboutToQuit.connect(self.showCursor)
 
     @Property(bool, notify=connectedChanged)
     def connected(self) -> bool:
         return self._connected
+
+    def _hide_cursor(self) -> None:
+        if self._cursor_hidden:
+            return
+        app = QGuiApplication.instance()
+        if app is None:
+            return
+        app.setOverrideCursor(QCursor(Qt.BlankCursor))
+        self._cursor_hidden = True
+        self._cursor_pos = QCursor.pos()
+
+    @Slot()
+    def showCursor(self) -> None:
+        if not self._cursor_hidden:
+            return
+        app = QGuiApplication.instance()
+        if app is not None:
+            app.restoreOverrideCursor()
+        self._cursor_hidden = False
+
+    def _poll_cursor(self) -> None:
+        if not self._cursor_hidden:
+            return
+        position = QCursor.pos()
+        if position != self._cursor_pos:
+            self._cursor_pos = position
+            self.showCursor()
 
     def _read(self):
         if self._library is None:
@@ -143,6 +176,7 @@ class GamepadManager(QObject):
         return None
 
     def _poll(self) -> None:
+        self._poll_cursor()
         state = self._read()
         if state is None:
             if self._connected:
@@ -161,6 +195,8 @@ class GamepadManager(QObject):
         buttons = int(pad.wButtons)
         fresh = buttons & ~self._last_buttons
         self._last_buttons = buttons
+        if fresh:
+            self._hide_cursor()
 
         if fresh & BUTTON_A:
             self.accept.emit()
@@ -192,7 +228,9 @@ class GamepadManager(QObject):
             self._nav_dx = dx
             self._nav_dy = dy
             self._nav_next = now + REPEAT_FIRST
+            self._hide_cursor()
             self.navigate.emit(dx, dy)
         elif now >= self._nav_next:
             self._nav_next = now + REPEAT_NEXT
+            self._hide_cursor()
             self.navigate.emit(dx, dy)

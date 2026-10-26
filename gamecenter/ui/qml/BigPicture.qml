@@ -20,11 +20,11 @@ Item {
     property var detailGame: ({})
 
     readonly property real uiScale: Math.max(1, Math.min(1.5, height / 800))
-    readonly property real heroHeight: Math.max(190, Math.min(700, (height - 260) * 0.52))
-    readonly property real carouselHeight: Math.max(150, Math.min(500, (height - 260) * 0.38))
-    readonly property real smallCardWidth: Math.max(100, carouselHeight * 0.55)
-    readonly property real smallCardHeight: carouselHeight * 0.7
-    readonly property real cinematicCardWidth: carouselHeight * 1.25
+    readonly property real heroHeight: Math.max(170, Math.min(520, (height - 230) * 0.38))
+    readonly property real carouselHeight: Math.max(190, Math.min(640, (height - 230) * 0.48))
+    readonly property real smallCardWidth: Math.max(100, carouselHeight * 0.62)
+    readonly property real smallCardHeight: carouselHeight * 0.74
+    readonly property real cinematicCardWidth: carouselHeight * 0.98
     readonly property real coverWidth: heroHeight * 0.8
 
     readonly property var games: {
@@ -110,6 +110,8 @@ Item {
             detailGame = ({});
             openedAt = Date.now();
             forceActiveFocus();
+        } else {
+            Gamepad.showCursor();
         }
     }
 
@@ -442,39 +444,39 @@ Item {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.leftMargin: 30 * root.uiScale
-        anchors.rightMargin: 30 * root.uiScale
-        anchors.topMargin: 18 * root.uiScale
-        height: 44 * root.uiScale
-        spacing: 12 * root.uiScale
+        anchors.leftMargin: 22 * root.uiScale
+        anchors.rightMargin: 22 * root.uiScale
+        anchors.topMargin: 10 * root.uiScale
+        height: 36 * root.uiScale
+        spacing: 10 * root.uiScale
 
         Text {
             text: "GAMECENTER"
             color: "#f2f5fa"
             font.family: "Chakra Petch"
-            font.pixelSize: 18 * root.uiScale
+            font.pixelSize: 15 * root.uiScale
             font.bold: true
-            font.letterSpacing: 2.2
+            font.letterSpacing: 2.0
         }
 
         Text {
             text: Tr.strings["BIG PICTURE"]
             color: Library.accent
             font.family: "Chakra Petch"
-            font.pixelSize: 10 * root.uiScale
+            font.pixelSize: 9 * root.uiScale
             font.bold: true
-            font.letterSpacing: 2.4
+            font.letterSpacing: 2.2
         }
 
         Item { Layout.fillWidth: true }
 
         Row {
-            spacing: 8 * root.uiScale
+            spacing: 7 * root.uiScale
             Layout.alignment: Qt.AlignVCenter
 
             Rectangle {
-                width: 7 * root.uiScale
-                height: 7 * root.uiScale
+                width: 6 * root.uiScale
+                height: 6 * root.uiScale
                 radius: width / 2
                 color: Gamepad.connected ? "#3ddc97" : "#5f6a7b"
                 anchors.verticalCenter: parent.verticalCenter
@@ -486,7 +488,7 @@ Item {
                       : Tr.strings["Keyboard & mouse"]
                 color: "#8b95a5"
                 font.family: "Sora"
-                font.pixelSize: 10 * root.uiScale
+                font.pixelSize: 9 * root.uiScale
                 anchors.verticalCenter: parent.verticalCenter
             }
         }
@@ -495,15 +497,15 @@ Item {
             id: clock
             color: "#dfe6f0"
             font.family: "Chakra Petch"
-            font.pixelSize: 14 * root.uiScale
-            font.letterSpacing: 1.2
-            Layout.leftMargin: 12 * root.uiScale
+            font.pixelSize: 12 * root.uiScale
+            font.letterSpacing: 1.0
+            Layout.leftMargin: 8 * root.uiScale
         }
 
         Rectangle {
-            width: 104 * root.uiScale
-            height: 38 * root.uiScale
-            radius: 10 * root.uiScale
+            width: 88 * root.uiScale
+            height: 32 * root.uiScale
+            radius: 8 * root.uiScale
             color: exitArea.containsMouse ? "#202633" : "#11161f"
             border.width: 1
             border.color: exitArea.containsMouse ? Library.accent : "#2a3444"
@@ -513,7 +515,7 @@ Item {
                 text: Tr.strings["Exit"]
                 color: exitArea.containsMouse ? Library.accent : "#dfe6f0"
                 font.family: "Sora"
-                font.pixelSize: 11 * root.uiScale
+                font.pixelSize: 10 * root.uiScale
             }
 
             MouseArea {
@@ -531,17 +533,17 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.leftMargin: 30 * root.uiScale
-        anchors.rightMargin: 30 * root.uiScale
-        anchors.topMargin: 16 * root.uiScale
-        anchors.bottomMargin: 18 * root.uiScale
-        spacing: 12 * root.uiScale
+        anchors.leftMargin: 24 * root.uiScale
+        anchors.rightMargin: 24 * root.uiScale
+        anchors.topMargin: 8 * root.uiScale
+        anchors.bottomMargin: 12 * root.uiScale
+        spacing: 10 * root.uiScale
 
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: root.heroHeight
             Layout.maximumHeight: root.heroHeight
-            spacing: 28 * root.uiScale
+            spacing: 22 * root.uiScale
 
             Rectangle {
                 Layout.preferredWidth: root.coverWidth
@@ -626,7 +628,7 @@ Item {
                     text: root.selected.title || ""
                     color: "#f8fafc"
                     font.family: "Sora"
-                    font.pixelSize: Math.max(28, Math.min(58, root.height * 0.055))
+                    font.pixelSize: Math.max(26, Math.min(54, root.height * 0.05))
                     font.bold: true
                     wrapMode: Text.WordWrap
                     maximumLineCount: 2
