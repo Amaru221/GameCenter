@@ -8,6 +8,7 @@ Item {
     property var game: ({})
     property bool opened: false
     property bool descriptionExpanded: false
+    property bool showArt: true
 
     signal closeRequested()
     signal playRequested()
@@ -46,6 +47,13 @@ Item {
             peak = Math.max(peak, root.history[i].seconds || 0);
         }
         return peak;
+    }
+
+    function scrollBy(delta) {
+        var maximum = Math.max(0, scroller.contentHeight - scroller.height);
+        scroller.contentY = Math.max(
+            0, Math.min(maximum, scroller.contentY + delta)
+        );
     }
 
     readonly property var infoChips: {
@@ -437,6 +445,7 @@ Item {
                             }
 
                             Rectangle {
+                                visible: root.showArt
                                 width: 132
                                 height: 42
                                 radius: 10

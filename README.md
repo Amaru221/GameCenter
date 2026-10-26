@@ -42,16 +42,18 @@ la muestra como una estantería y lanza los juegos con un doble clic.
 - Las estadísticas se calculan con las sesiones registradas por GameCenter; el
   tiempo anterior sin fecha no se inventa y sigue disponible como total
   histórico en la ficha de cada juego.
-- **Big Picture**: modo de sofá a pantalla completa dentro de la ventana, con
-  portada grande, información del juego, carrusel horizontal, filtros
-  **All games / Recent / Favorites** y barra de pistas de mando.
+- **Big Picture**: modo de sofá **a pantalla completa** (sin barra de título ni
+  barra de tareas), con portada grande, información del juego y un carrusel
+  cinematográfico donde el juego seleccionado es mucho más ancho que el resto.
   - Se entra desde el menú → **Big Picture**, con `Ctrl+B` o con **Start** del
     mando.
   - Mando Xbox compatible (XInput): D-pad/stick para moverse, **A** jugar,
-    **B** salir, **LB/RB** filtros, **X** favorito y **Start** menú de salida.
-  - También funciona con teclado (flechas, Enter, Esc, `[`/`]`, `F`) y ratón.
-  - La salida siempre pide confirmación (Cancel/Exit) y puede hacerse con el
-    mando o con el botón **Exit** de la esquina.
+    **B** volver, **Y/Triángulo** abrir la ficha del juego (descripción y
+    timeline), **LB/RB** filtros, **X** favorito y **Start** para **salir**.
+  - También funciona con teclado (flechas, Enter, Esc, `I`, `[`/`]`, `F`) y
+    ratón; la ficha del juego se abre con el botón **Details**.
+  - La salida con Start es directa; el botón **Exit** de la esquina mantiene
+    una confirmación para el ratón.
   - El soporte nativo de mando usa **XInput en Windows**; en Linux o sin mando
     la interfaz funciona con teclado y ratón y la barra de pistas se adapta.
 - **Favoritos** persistentes, con filtro en la barra.

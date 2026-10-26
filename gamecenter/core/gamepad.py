@@ -104,6 +104,7 @@ class GamepadManager(QObject):
     pageLeft = Signal()
     pageRight = Signal()
     favorite = Signal()
+    details = Signal()
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -167,6 +168,8 @@ class GamepadManager(QObject):
             self.back.emit()
         if fresh & BUTTON_X:
             self.favorite.emit()
+        if fresh & BUTTON_Y:
+            self.details.emit()
         if fresh & BUTTON_START:
             self.menu.emit()
         if fresh & BUTTON_BACK:

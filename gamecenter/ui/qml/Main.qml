@@ -10,6 +10,7 @@ Window {
     visible: true
     title: "GameCenter"
     color: "#07080b"
+    visibility: bigPictureOpen ? Window.FullScreen : Window.Windowed
 
     property var detailGame: ({})
     property int detailIndex: -1
