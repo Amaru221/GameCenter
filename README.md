@@ -16,6 +16,21 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   una portada generada.
 - **Vista de detalle** al hacer clic: cartucho grande, Play, tamaño, tiempo
   jugado (Steam), última partida, ruta y botones.
+- **Resumen del juego**: título, tienda, año, descripción, tamaño, estado de
+  instalación, tiempo total, última partida, géneros y estudio. La descripción
+  se obtiene de la API pública de Steam Store (AppID para Steam; búsqueda por
+  título exacto para el resto), se cachea en `%APPDATA%\GameCenter\metadata.json`
+  y se muestra en el idioma de la interfaz.
+- **Timeline de sesiones**: debajo del resumen aparece un historial por sesión
+  con fecha/hora y duración, además de una gráfica compacta de actividad y el
+  tiempo total. Las sesiones se registran desde esta versión en
+  `%APPDATA%\GameCenter\history.json` (también para Steam, sin tocar su
+  `localconfig.vdf`).
+- **Panel responsive**: el detalle se adapta al ancho de la ventana (vista de
+  dos columnas con cartucho grande o vista compacta con miniatura) y el
+  contenido se desplaza cuando la altura es reducida.
+- **Favoritos con efecto**: la estrella del detalle tiene brillo, rebote y un
+  destello animado al añadir el juego, con aviso de “Añadido a favoritos”.
 - **Favoritos** persistentes, con filtro en la barra.
 - **Dock de sesiones**: al lanzar un juego aparece con su tiempo en marcha y se
   retira solo cuando el proceso termina (o con la ×).
@@ -135,6 +150,7 @@ gamecenter/
   core/
     models.py           modelo Game
     i18n.py             catálogo de idiomas y traductor de la interfaz
+    metadata.py         descripciones de Steam Store con caché local
     vdf.py              lector de VDF (formato de Valve)
     favorites.py        favoritos persistentes (JSON)
     sessions.py         seguimiento de juegos en ejecución

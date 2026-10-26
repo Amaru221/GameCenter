@@ -130,9 +130,10 @@ Window {
         anchors.bottomMargin: 104
 
         onDetailRequested: (index) => {
+            detailOpen = true;
             detailIndex = index;
             detailGame = Library.gameAt(index);
-            detailOpen = true;
+            Library.loadDetails(index);
         }
     }
 
@@ -148,7 +149,7 @@ Window {
 
     Dock {
         id: dock
-        z: 20
+        z: detailOpen ? 5 : 20
         inserting: insertEffect.running
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
@@ -157,6 +158,7 @@ Window {
 
     SlotCartridge {
         id: slotCard
+        z: detailOpen ? 5 : 19
         x: dock.x + dock.width / 2 - width / 2
         y: dock.y - height
         game: window.slotGame
@@ -220,6 +222,9 @@ Window {
         onFavoriteRequested: {
             Library.toggleFavorite(detailIndex);
             detailGame = Library.gameAt(detailIndex);
+            toast.show(detailGame.favorite
+                       ? Tr.strings["Added to favorites"]
+                       : Tr.strings["Removed from favorites"]);
         }
         onArtRequested: {
             artOpen = true;
@@ -286,6 +291,7 @@ Window {
             refreshSlot(true);
             if (detailOpen) {
                 detailGame = Library.gameAt(detailIndex);
+                Library.loadDetails(detailIndex);
             }
         }
     }
@@ -310,6 +316,11 @@ Window {
             artOpen = false;
         }
         function onPlaytimeChanged() {
+            if (detailOpen) {
+                detailGame = Library.gameAt(detailIndex);
+            }
+        }
+        function onDetailsChanged() {
             if (detailOpen) {
                 detailGame = Library.gameAt(detailIndex);
             }

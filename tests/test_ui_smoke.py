@@ -56,7 +56,13 @@ def model(app, monkeypatch, games, tmp_path):
     monkeypatch.setattr(
         library_model.playtime, "_fallback_path", lambda: tmp_path / "playtime.json"
     )
+    monkeypatch.setattr(
+        library_model.playtime, "history_path", lambda: tmp_path / "history.json"
+    )
     monkeypatch.setattr(library_model.artwork, "CACHE", tmp_path / "art")
+    monkeypatch.setattr(
+        library_model.metadata, "cache_path", lambda: tmp_path / "metadata.json"
+    )
     return library_model.LibraryModel(
         download_art=False, settings_path=tmp_path / "settings.json"
     )
@@ -226,6 +232,50 @@ def test_game_at_returns_detail_data(model) -> None:
     assert detail["texture"].startswith("file:///")
     assert detail["hasFolder"] is False
     assert detail["lastPlayed"].startswith("Played")
+    assert detail["description"] == ""
+    assert detail["detailsLoaded"] is False
+    assert detail["history"] == []
+
+
+def test_game_detail_loads_cached_description(model, monkeypatch) -> None:
+    description = {
+        "description": "A tiny space adventure.",
+        "developers": "Studio One",
+        "genres": "Adventure",
+        "releaseDate": "2024",
+    }
+    monkeypatch.setattr(
+        library_model.metadata,
+        "cached",
+        lambda game, language: description,
+    )
+
+    model.loadDetails(0)
+    detail = model.gameAt(0)
+
+    assert detail["description"] == description["description"]
+    assert detail["developers"] == description["developers"]
+    assert detail["genres"] == description["genres"]
+    assert detail["releaseDate"] == description["releaseDate"]
+    assert detail["detailsLoaded"] is True
+
+
+def test_session_ended_records_a_timeline_entry_for_steam(model) -> None:
+    game = model._all[0]
+    session = model._sessions.start(game, None, "")
+    session.started_at = 1_700_000_000
+
+    model._session_ended(session, 90)
+
+    row = next(
+        index for index, item in enumerate(model._visible) if item.id == game.id
+    )
+    detail = model.gameAt(row)
+    assert detail["sessionCount"] == 1
+    assert detail["history"][0]["timestamp"] == 1_700_000_000
+    assert detail["history"][0]["seconds"] == 90
+    assert detail["historyTotalText"] == "2 min"
+    assert library_model.playtime.seconds_for(game) == 0
 
 
 def test_remove_store_game_and_restore(model) -> None:
@@ -443,3 +493,35 @@ def test_qml_slot_waits_for_the_insertion_animation(app, model) -> None:
     app.processEvents()
     assert slot.property("game")["title"] == "Alpha Quest"
     model._sessions.eject(first.id)
+
+
+def test_qml_detail_updates_when_the_description_arrives(app, model, monkeypatch) -> None:
+    from PySide6.QtCore import QObject
+
+    from gamecenter.ui.app import create_engine
+
+    cached = {
+        "description": "A tiny space adventure.",
+        "developers": "Studio One",
+        "genres": "Adventure",
+        "releaseDate": "2024",
+    }
+    monkeypatch.setattr(
+        library_model.metadata, "cached", lambda game, language: cached
+    )
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    assert root.findChild(QObject, "favoriteButton") is not None
+
+    root.setProperty("detailIndex", 0)
+    root.setProperty("detailGame", model.gameAt(0))
+    root.setProperty("detailOpen", True)
+    model.loadDetails(0)
+    app.processEvents()
+
+    detail = root.property("detailGame")
+    if hasattr(detail, "toVariant"):
+        detail = detail.toVariant()
+    assert detail["description"] == "A tiny space adventure."
+    assert detail["detailsLoaded"] is True

@@ -22,10 +22,16 @@ from .models import Game
 from .preferences import config_dir
 
 FILENAME = ".gamecenter_playtime.json"
+HISTORY_FILENAME = "history.json"
+MAX_HISTORY = 200
 
 
 def _fallback_path() -> Path:
     return config_dir() / "playtime.json"
+
+
+def history_path() -> Path:
+    return config_dir() / HISTORY_FILENAME
 
 
 def _read(path: Path) -> dict:
@@ -147,3 +153,46 @@ def add_seconds(game: Game, seconds: float) -> None:
         _fallback_write(game.id, entry)
         return
     _fallback_write(game.id, entry)
+
+
+def record_session(game: Game, started_at: float, seconds: float) -> None:
+    """Append one session to the global, per-game timeline."""
+    if seconds < 1:
+        return
+
+    path = history_path()
+    data = _read(path)
+    entries = data.get(game.id)
+    if not isinstance(entries, list):
+        entries = []
+
+    entries.append(
+        {
+            "start": int(started_at or time.time() - int(seconds)),
+            "seconds": int(seconds),
+        }
+    )
+    data[game.id] = entries[-MAX_HISTORY:]
+    _write(path, data)
+
+
+def history_for(game: Game) -> list[dict]:
+    """Finished sessions for a game, newest first."""
+    entries = _read(history_path()).get(game.id)
+    if not isinstance(entries, list):
+        return []
+
+    out: list[dict] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        try:
+            start = int(entry.get("start") or 0)
+            seconds = int(entry.get("seconds") or 0)
+        except (TypeError, ValueError):
+            continue
+        if seconds > 0:
+            out.append({"start": start, "seconds": seconds})
+
+    out.sort(key=lambda item: item["start"], reverse=True)
+    return out

@@ -11,6 +11,20 @@
 - Sessions opened through a store URI now get a **30-second startup grace**
   before the process check can drop them, so the dock chip and the slot
   cartridge no longer vanish while the game is still starting.
+- The game detail is now a **responsive summary**: title, store, release year,
+  description, size, install state, total playtime, last played, genres and
+  developer, with the cartridge preview switching to a compact cover on narrow
+  windows.
+- Descriptions come from the public Steam Store API (AppID for Steam, exact
+  title search for other stores), cached in `metadata.json` and fetched in the
+  current interface language.
+- Added a **playtime timeline** under the summary with one entry per session
+  (date/time and duration), an activity bar strip and the all-time total. New
+  sessions are stored in `history.json`, including Steam sessions.
+- The detail panel now scrolls when the window is short and leaves the dock out
+  of the modal layer.
+- The favourite star has been redesigned with a golden glow, a pop and a star
+  burst when a game is added, plus a confirmation toast.
 
 ## v0.13.0
 
