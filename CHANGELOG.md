@@ -1,7 +1,14 @@
 # Changelog
 
-## Unreleased
+## v0.15.2
 
+- **Big Picture carousel with four presentation modes**: **Arc**, **Flat**,
+  **3D Ring** and **Vertical Wheel**. Switch with **LB/RB**, `C`/`Tab` or the
+  mode pill; navigation and filters adapt (up/down or left/right) to each mode.
+- Covers are always shown **complete** (`PreserveAspectFit`), never cropped, and
+  the focused card **never overlaps the bottom hints**, at any window size.
+- New PS5-style presentation: accent glow, depth shadow, glass sheen, ring
+  track, floating depth and smooth animated transitions between modes.
 - Big Picture has a more compact top bar so the **game carousel is the main
   focus**; the selected cover is larger and the side covers keep a readable
   size.

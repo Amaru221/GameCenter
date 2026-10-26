@@ -631,6 +631,23 @@ def test_qml_big_picture_navigation_and_exit_confirmation(app, model) -> None:
     app.processEvents()
     assert picture.property("exitConfirmOpen") is False
 
+    QMetaObject.invokeMethod(picture, "cycleMode", Q_ARG("QVariant", 1))
+    app.processEvents()
+    assert picture.property("carouselMode") == "flat"
+    carousel = root.findChild(QObject, "bigPictureCarousel")
+    assert carousel is not None
+    assert carousel.property("mode") == "flat"
+
+    QMetaObject.invokeMethod(picture, "cycleMode", Q_ARG("QVariant", 1))
+    app.processEvents()
+    assert picture.property("carouselMode") == "ring"
+    assert carousel.property("mode") == "ring"
+
+    QMetaObject.invokeMethod(picture, "cycleMode", Q_ARG("QVariant", 1))
+    app.processEvents()
+    assert picture.property("carouselMode") == "wheel"
+    assert carousel.property("mode") == "wheel"
+
 
 def test_qml_big_picture_opens_the_game_detail(app, model, monkeypatch) -> None:
     from PySide6.QtCore import QMetaObject, QObject
