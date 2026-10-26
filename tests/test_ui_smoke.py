@@ -116,10 +116,22 @@ def test_background_is_generated(app) -> None:
 def test_launch_starts_a_session(model, monkeypatch) -> None:
     monkeypatch.setattr(library_model, "launch_game", lambda game: 4321)
 
-    model.launch(0)
+    session_id = model.launch(0)
 
+    assert session_id == "s1"
     assert model.sessions.count == 1
+    assert model.sessions.list[0]["id"] == session_id
     assert model.sessions.list[0]["title"] == "Gamma Flight"
+
+
+def test_session_card_exposes_cartridge_data(model) -> None:
+    card = model.sessionCard("steam:1")
+    assert card["title"] == "Alpha Quest"
+    assert card["source"] == "Steam"
+    assert card["meta"] == "STEAM · 123 · ALPH"
+    assert card["cover"].startswith("image://cover/")
+    assert card["cartridgeColor"] == model.cartridgeColor
+    assert model.sessionCard("missing:1") == {}
 
 
 def test_favorites_toggle_and_filter(model) -> None:
@@ -370,3 +382,64 @@ def test_qml_reacts_to_language_change(app, model) -> None:
     model.translator.setLanguage("en")
     app.processEvents()
     assert heading.property("text") == "ALL GAMES"
+
+
+def test_qml_slot_shows_last_running_session(app, model) -> None:
+    from PySide6.QtCore import QObject
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    slot = root.findChild(QObject, "slotCartridge")
+    assert slot is not None
+    assert slot.property("active") is False
+
+    first = model._sessions.start(model._all[0], None, "")
+    app.processEvents()
+    assert slot.property("active") is True
+    assert slot.property("game")["title"] == "Alpha Quest"
+
+    second = model._sessions.start(model._all[1], None, "")
+    app.processEvents()
+    assert slot.property("game")["title"] == "Beta Racer"
+
+    model._sessions.eject(second.id)
+    app.processEvents()
+    assert slot.property("game")["title"] == "Alpha Quest"
+
+    model._sessions.eject(first.id)
+    app.processEvents()
+    assert slot.property("active") is False
+
+
+def test_qml_slot_waits_for_the_insertion_animation(app, model) -> None:
+    from PySide6.QtCore import Q_ARG, QMetaObject, QObject
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    slot = root.findChild(QObject, "slotCartridge")
+    effect = root.findChild(QObject, "insertEffect")
+    assert slot is not None and effect is not None
+
+    first = model._sessions.start(model._all[0], None, "")
+    app.processEvents()
+    assert slot.property("game")["title"] == "Alpha Quest"
+
+    effect.setProperty("running", True)
+    second = model._sessions.start(model._all[1], None, "")
+    app.processEvents()
+    # The previous cartridge stays in the slot while the next one flies in.
+    assert slot.property("game")["title"] == "Alpha Quest"
+
+    QMetaObject.invokeMethod(root, "commitSlot", Q_ARG("QVariant", second.id))
+    app.processEvents()
+    assert slot.property("game")["title"] == "Beta Racer"
+
+    effect.setProperty("running", False)
+    model._sessions.eject(second.id)
+    app.processEvents()
+    assert slot.property("game")["title"] == "Alpha Quest"
+    model._sessions.eject(first.id)

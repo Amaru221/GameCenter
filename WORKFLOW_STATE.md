@@ -1,79 +1,89 @@
-# WORKFLOW STATE — Filtros completos e idiomas
+# WORKFLOW STATE — Cartucho en ejecución dentro de la ranura
 
 ## Descripción funcional
 
-1. **Filtro "All stores"**: debe mostrar siempre todas las tiendas soportadas
-   (Steam, Epic Games, GOG, Battle.net, Riot) más la entrada **Local**, aunque
-   alguna tienda no tenga juegos instalados en este momento.
-2. **Segundo filtro (ordenación)**: añadir la opción **Most played**, que ordena
-   de mayor a menor tiempo jugado (`playtime_minutes`) y desempata por título.
-3. **Idiomas**:
-   - Interfaz: selector de idioma en **Settings** con inglés, español, francés,
-     alemán, italiano y portugués. El cambio se aplica al instante y se persiste
-     en `settings.json` (`language`).
-   - Instalador Inno Setup: añadir francés, alemán, italiano, portugués,
-     portugués de Brasil, neerlandés, polaco, ruso y japonés además de inglés y
-     español.
+- Mientras un juego está en ejecución, su cartucho queda **visible sobresaliendo
+  de la ranura de inserción** del dock. No desaparece al terminar la animación.
+- Si hay **varios juegos ejecutándose**, la ranura muestra el **último lanzado**
+  (el último elemento de `Sessions.list`).
+- Al **lanzar otro juego mientras hay uno en la ranura**, el cartucho anterior
+  permanece visible durante la animación de aproximación; cuando el nuevo
+  cartucho se asienta en la ranura, lo reemplaza.
+- Cuando un juego termina o se expulsa, la ranura pasa al siguiente juego en
+  ejecución más reciente; si no queda ninguno, el cartucho se oculta con un
+  fundido.
 
 ## Decisión de arquitectura
 
-- Un único catálogo de traducciones en Python (`gamecenter/core/i18n.py`) usa el
-  texto inglés como clave. Se expone a QML mediante el objeto `Tr`:
-  - `Tr.strings["Settings"]` → texto traducido (binding reactivo).
-  - `Tr.language`, `Tr.languages`, `Tr.setLanguage(code)`.
-- `LibraryModel` crea el `Translator` con las preferencias, lo registra como
-  traductor activo y emite `changed`/`dataChanged` al cambiar de idioma.
-- Los módulos de core traducen sus mensajes visibles con `tr("...")`.
-- No se añaden dependencias ni pasos de compilación (`.qm`/`lrelease`).
+- La ranura se dibuja con un nuevo `SlotCartridge.qml`, situado en `Main.qml`
+  entre el `InsertEffect` (z=15) y el `Dock` (z=20). Su parte inferior queda
+  tapada por el dock, de modo que solo sobresale la parte superior.
+- `Library` expone:
+  - `launch(row)` ahora devuelve el **id de sesión** (`""` si falla).
+  - `sessionCard(gameId)` devuelve los datos completos de la tarjeta
+    (título, tienda, meta, carátula, color) para una sesión en ejecución.
+- `InsertEffect` conserva su animación y emite `inserted(sessionId)` justo
+  cuando el cartucho se asienta; en ese momento `Main` actualiza la ranura.
+- `Main` centraliza la elección de la sesión visible:
+  - `commitSlot(id)` prioriza la sesión indicada y cae al último juego en
+    ejecución si esa sesión ya terminó.
+  - `refreshSlot()` se ejecuta cuando cambia `Sessions` o el idioma y mantiene
+    la tarjeta actual si la animación está en curso.
+- Se amplía el margen inferior de `LibraryGrid` para que el cartucho sobresalga
+  sin tapar la última fila de juegos.
 
-## Contrato de API (UI interna)
+## Contrato interno
 
 | Elemento | Tipo | Descripción |
 | --- | --- | --- |
-| `Tr.language` | `str` (notify) | Código activo: `en`, `es`, `fr`, `de`, `it`, `pt`. |
-| `Tr.languages` | `list[{text,value}]` | Idiomas disponibles para el `PillCombo`. |
-| `Tr.strings` | `dict[str,str]` (notify) | Catálogo completo; las claves ausentes caen a inglés. |
-| `Tr.setLanguage(code)` | slot | Cambia idioma, persiste y emite `languageChanged`. |
-| `Tr.text(key)` | slot → `str` | Traducción puntual desde Python/QML. |
-| `Library.translator` | `QObject` (constant) | Instancia `Tr` del modelo. |
-| `Library.setSort("most")` | slot | Orden por tiempo jugado descendente. |
-| `Library.sourceOptions` | `list[{text,value}]` | Todas las tiendas conocidas (sin `local`). |
-| `Preferences.language` | propiedad | Persistida en `settings.json`. |
+| `Library.launch(row)` | slot → `str` | Inicia el juego y devuelve el id de sesión. |
+| `Library.sessionCard(gameId)` | slot → `QVariantMap` | Datos de cartucho para una sesión. |
+| `InsertEffect.inserted(sessionId)` | signal | El cartucho acaba de asentarse en la ranura. |
+| `Main.slotGame` | `var` | Datos del cartucho que se muestra en la ranura. |
+| `Main.commitSlot(id)` | function | Fija la sesión visible al terminar la inserción. |
+| `Main.refreshSlot(force)` | function | Recalcula la sesión visible. |
+| `SlotCartridge.game` | `var` | Datos del cartucho a dibujar. |
 
 ## Checklist
 
 ### Backend
-- [x] `gamecenter/core/i18n.py` con catálogo en/es/fr/de/it/pt.
-- [x] `Preferences.language` con validación y persistencia.
-- [x] `LibraryModel`: `translator`, `setLanguage` vía `Tr`, mensajes traducidos.
-- [x] `sourceOptions` incluye siempre Steam, Epic, GOG, Battle.net y Riot.
-- [x] Orden `most` por `playtime_minutes` descendente.
-- [x] Mensajes de core (`manual`, `launch`, `updater`, `steamgriddb`) traducidos.
-- [x] `app.py` expone `Tr` al contexto QML.
+- [x] `LibraryModel.launch` devuelve el id de sesión.
+- [x] `LibraryModel.sessionCard` devuelve los datos de la tarjeta.
+- [x] Tests del id de sesión y de `sessionCard`.
 
 ### Frontend
-- [x] `Toolbar.qml`: "All stores" con todas las tiendas, opción "Most played" y textos traducidos.
-- [x] `SettingsPanel.qml`: sección LANGUAGE con selector + scroll para el panel.
-- [x] Resto de QML usa `Tr.strings` para todos los textos visibles.
-- [x] `Main.qml` refresca el detalle al cambiar de idioma.
+- [x] Nuevo `SlotCartridge.qml` con cartucho escalado y fundido.
+- [x] `Main.qml`: propiedades/funciones de ranura, conexión con `Sessions`,
+      `InsertEffect.inserted` y ajuste del margen inferior.
+- [x] `InsertEffect.qml`: guarda `sessionId`, bloquea la actualización durante
+      la animación y emite `inserted` al asentarse.
+- [x] La ranura refleja el último juego, el anterior al expulsar y se oculta al
+      no quedar sesiones.
 
-### Empaquetado y documentación
-- [x] `packaging/gamecenter.iss`: nuevos idiomas del instalador.
-- [x] README y CHANGELOG actualizados.
-- [x] Tests: orden `most`, catálogo de tiendas, cambio de idioma.
+### Verificación
+- [x] `python -m pytest -q`.
+- [x] Captura con `GC_DEMO=1 GC_SESSION=1` para revisar el cartucho sobresalido.
+- [x] Prueba manual: lanzar dos juegos y comprobar que el segundo reemplaza al
+      primero al finalizar su animación.
 
-## Verificación
+## Resultado
 
-- `python -m compileall -q gamecenter tests` → OK.
-- `python -m pytest -q` → **92 passed**.
-- Carga headless de `Main.qml` y cambio de idioma en caliente comprobado en
-  `tests/test_ui_smoke.py::test_qml_reacts_to_language_change`.
-- Capturas revisadas: panel de Ajustes en inglés y español; toolbar con el
-  nuevo desplegable de ordenación.
+- `python -m pytest -q` → **96 passed**.
+- Prueba de integración de la animación (QML + sesiones): durante el vuelo la
+  ranura conserva `Alpha Quest`; al asentarse pasa a `Beta Racer` y la sesión
+  anterior sigue viva en el dock.
+- Prueba específica de lanzamiento por URI (sin `pid`): la sesión sobrevive al
+  primer `poll` y la ranura sigue activa después de la animación.
+- Captura de `GC_DEMO=1 GC_SESSION=1`: el cartucho sobresale 44 px de la ranura,
+  centrado, sin tapar la última fila de la biblioteca.
 
 ## Notas
 
-- El catálogo usa el texto inglés como clave; cualquier clave ausente cae a
-  inglés, así que añadir un idioma nuevo es solo añadir su diccionario.
-- El idioma se guarda en `settings.json` (`language`) y se aplica al instante
-  sin reiniciar.
+- El carrito de la ranura se dibuja en un contenedor recortado (`SlotCartridge`)
+  para que la parte inferior quede oculta en el dock y no asome por debajo.
+- `InsertEffect` mantiene la guarda `running` mientras lanza la sesión, de modo
+  que el cartucho anterior no desaparece antes de que el nuevo se asiente.
+- **Corrección del arranque**: las sesiones lanzadas por URI (Steam, Epic, etc.)
+  no tienen `pid`; el primer `poll` las eliminaba antes de que el proceso real
+  apareciera. Ahora `SessionTracker` concede `LAUNCH_GRACE = 30 s` para que el
+  cartucho permanezca mientras el juego arranca.

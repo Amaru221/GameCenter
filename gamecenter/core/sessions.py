@@ -21,6 +21,10 @@ try:
 except ImportError:  # pragma: no cover - psutil is a declared dependency
     psutil = None
 
+# A store URI has no pid; give the launcher time to spawn the real game before
+# the first poll decides the session is gone.
+LAUNCH_GRACE = 30.0
+
 
 def _format_elapsed(seconds: int) -> str:
     minutes, secs = divmod(max(0, seconds), 60)
@@ -39,7 +43,7 @@ def _under(path: str, folder: Path) -> bool:
 
 def _process_running(session: "Session") -> bool:
     if psutil is None:
-        return session.pid is not None and session.started_at + 60 > time.time()
+        return session.started_at + 60 > time.time()
 
     if session.pid is not None:
         try:
@@ -56,6 +60,13 @@ def _process_running(session: "Session") -> bool:
                     return True
         except (psutil.Error, OSError):
             pass
+
+    # Store launchers (Steam, Epic, …) are opened via URI, so there is no pid
+    # and the real game process may take a while to appear. Keep the session
+    # alive during a short startup window instead of dropping it on the first
+    # poll.
+    if session.started_at + LAUNCH_GRACE > time.time():
+        return True
 
     return False
 

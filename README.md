@@ -33,7 +33,10 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   reiniciar la aplicación.
 - **Animación de inserción**: al pulsar Play, el cartucho vuela desde el detalle
   y se inserta en la ranura central del dock “Ready”, que se ilumina mientras
-  muestra “Inserting…”.
+  muestra “Inserting…”. Al terminar la animación, el cartucho **se queda
+  sobresaliendo de la ranura mientras el juego está en ejecución**. Si hay
+  varios juegos abiertos, la ranura muestra el último lanzado; al cerrar uno,
+  pasa al siguiente y, si no queda ninguno, se oculta con un fundido.
 - **Carátulas por juego con SteamGridDB**: opciones verticales paginadas, con
   cinco iniciales y **Load more** para seguir explorando; la cuadrícula se
   desplaza. La clave se guarda en el almacén de credenciales del sistema, nunca
