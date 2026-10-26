@@ -121,7 +121,7 @@ Item {
                 TextField {
                     id: search
                     Layout.fillWidth: true
-                    placeholderText: "Search your games"
+                    placeholderText: Tr.strings["Search your games"]
                     placeholderTextColor: "#6f7887"
                     color: "#e8edf5"
                     background: null
@@ -156,7 +156,7 @@ Item {
 
                     Text {
                         anchors.centerIn: parent
-                        text: "LIBRARY"
+                        text: Tr.strings["LIBRARY"]
                         color: "#f2f5fa"
                         font.family: "Chakra Petch"
                         font.pixelSize: 11
@@ -173,7 +173,7 @@ Item {
 
                     Text {
                         anchors.centerIn: parent
-                        text: "STORE"
+                        text: Tr.strings["STORE"]
                         color: "#7b8494"
                         font.family: "Chakra Petch"
                         font.pixelSize: 11
@@ -184,7 +184,7 @@ Item {
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: root.toastRequested("Store coming in v0.2")
+                        onClicked: root.toastRequested(Tr.strings["Store coming in v0.2"])
                     }
                 }
             }
@@ -249,7 +249,7 @@ Item {
             }
 
             ToolTip.visible: updateHover.containsMouse
-            ToolTip.text: "GameCenter " + Library.updateVersion + " is available - click to update"
+            ToolTip.text: Tr.strings["GameCenter %1 is available - click to update"].arg(Library.updateVersion)
         }
 
         Rectangle {
@@ -356,27 +356,27 @@ Item {
                 }
 
                 MenuItem {
-                    text: "Scan Steam games"
+                    text: Tr.strings["Scan Steam games"]
                     onTriggered: root.scanRequested("steam")
                 }
                 MenuItem {
-                    text: "Scan Epic games"
+                    text: Tr.strings["Scan Epic games"]
                     onTriggered: root.scanRequested("epic")
                 }
                 MenuItem {
-                    text: "Scan GOG games"
+                    text: Tr.strings["Scan GOG games"]
                     onTriggered: root.scanRequested("gog")
                 }
                 MenuItem {
-                    text: "Scan Battle.net games"
+                    text: Tr.strings["Scan Battle.net games"]
                     onTriggered: root.scanRequested("battlenet")
                 }
                 MenuItem {
-                    text: "Scan Riot games"
+                    text: Tr.strings["Scan Riot games"]
                     onTriggered: root.scanRequested("riot")
                 }
                 MenuItem {
-                    text: "Scan all stores"
+                    text: Tr.strings["Scan all stores"]
                     onTriggered: root.scanRequested("")
                 }
                 MenuSeparator {
@@ -386,7 +386,7 @@ Item {
                     }
                 }
                 MenuItem {
-                    text: "Restore removed games"
+                    text: Tr.strings["Restore removed games"]
                     enabled: Library.hiddenCount > 0
                     onTriggered: root.restoreHiddenRequested()
                 }
@@ -397,11 +397,11 @@ Item {
                     }
                 }
                 MenuItem {
-                    text: "Add game manually..."
+                    text: Tr.strings["Add game manually..."]
                     onTriggered: root.addRequested()
                 }
                 MenuItem {
-                    text: "Settings"
+                    text: Tr.strings["Settings"]
                     onTriggered: root.settingsRequested()
                 }
             }

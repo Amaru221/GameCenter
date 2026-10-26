@@ -25,9 +25,27 @@ def app():
 @pytest.fixture
 def games() -> list[Game]:
     return [
-        Game(id="steam:1", title="Alpha Quest", source="steam", app_id="123", last_played=100),
-        Game(id="steam:2", title="Beta Racer", source="steam", installed=False),
-        Game(id="epic:3", title="Gamma Flight", source="epic", last_played=300),
+        Game(
+            id="steam:1",
+            title="Alpha Quest",
+            source="steam",
+            app_id="123",
+            last_played=100,
+        ),
+        Game(
+            id="steam:2",
+            title="Beta Racer",
+            source="steam",
+            installed=False,
+            playtime_minutes=120,
+        ),
+        Game(
+            id="epic:3",
+            title="Gamma Flight",
+            source="epic",
+            last_played=300,
+            playtime_minutes=30,
+        ),
     ]
 
 
@@ -70,6 +88,10 @@ def test_model_sorts(model) -> None:
     model.setSort("recent")
     titles = [model.data(model.index(i, 0), library_model.ROLE_TITLE) for i in range(3)]
     assert titles[0] == "Gamma Flight"
+
+    model.setSort("most")
+    titles = [model.data(model.index(i, 0), library_model.ROLE_TITLE) for i in range(3)]
+    assert titles == ["Beta Racer", "Gamma Flight", "Alpha Quest"]
 
 
 def test_meta_line_has_store_id_and_tag(model) -> None:
@@ -138,8 +160,44 @@ def test_appearance_properties(model) -> None:
 
 def test_source_options_have_labels(model) -> None:
     options = model.sourceOptions
-    assert {option["value"] for option in options} == {"steam", "epic"}
-    assert {option["text"] for option in options} == {"Steam", "Epic Games"}
+    assert {option["value"] for option in options} == {
+        "steam",
+        "epic",
+        "gog",
+        "battlenet",
+        "riot",
+    }
+    assert {option["text"] for option in options} == {
+        "Steam",
+        "Epic Games",
+        "GOG",
+        "Battle.net",
+        "Riot",
+    }
+
+
+def test_language_switches_and_persists(model) -> None:
+    assert model.translator.language == "en"
+
+    model.translator.setLanguage("es")
+
+    assert model.translator.language == "es"
+    assert model.translator.strings["Settings"] == "Ajustes"
+    assert model.translator.strings["Most played"] == "Más jugados"
+    assert model._prefs.language == "es"
+
+    model.translator.setLanguage("en")
+    assert model.translator.language == "en"
+
+
+def test_every_language_has_the_full_catalog() -> None:
+    from gamecenter.core import i18n
+
+    keys = set(i18n.catalog("en"))
+    assert keys
+    for code, _name in i18n.LANGUAGES:
+        assert set(i18n.catalog(code)) == keys
+    assert i18n.catalog("es")["1 game"] == "1 juego"
 
 
 def test_game_at_returns_detail_data(model) -> None:
@@ -288,3 +346,27 @@ def test_qml_window_loads(app, model) -> None:
     roots = engine.rootObjects()
     assert roots, "Main.qml failed to load"
     assert roots[0].property("title") == "GameCenter"
+
+
+def test_qml_reacts_to_language_change(app, model) -> None:
+    from PySide6.QtCore import QObject
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    heading = root.findChild(QObject, "headingLabel")
+    assert heading is not None
+    assert heading.property("text") == "ALL GAMES"
+
+    model.translator.setLanguage("es")
+    app.processEvents()
+
+    assert heading.property("text") == "TODOS LOS JUEGOS"
+    combo = root.findChild(QObject, "languageCombo")
+    assert combo is not None
+    assert combo.property("value") == "es"
+
+    model.translator.setLanguage("en")
+    app.processEvents()
+    assert heading.property("text") == "ALL GAMES"

@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .. import __version__
+from .i18n import tr
 
 REPO = "Amaru221/GameCenter"
 API = f"https://api.github.com/repos/{REPO}/releases/latest"
@@ -73,15 +74,17 @@ def fetch_latest(timeout: int = 10) -> dict:
             data = json.load(response)
     except urllib.error.HTTPError as exc:
         if exc.code == 404:
-            raise UpdateError("No releases found on GitHub.") from exc
-        raise UpdateError(f"GitHub answered with an error ({exc.code}).") from exc
+            raise UpdateError(tr("No releases found on GitHub.")) from exc
+        raise UpdateError(
+            tr("GitHub answered with an error ({code}).", code=exc.code)
+        ) from exc
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        raise UpdateError("Couldn't reach GitHub.") from exc
+        raise UpdateError(tr("Couldn't reach GitHub.")) from exc
     except ValueError as exc:
-        raise UpdateError("GitHub sent an unexpected answer.") from exc
+        raise UpdateError(tr("GitHub sent an unexpected answer.")) from exc
 
     if not isinstance(data, dict):
-        raise UpdateError("GitHub sent an unexpected answer.")
+        raise UpdateError(tr("GitHub sent an unexpected answer."))
     return data
 
 
@@ -148,7 +151,7 @@ def download_installer(
 ) -> Path:
     """Download the release installer, verify it and return its local path."""
     if not info.installer_url:
-        raise UpdateError("This release doesn't include an installer.")
+        raise UpdateError(tr("This release doesn't include an installer."))
 
     target = (
         Path(destination)
@@ -158,7 +161,7 @@ def download_installer(
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
-        raise UpdateError("Couldn't prepare the update folder.") from exc
+        raise UpdateError(tr("Couldn't prepare the update folder.")) from exc
 
     expected_size = int(info.installer_size or 0)
     expected_digest = _expected_digest(info)
@@ -195,9 +198,9 @@ def download_installer(
                         progress(downloaded, total)
 
         if total and downloaded != total:
-            raise UpdateError("The update download was incomplete.")
+            raise UpdateError(tr("The update download was incomplete."))
         if expected_digest and _sha256(part) != expected_digest:
-            raise UpdateError("The update file failed its integrity check.")
+            raise UpdateError(tr("The update file failed its integrity check."))
         os.replace(part, target)
         return target
     except UpdateError:
@@ -205,16 +208,16 @@ def download_installer(
         raise
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         part.unlink(missing_ok=True)
-        raise UpdateError("Couldn't download the update.") from exc
+        raise UpdateError(tr("Couldn't download the update.")) from exc
 
 
 def launch_installer(path: Path) -> None:
     """Start the downloaded installer silently. The caller quits afterwards."""
     if sys.platform != "win32":
-        raise UpdateError("Automatic installation is only available on Windows.")
+        raise UpdateError(tr("Automatic installation is only available on Windows."))
     installer = Path(path)
     if not installer.is_file():
-        raise UpdateError("The downloaded installer is missing.")
+        raise UpdateError(tr("The downloaded installer is missing."))
     try:
         subprocess.Popen(
             [
@@ -227,4 +230,4 @@ def launch_installer(path: Path) -> None:
             close_fds=True,
         )
     except OSError as exc:
-        raise UpdateError("Couldn't start the installer.") from exc
+        raise UpdateError(tr("Couldn't start the installer.")) from exc

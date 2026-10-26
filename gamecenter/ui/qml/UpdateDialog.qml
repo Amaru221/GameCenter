@@ -70,7 +70,7 @@ Item {
                     spacing: 2
 
                     Text {
-                        text: "Update available"
+                        text: Tr.strings["Update available"]
                         color: "#f2f5fa"
                         font.family: "Sora"
                         font.pixelSize: 20
@@ -89,8 +89,7 @@ Item {
 
             Text {
                 Layout.fillWidth: true
-                text: "You have GameCenter " + Library.version
-                      + ". A newer version is ready to download and install."
+                text: Tr.strings["You have GameCenter %1. A newer version is ready to download and install."].arg(Library.version)
                 color: "#cfd6e2"
                 font.family: "Sora"
                 font.pixelSize: 12
@@ -100,7 +99,7 @@ Item {
             Text {
                 Layout.fillWidth: true
                 visible: Library.updateSizeText !== ""
-                text: "Installer: " + Library.updateSizeText
+                text: Tr.strings["Installer: %1"].arg(Library.updateSizeText)
                 color: "#6f7887"
                 font.family: "Sora"
                 font.pixelSize: 10
@@ -200,7 +199,7 @@ Item {
 
                     Text {
                         anchors.centerIn: parent
-                        text: "Later"
+                        text: Tr.strings["Later"]
                         color: "#cfd6e2"
                         font.family: "Sora"
                         font.pixelSize: 12
@@ -224,8 +223,10 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         text: Library.updateDownloading
-                              ? "Downloading..."
-                              : (Library.updateInstalling || Library.updateReady ? "Installing..." : "Update now")
+                              ? Tr.strings["Downloading..."]
+                              : (Library.updateInstalling || Library.updateReady
+                                 ? Tr.strings["Installing..."]
+                                 : Tr.strings["Update now"])
                         color: Library.accentText
                         font.family: "Sora"
                         font.pixelSize: 12

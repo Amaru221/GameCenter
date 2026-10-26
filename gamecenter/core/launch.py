@@ -8,6 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from .i18n import tr
 from .models import Game
 
 
@@ -60,4 +61,4 @@ def launch(game: Game) -> int | None:
         )
         return process.pid
 
-    raise LaunchError(f"Don't know how to start {game.title!r}.")
+    raise LaunchError(tr("Don't know how to start {title}.", title=repr(game.title)))

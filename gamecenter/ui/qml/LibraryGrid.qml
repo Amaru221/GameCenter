@@ -74,8 +74,8 @@ Item {
         horizontalAlignment: Text.AlignCenter
         wrapMode: Text.WordWrap
         text: Library.total === 0
-              ? "No Steam library found.\nInstall a game with Steam and press F5."
-              : "No games match your filters."
+              ? Tr.strings["No Steam library found.\nInstall a game with Steam and press F5."]
+              : Tr.strings["No games match your filters."]
         color: "#98a3b4"
         font.family: "Sora"
         font.pixelSize: 13
@@ -117,7 +117,7 @@ Item {
         }
 
         MenuItem {
-            text: "Launch"
+            text: Tr.strings["Launch"]
             onTriggered: Library.launch(contextMenu.row)
         }
         MenuSeparator {
@@ -127,15 +127,15 @@ Item {
             }
         }
         MenuItem {
-            text: "Open install folder"
+            text: Tr.strings["Open install folder"]
             onTriggered: Library.openFolder(contextMenu.row)
         }
         MenuItem {
-            text: "Copy App ID"
+            text: Tr.strings["Copy App ID"]
             onTriggered: Library.copyAppId(contextMenu.row)
         }
         MenuItem {
-            text: "Cartridge color..."
+            text: Tr.strings["Cartridge color..."]
             onTriggered: {
                 colorPopup.row = contextMenu.row;
                 colorPopup.open();
@@ -148,7 +148,7 @@ Item {
             }
         }
         MenuItem {
-            text: "Remove from library"
+            text: Tr.strings["Remove from library"]
             onTriggered: Library.removeGame(contextMenu.row)
         }
     }
@@ -178,7 +178,7 @@ Item {
             spacing: 12
 
             Text {
-                text: "Cartridge color"
+                text: Tr.strings["Cartridge color"]
                 color: "#f2f5fa"
                 font.family: "Sora"
                 font.pixelSize: 15
@@ -213,7 +213,7 @@ Item {
 
                 Text {
                     anchors.centerIn: parent
-                    text: "Use default"
+                    text: Tr.strings["Use default"]
                     color: "#cfd6e2"
                     font.family: "Sora"
                     font.pixelSize: 11

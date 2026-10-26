@@ -16,6 +16,7 @@ import urllib.request
 from pathlib import Path
 
 from .. import __version__
+from .i18n import tr
 from .models import Game
 
 API = "https://www.steamgriddb.com/api/v2"
@@ -42,15 +43,17 @@ def _get(path: str, key: str, params: dict | None = None):
             payload = json.load(response)
     except urllib.error.HTTPError as exc:
         if exc.code in (401, 403):
-            raise SteamGridDBError("SteamGridDB rejected the API key.") from exc
-        raise SteamGridDBError(f"SteamGridDB answered with an error ({exc.code}).") from exc
+            raise SteamGridDBError(tr("SteamGridDB rejected the API key.")) from exc
+        raise SteamGridDBError(
+            tr("SteamGridDB answered with an error ({code}).", code=exc.code)
+        ) from exc
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        raise SteamGridDBError("Couldn't reach SteamGridDB.") from exc
+        raise SteamGridDBError(tr("Couldn't reach SteamGridDB.")) from exc
     except ValueError as exc:
-        raise SteamGridDBError("SteamGridDB sent an unexpected answer.") from exc
+        raise SteamGridDBError(tr("SteamGridDB sent an unexpected answer.")) from exc
 
     if not isinstance(payload, dict) or not payload.get("success"):
-        raise SteamGridDBError("SteamGridDB didn't return any results.")
+        raise SteamGridDBError(tr("SteamGridDB didn't return any results."))
     return payload.get("data")
 
 
@@ -101,10 +104,10 @@ def download(url: str, folder: Path) -> Path:
         with urllib.request.urlopen(request, timeout=20) as response:
             data = response.read()
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        raise SteamGridDBError("Couldn't download that artwork.") from exc
+        raise SteamGridDBError(tr("Couldn't download that artwork.")) from exc
 
     if len(data) < 1024:
-        raise SteamGridDBError("That artwork came back empty.")
+        raise SteamGridDBError(tr("That artwork came back empty."))
     part.write_bytes(data)
     os.replace(part, target)
     return target

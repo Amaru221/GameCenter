@@ -12,6 +12,8 @@ import re
 import sys
 from pathlib import Path
 
+from .i18n import CODES
+
 DEFAULT_ACCENT = "#4cc9f0"
 DEFAULT_SURFACE = "#12151b"
 DEFAULT_CARTRIDGE = "#3c414a"
@@ -99,6 +101,8 @@ class Preferences:
         )
 
         data["checkUpdates"] = bool(data.get("checkUpdates", True))
+        language = str(data.get("language") or "en")
+        data["language"] = language if language in CODES else "en"
         try:
             data["lastUpdateCheck"] = float(data.get("lastUpdateCheck") or 0)
         except (TypeError, ValueError):
@@ -170,6 +174,18 @@ class Preferences:
     def cartridge_color(self, value: str) -> None:
         if _HEX.match(value or ""):
             self._data["cartridgeColor"] = value
+            self._save()
+
+    # -- language ---------------------------------------------------------
+
+    @property
+    def language(self) -> str:
+        return str(self._data["language"])
+
+    @language.setter
+    def language(self, value: str) -> None:
+        if value in CODES and value != self._data["language"]:
+            self._data["language"] = value
             self._save()
 
     # -- updates ----------------------------------------------------------

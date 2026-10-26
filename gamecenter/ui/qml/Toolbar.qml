@@ -10,11 +10,11 @@ Item {
 
     readonly property string heading: {
         if (Library.favoritesOnly) {
-            return "FAVORITES";
+            return Tr.strings["FAVORITES"];
         }
         var key = Library.sourceFilter;
         if (!key) {
-            return "ALL GAMES";
+            return Tr.strings["ALL GAMES"];
         }
         var options = Library.sourceOptions;
         for (var i = 0; i < options.length; i++) {
@@ -22,11 +22,14 @@ Item {
                 return options[i].text.toUpperCase();
             }
         }
-        return key === "local" ? "LOCAL" : key.toUpperCase();
+        return key === "local" ? Tr.strings["Local"].toUpperCase() : key.toUpperCase();
     }
 
     readonly property var sourceEntries: {
-        var out = [{ text: "All stores", value: "" }, { text: "Local", value: "local" }];
+        var out = [
+            { text: Tr.strings["All stores"], value: "" },
+            { text: Tr.strings["Local"], value: "local" }
+        ];
         var options = Library.sourceOptions;
         for (var i = 0; i < options.length; i++) {
             if (options[i].value !== "local") {
@@ -34,6 +37,16 @@ Item {
             }
         }
         return out;
+    }
+
+    readonly property var sortEntries: {
+        var s = Tr.strings;
+        return [
+            { text: s["Recently Played"], value: "recent" },
+            { text: s["Most played"], value: "most" },
+            { text: s["Title"], value: "title" },
+            { text: s["Size"], value: "size" }
+        ];
     }
 
     Connections {
@@ -52,6 +65,7 @@ Item {
         spacing: 10
 
         Text {
+            objectName: "headingLabel"
             text: root.heading
             color: "#e8edf5"
             font.family: "Chakra Petch"
@@ -61,7 +75,9 @@ Item {
         }
 
         Text {
-            text: Library.count === 1 ? "1 game" : Library.count + " games"
+            text: Library.count === 1
+                  ? Tr.strings["1 game"]
+                  : Tr.strings["%1 games"].arg(Library.count)
             color: "#8b95a5"
             font.family: "Sora"
             font.pixelSize: 12
@@ -82,11 +98,7 @@ Item {
             id: sortCombo
             Layout.preferredWidth: 186
             value: Library.sortMode
-            entries: [
-                { text: "Recently Played", value: "recent" },
-                { text: "Title", value: "title" },
-                { text: "Size", value: "size" }
-            ]
+            entries: root.sortEntries
             onSelected: (chosen) => Library.setSort(chosen)
         }
 

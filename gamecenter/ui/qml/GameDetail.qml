@@ -153,7 +153,7 @@ Item {
                         }
 
                         Text {
-                            text: "Play"
+                            text: Tr.strings["Play"]
                             color: Library.accentText
                             font.family: "Sora"
                             font.pixelSize: 14
@@ -180,7 +180,9 @@ Item {
                         font.pixelSize: 12
                     }
                     Text {
-                        text: root.game.installed !== false ? "Installed" : "Not installed"
+                        text: root.game.installed !== false
+                              ? Tr.strings["Installed"]
+                              : Tr.strings["Not installed"]
                         color: "#aeb8c7"
                         font.family: "Sora"
                         font.pixelSize: 12
@@ -225,7 +227,7 @@ Item {
 
                         Text {
                             anchors.centerIn: parent
-                            text: "Open folder"
+                            text: Tr.strings["Open folder"]
                             color: "#cfd6e2"
                             font.family: "Sora"
                             font.pixelSize: 12
@@ -250,7 +252,7 @@ Item {
 
                         Text {
                             anchors.centerIn: parent
-                            text: "Copy App ID"
+                            text: Tr.strings["Copy App ID"]
                             color: "#cfd6e2"
                             font.family: "Sora"
                             font.pixelSize: 12
@@ -275,7 +277,7 @@ Item {
 
                         Text {
                             anchors.centerIn: parent
-                            text: "Choose art"
+                            text: Tr.strings["Choose art"]
                             color: "#cfd6e2"
                             font.family: "Sora"
                             font.pixelSize: 12

@@ -75,7 +75,7 @@ Item {
                     spacing: 2
 
                     Text {
-                        text: "Choose artwork"
+                        text: Tr.strings["Choose artwork"]
                         color: "#f2f5fa"
                         font.family: "Sora"
                         font.pixelSize: 22
@@ -83,7 +83,7 @@ Item {
                     }
 
                     Text {
-                        text: "Portrait grids from SteamGridDB"
+                        text: Tr.strings["Portrait grids from SteamGridDB"]
                         color: "#8b95a5"
                         font.family: "Sora"
                         font.pixelSize: 11
@@ -94,7 +94,7 @@ Item {
             Text {
                 Layout.fillWidth: true
                 visible: Library.artLoading
-                text: "Looking for artwork..."
+                text: Tr.strings["Looking for artwork..."]
                 color: "#aeb8c7"
                 font.family: "Sora"
                 font.pixelSize: 13
@@ -126,7 +126,7 @@ Item {
 
                         Text {
                             anchors.centerIn: parent
-                            text: "Open Settings"
+                            text: Tr.strings["Open Settings"]
                             color: Library.accentText
                             font.family: "Sora"
                             font.pixelSize: 12
@@ -150,7 +150,7 @@ Item {
 
                         Text {
                             anchors.centerIn: parent
-                            text: "Try again"
+                            text: Tr.strings["Try again"]
                             color: "#cfd6e2"
                             font.family: "Sora"
                             font.pixelSize: 12
@@ -224,7 +224,7 @@ Item {
 
                             Text {
                                 anchors.centerIn: parent
-                                text: "Default"
+                                text: Tr.strings["Default"]
                                 color: "#dfe6f0"
                                 font.family: "Sora"
                                 font.pixelSize: 11
@@ -281,7 +281,10 @@ Item {
 
                 Text {
                     Layout.fillWidth: true
-                    text: Library.artHasMore ? "Showing " + Library.artOptions.length + " of " + Library.artTotal + " loaded options." : "Showing all " + Library.artOptions.length + " options."
+                    text: Library.artHasMore
+                          ? Tr.strings["Showing %1 of %2 loaded options."]
+                                .arg(Library.artOptions.length).arg(Library.artTotal)
+                          : Tr.strings["Showing all %1 options."].arg(Library.artOptions.length)
                     color: "#6f7887"
                     font.family: "Sora"
                     font.pixelSize: 10
@@ -299,7 +302,7 @@ Item {
 
                     Text {
                         anchors.centerIn: parent
-                        text: Library.artLoadingMore ? "Loading..." : "Load more"
+                        text: Library.artLoadingMore ? Tr.strings["Loading..."] : Tr.strings["Load more"]
                         color: "#cfd6e2"
                         font.family: "Sora"
                         font.pixelSize: 11

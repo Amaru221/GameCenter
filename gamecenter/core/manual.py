@@ -10,6 +10,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from .i18n import tr
 from .models import Game
 from .preferences import config_dir
 
@@ -145,18 +146,18 @@ class ManualLibrary:
         title = (title or "").strip()
         folder_path = Path(folder).expanduser()
         if not title:
-            raise ValueError("Give the game a title.")
+            raise ValueError(tr("Give the game a title."))
         if not folder_path.is_dir():
-            raise ValueError("Choose a valid root folder.")
+            raise ValueError(tr("Choose a valid root folder."))
 
         exe = Path(executable).expanduser() if executable else None
         if exe is None or not exe.is_file():
             candidates = find_executables(folder_path)
             if not candidates:
-                raise ValueError("No executable found in that folder.")
+                raise ValueError(tr("No executable found in that folder."))
             exe = candidates[0]
         if not exe.is_file():
-            raise ValueError("That executable doesn't exist.")
+            raise ValueError(tr("That executable doesn't exist."))
 
         game_id = f"{SOURCE}:{_slug(title)}-{hashlib.sha1(str(folder_path.resolve()).encode('utf-8')).hexdigest()[:6]}"
         self._games = [game for game in self._games if game.id != game_id]
