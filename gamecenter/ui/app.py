@@ -13,6 +13,7 @@ from PySide6.QtQuickControls2 import QQuickStyle
 from PySide6.QtWidgets import QApplication
 
 from .. import __version__
+from ..core.gamepad import GamepadManager
 from . import covers
 from .library_model import LibraryModel
 
@@ -82,6 +83,9 @@ def create_engine(library: LibraryModel) -> QQmlApplicationEngine:
     engine.rootContext().setContextProperty("Library", library)
     engine.rootContext().setContextProperty("Sessions", library.sessions)
     engine.rootContext().setContextProperty("Tr", library.translator)
+    gamepad = GamepadManager()
+    gamepad.setParent(engine)
+    engine.rootContext().setContextProperty("Gamepad", gamepad)
     engine.load(QUrl.fromLocalFile(str(QML_DIR / "Main.qml")))
     return engine
 

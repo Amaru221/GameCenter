@@ -34,6 +34,11 @@
 - Added the **Month by Month** river chart (stacked game areas), a horizontal
   carousel of month cards with top games, progress bars, daily activity and
   “Open month”, plus a “Watch” auto-scroll mode.
+- Added **Big Picture**, a couch-friendly mode with a large cover and game
+  summary, horizontal library carousel, All/Recent/Favorites filters and an
+  exit confirmation. It is fully usable with an Xbox/XInput controller
+  (D-pad/stick, A, B, LB/RB, X, Start), keyboard or mouse, and can be opened
+  from the menu, `Ctrl+B` or the controller Start button.
 
 ## v0.13.0
 

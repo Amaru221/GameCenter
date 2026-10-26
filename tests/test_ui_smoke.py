@@ -12,6 +12,7 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("QT_QUICK_BACKEND", "software")
+os.environ.setdefault("GC_NO_GAMEPAD", "1")
 
 from gamecenter.core.models import Game  # noqa: E402
 from gamecenter.ui import covers, library_model  # noqa: E402
@@ -140,6 +141,27 @@ def test_session_card_exposes_cartridge_data(model) -> None:
     assert card["cover"].startswith("image://cover/")
     assert card["cartridgeColor"] == model.cartridgeColor
     assert model.sessionCard("missing:1") == {}
+
+
+def test_big_picture_games_and_launch_by_id(model, monkeypatch) -> None:
+    games = model.bigPictureGames
+    assert [game["title"] for game in games] == [
+        "Alpha Quest",
+        "Beta Racer",
+        "Gamma Flight",
+    ]
+    assert games[0]["favorite"] is False
+    assert games[0]["cover"].startswith("image://cover/")
+
+    monkeypatch.setattr(library_model, "launch_game", lambda game: 4321)
+    session_id = model.launchById("epic:3")
+    assert session_id == "s1"
+    assert model.sessions.list[0]["title"] == "Gamma Flight"
+
+    assert model.toggleFavoriteById("steam:1") is True
+    assert model.bigPictureGames[0]["favorite"] is True
+    assert model.toggleFavoriteById("steam:1") is False
+    assert model.launchById("missing:1") == ""
 
 
 def test_favorites_toggle_and_filter(model) -> None:
@@ -553,3 +575,35 @@ def test_qml_stats_view_loads_the_year_summary(app, model) -> None:
     assert data["sessionsCount"] == 1
     assert data["months"]
     assert data["river"]["layers"]
+
+
+def test_qml_big_picture_navigation_and_exit_confirmation(app, model) -> None:
+    from PySide6.QtCore import Q_ARG, QMetaObject, QObject
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.setProperty("bigPictureOpen", True)
+    app.processEvents()
+
+    picture = root.findChild(QObject, "bigPicture")
+    assert picture is not None
+    assert picture.property("opened") is True
+
+    games = picture.property("games")
+    if hasattr(games, "toVariant"):
+        games = games.toVariant()
+    assert len(games) == 3
+
+    QMetaObject.invokeMethod(picture, "moveSelection", Q_ARG("QVariant", 1))
+    app.processEvents()
+    assert picture.property("selectedIndex") == 1
+
+    QMetaObject.invokeMethod(picture, "requestExit")
+    app.processEvents()
+    assert picture.property("exitConfirmOpen") is True
+
+    QMetaObject.invokeMethod(picture, "activateExitFocus")
+    app.processEvents()
+    assert picture.property("exitConfirmOpen") is False
