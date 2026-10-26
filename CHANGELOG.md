@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.14.0
 
 - The running game's cartridge now **stays protruding from the dock slot** while
   the game is running. With several games open, the slot shows the most recent
