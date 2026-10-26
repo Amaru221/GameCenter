@@ -631,6 +631,23 @@ def test_qml_big_picture_navigation_and_exit_confirmation(app, model) -> None:
     app.processEvents()
     assert picture.property("exitConfirmOpen") is False
 
+    QMetaObject.invokeMethod(picture, "cycleMode", Q_ARG("QVariant", 1))
+    app.processEvents()
+    assert picture.property("carouselMode") == "flat"
+    carousel = root.findChild(QObject, "bigPictureCarousel")
+    assert carousel is not None
+    assert carousel.property("mode") == "flat"
+
+    QMetaObject.invokeMethod(picture, "cycleMode", Q_ARG("QVariant", 1))
+    app.processEvents()
+    assert picture.property("carouselMode") == "ring"
+    assert carousel.property("mode") == "ring"
+
+    QMetaObject.invokeMethod(picture, "cycleMode", Q_ARG("QVariant", 1))
+    app.processEvents()
+    assert picture.property("carouselMode") == "wheel"
+    assert carousel.property("mode") == "wheel"
+
 
 def test_qml_big_picture_opens_the_game_detail(app, model, monkeypatch) -> None:
     from PySide6.QtCore import QMetaObject, QObject
@@ -663,3 +680,13 @@ def test_qml_big_picture_opens_the_game_detail(app, model, monkeypatch) -> None:
         detail = detail.toVariant()
     assert detail["id"] == "steam:1"
     assert detail["description"] == "A tiny space adventure."
+
+
+def test_gamepad_cursor_toggle(app) -> None:
+    from gamecenter.core.gamepad import GamepadManager
+
+    manager = GamepadManager()
+    manager._hide_cursor()
+    assert manager._cursor_hidden is True
+    manager.showCursor()
+    assert manager._cursor_hidden is False

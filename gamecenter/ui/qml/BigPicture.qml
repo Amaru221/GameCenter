@@ -18,13 +18,20 @@ Item {
     property double openedAt: 0
     property bool detailOpen: false
     property var detailGame: ({})
+    property string carouselMode: "arc"
 
     readonly property real uiScale: Math.max(1, Math.min(1.5, height / 800))
-    readonly property real heroHeight: Math.max(190, Math.min(700, (height - 260) * 0.52))
-    readonly property real carouselHeight: Math.max(150, Math.min(500, (height - 260) * 0.38))
-    readonly property real smallCardWidth: Math.max(100, carouselHeight * 0.55)
-    readonly property real smallCardHeight: carouselHeight * 0.7
-    readonly property real cinematicCardWidth: carouselHeight * 1.25
+    readonly property real heroHeight: Math.max(
+        200,
+        Math.min(
+            520,
+            (height - 230) * (carouselMode === "wheel" ? 0.30
+                               : carouselMode === "ring" ? 0.35 : 0.38)
+        )
+    )
+    readonly property real carouselHeight: Math.max(
+        220, Math.min(700, height - heroHeight - 170)
+    )
     readonly property real coverWidth: heroHeight * 0.8
 
     readonly property var games: {
@@ -64,22 +71,27 @@ Item {
                 { key: "I", label: Tr.strings["Details"] }
             ];
         }
+
+        var vertical = root.carouselMode === "wheel";
         if (Gamepad.connected) {
             return [
                 { key: "A", label: Tr.strings["Play"] },
                 { key: "B", label: Tr.strings["Back"] },
                 { key: "Y", label: Tr.strings["Details"] },
-                { key: "LB / RB", label: Tr.strings["Filter"] },
+                { key: vertical ? "↑ ↓" : "← →", label: Tr.strings["Select"] },
+                { key: vertical ? "← →" : "↑ ↓", label: Tr.strings["Filter"] },
+                { key: "LB / RB", label: Tr.strings["Mode"] },
                 { key: "X", label: Tr.strings["Favorite"] },
                 { key: "Start", label: Tr.strings["Exit"] }
             ];
         }
         return [
-            { key: "← →", label: Tr.strings["Select"] },
             { key: "Enter", label: Tr.strings["Play"] },
+            { key: vertical ? "↑ ↓" : "← →", label: Tr.strings["Select"] },
+            { key: vertical ? "← →" : "↑ ↓", label: Tr.strings["Filter"] },
+            { key: "C", label: Tr.strings["Mode"] },
             { key: "I", label: Tr.strings["Details"] },
             { key: "Esc", label: Tr.strings["Exit"] },
-            { key: "[ ]", label: Tr.strings["Filter"] },
             { key: "F", label: Tr.strings["Favorite"] }
         ];
     }
@@ -110,15 +122,30 @@ Item {
             detailGame = ({});
             openedAt = Date.now();
             forceActiveFocus();
+        } else {
+            Gamepad.showCursor();
         }
     }
 
-    onSelectedIndexChanged: {
-        if (typeof carousel !== "undefined" && carousel !== null && games.length) {
-            Qt.callLater(function() {
-                carousel.positionViewAtIndex(selectedIndex, ListView.Center);
-            });
+    function modeLabel(mode) {
+        if (mode === "flat") {
+            return Tr.strings["Flat"];
         }
+        if (mode === "ring") {
+            return Tr.strings["3D Ring"];
+        }
+        if (mode === "wheel") {
+            return Tr.strings["Vertical Wheel"];
+        }
+        return Tr.strings["Arc"];
+    }
+
+    function cycleMode(delta) {
+        var modes = ["arc", "flat", "ring", "wheel"];
+        var current = modes.indexOf(carouselMode);
+        carouselMode = modes[(current + delta + modes.length) % modes.length];
+        status = Tr.strings["Mode"] + ": " + modeLabel(carouselMode);
+        statusTimer.restart();
     }
 
     function moveSelection(dx) {
@@ -127,9 +154,6 @@ Item {
         }
         selectedIndex = Math.max(0, Math.min(games.length - 1,
                                             selectedIndex + dx));
-        Qt.callLater(function() {
-            carousel.positionViewAtIndex(selectedIndex, ListView.Center);
-        });
     }
 
     function cycleFilter(delta) {
@@ -137,11 +161,6 @@ Item {
         var current = order.indexOf(filter);
         filter = order[(current + delta + order.length) % order.length];
         selectedIndex = 0;
-        Qt.callLater(function() {
-            if (carousel.count > 0) {
-                carousel.positionViewAtIndex(0, ListView.Beginning);
-            }
-        });
     }
 
     function toggleFavorite() {
@@ -245,17 +264,19 @@ Item {
             return;
         }
 
+        var vertical = root.carouselMode === "wheel";
+
         if (event.key === Qt.Key_Left) {
-            root.moveSelection(-1);
+            vertical ? root.cycleFilter(-1) : root.moveSelection(-1);
             event.accepted = true;
         } else if (event.key === Qt.Key_Right) {
-            root.moveSelection(1);
+            vertical ? root.cycleFilter(1) : root.moveSelection(1);
             event.accepted = true;
         } else if (event.key === Qt.Key_Up) {
-            root.cycleFilter(-1);
+            vertical ? root.moveSelection(-1) : root.cycleFilter(-1);
             event.accepted = true;
         } else if (event.key === Qt.Key_Down) {
-            root.cycleFilter(1);
+            vertical ? root.moveSelection(1) : root.cycleFilter(1);
             event.accepted = true;
         } else if (event.key === Qt.Key_Return
                    || event.key === Qt.Key_Enter
@@ -269,6 +290,10 @@ Item {
         } else if (event.key === Qt.Key_I
                    || event.key === Qt.Key_D) {
             root.openDetail();
+            event.accepted = true;
+        } else if (event.key === Qt.Key_C
+                   || event.key === Qt.Key_Tab) {
+            root.cycleMode(1);
             event.accepted = true;
         } else if (event.key === Qt.Key_F) {
             root.toggleFavorite();
@@ -304,7 +329,14 @@ Item {
                 }
                 return;
             }
-            if (dx !== 0) {
+            var vertical = root.carouselMode === "wheel";
+            if (vertical) {
+                if (dx !== 0) {
+                    root.cycleFilter(dx > 0 ? 1 : -1);
+                } else if (dy !== 0) {
+                    root.moveSelection(dy);
+                }
+            } else if (dx !== 0) {
                 root.moveSelection(dx);
             } else if (dy !== 0) {
                 root.cycleFilter(dy > 0 ? 1 : -1);
@@ -349,7 +381,7 @@ Item {
                     || root.exitConfirmOpen || root.detailOpen) {
                 return;
             }
-            root.cycleFilter(-1);
+            root.cycleMode(-1);
         }
 
         function onPageRight() {
@@ -357,7 +389,7 @@ Item {
                     || root.exitConfirmOpen || root.detailOpen) {
                 return;
             }
-            root.cycleFilter(1);
+            root.cycleMode(1);
         }
 
         function onFavorite() {
@@ -442,39 +474,39 @@ Item {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.leftMargin: 30 * root.uiScale
-        anchors.rightMargin: 30 * root.uiScale
-        anchors.topMargin: 18 * root.uiScale
-        height: 44 * root.uiScale
-        spacing: 12 * root.uiScale
+        anchors.leftMargin: 22 * root.uiScale
+        anchors.rightMargin: 22 * root.uiScale
+        anchors.topMargin: 10 * root.uiScale
+        height: 36 * root.uiScale
+        spacing: 10 * root.uiScale
 
         Text {
             text: "GAMECENTER"
             color: "#f2f5fa"
             font.family: "Chakra Petch"
-            font.pixelSize: 18 * root.uiScale
+            font.pixelSize: 15 * root.uiScale
             font.bold: true
-            font.letterSpacing: 2.2
+            font.letterSpacing: 2.0
         }
 
         Text {
             text: Tr.strings["BIG PICTURE"]
             color: Library.accent
             font.family: "Chakra Petch"
-            font.pixelSize: 10 * root.uiScale
+            font.pixelSize: 9 * root.uiScale
             font.bold: true
-            font.letterSpacing: 2.4
+            font.letterSpacing: 2.2
         }
 
         Item { Layout.fillWidth: true }
 
         Row {
-            spacing: 8 * root.uiScale
+            spacing: 7 * root.uiScale
             Layout.alignment: Qt.AlignVCenter
 
             Rectangle {
-                width: 7 * root.uiScale
-                height: 7 * root.uiScale
+                width: 6 * root.uiScale
+                height: 6 * root.uiScale
                 radius: width / 2
                 color: Gamepad.connected ? "#3ddc97" : "#5f6a7b"
                 anchors.verticalCenter: parent.verticalCenter
@@ -486,7 +518,7 @@ Item {
                       : Tr.strings["Keyboard & mouse"]
                 color: "#8b95a5"
                 font.family: "Sora"
-                font.pixelSize: 10 * root.uiScale
+                font.pixelSize: 9 * root.uiScale
                 anchors.verticalCenter: parent.verticalCenter
             }
         }
@@ -495,15 +527,15 @@ Item {
             id: clock
             color: "#dfe6f0"
             font.family: "Chakra Petch"
-            font.pixelSize: 14 * root.uiScale
-            font.letterSpacing: 1.2
-            Layout.leftMargin: 12 * root.uiScale
+            font.pixelSize: 12 * root.uiScale
+            font.letterSpacing: 1.0
+            Layout.leftMargin: 8 * root.uiScale
         }
 
         Rectangle {
-            width: 104 * root.uiScale
-            height: 38 * root.uiScale
-            radius: 10 * root.uiScale
+            width: 88 * root.uiScale
+            height: 32 * root.uiScale
+            radius: 8 * root.uiScale
             color: exitArea.containsMouse ? "#202633" : "#11161f"
             border.width: 1
             border.color: exitArea.containsMouse ? Library.accent : "#2a3444"
@@ -513,7 +545,7 @@ Item {
                 text: Tr.strings["Exit"]
                 color: exitArea.containsMouse ? Library.accent : "#dfe6f0"
                 font.family: "Sora"
-                font.pixelSize: 11 * root.uiScale
+                font.pixelSize: 10 * root.uiScale
             }
 
             MouseArea {
@@ -531,17 +563,17 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.leftMargin: 30 * root.uiScale
-        anchors.rightMargin: 30 * root.uiScale
-        anchors.topMargin: 16 * root.uiScale
-        anchors.bottomMargin: 18 * root.uiScale
-        spacing: 12 * root.uiScale
+        anchors.leftMargin: 24 * root.uiScale
+        anchors.rightMargin: 24 * root.uiScale
+        anchors.topMargin: 8 * root.uiScale
+        anchors.bottomMargin: 12 * root.uiScale
+        spacing: 10 * root.uiScale
 
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: root.heroHeight
             Layout.maximumHeight: root.heroHeight
-            spacing: 28 * root.uiScale
+            spacing: 22 * root.uiScale
 
             Rectangle {
                 Layout.preferredWidth: root.coverWidth
@@ -626,7 +658,7 @@ Item {
                     text: root.selected.title || ""
                     color: "#f8fafc"
                     font.family: "Sora"
-                    font.pixelSize: Math.max(28, Math.min(58, root.height * 0.055))
+                    font.pixelSize: Math.max(26, Math.min(54, root.height * 0.05))
                     font.bold: true
                     wrapMode: Text.WordWrap
                     maximumLineCount: 2
@@ -862,15 +894,62 @@ Item {
                 font.family: "Sora"
                 font.pixelSize: 10 * root.uiScale
             }
+
+            Rectangle {
+                width: 168 * root.uiScale
+                height: 30 * root.uiScale
+                radius: 15 * root.uiScale
+                color: modeArea.containsMouse ? "#1b2535" : "#101722"
+                border.width: 1
+                border.color: modeArea.containsMouse
+                              ? Library.accent
+                              : "#243044"
+
+                Row {
+                    anchors.centerIn: parent
+                    spacing: 6 * root.uiScale
+
+                    Text {
+                        text: Tr.strings["Mode"] + ": "
+                              + root.modeLabel(root.carouselMode)
+                        color: modeArea.containsMouse
+                               ? Library.accent
+                               : "#c9d2e0"
+                        font.family: "Sora"
+                        font.pixelSize: 9 * root.uiScale
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    Text {
+                        text: "‹ ›"
+                        color: "#6f7887"
+                        font.family: "Sora"
+                        font.pixelSize: 9 * root.uiScale
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                MouseArea {
+                    id: modeArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: (mouse) => root.cycleMode(
+                        mouse.button === Qt.RightButton ? -1 : 1
+                    )
+                }
+            }
         }
 
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: root.carouselHeight
+            Layout.maximumHeight: root.carouselHeight
             spacing: 8
 
             Rectangle {
-                visible: root.games.length > 1
+                visible: root.games.length > 1 && root.carouselMode !== "wheel"
                 z: 5
                 width: 34 * root.uiScale
                 height: 34 * root.uiScale
@@ -899,98 +978,22 @@ Item {
                 }
             }
 
-            ListView {
+            BigPictureCarousel {
                 id: carousel
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                orientation: ListView.Horizontal
-                spacing: 14
-                clip: true
-                model: root.games
-                currentIndex: root.selectedIndex
-                boundsBehavior: Flickable.StopAtBounds
-                snapMode: ListView.SnapToItem
-                cacheBuffer: 900
-                focus: false
-
-                onCurrentIndexChanged: {
-                    if (currentIndex !== root.selectedIndex) {
-                        root.selectedIndex = currentIndex;
-                    }
-                }
-
-                delegate: Item {
-                    id: card
-                    readonly property bool current: ListView.isCurrentItem
-
-                    width: current ? root.cinematicCardWidth : root.smallCardWidth
-                    height: current ? carousel.height - 4 : root.smallCardHeight
-                    y: (carousel.height - height) / 2
-                    opacity: current ? 1
-                                     : (Math.abs(index - carousel.currentIndex) <= 1
-                                        ? 0.62 : 0.34)
-                    z: current ? 5 : 1
-
-                    Behavior on width { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
-                    Behavior on height { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
-                    Behavior on opacity { NumberAnimation { duration: 220 } }
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: 16
-                        color: Library.accent
-                        opacity: card.current ? 0.16 : 0
-                        scale: 1.04
-                        z: -1
-                    }
-
-                    Rectangle {
-                        width: parent.width
-                        height: parent.height - 24
-                        radius: 14
-                        color: "#0d1118"
-                        border.width: 2
-                        border.color: card.current ? Library.accent : "#243044"
-                        clip: true
-
-                        Image {
-                            anchors.fill: parent
-                            source: modelData.cover || ""
-                            fillMode: card.current
-                                       ? Image.PreserveAspectCrop
-                                       : Image.PreserveAspectFit
-                            asynchronous: true
-                            cache: true
-                            smooth: true
-                        }
-                    }
-
-                    Text {
-                        width: parent.width
-                        y: parent.height - 21
-                        text: modelData.title || ""
-                        color: card.current ? "#f2f5fa" : "#8b95a5"
-                        font.family: "Sora"
-                        font.pixelSize: 10 * root.uiScale
-                        font.bold: card.current
-                        horizontalAlignment: Text.AlignHCenter
-                        elide: Text.ElideRight
-                        maximumLineCount: 1
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            root.selectedIndex = index;
-                        }
-                        onDoubleClicked: root.launchSelected()
-                    }
+                games: root.games
+                selectedIndex: root.selectedIndex
+                mode: root.carouselMode
+                onSelected: (index) => root.selectedIndex = index
+                onActivated: (index) => {
+                    var game = root.games[index] || ({});
+                    root.launchGame(game.id, game.title);
                 }
             }
 
             Rectangle {
-                visible: root.games.length > 1
+                visible: root.games.length > 1 && root.carouselMode !== "wheel"
                 z: 5
                 width: 34 * root.uiScale
                 height: 34 * root.uiScale

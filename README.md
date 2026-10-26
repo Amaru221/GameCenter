@@ -3,7 +3,7 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.15.0** — Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
+> Estado: **v0.15.2** — Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 
@@ -44,16 +44,29 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   histórico en la ficha de cada juego.
 - **Big Picture**: modo de sofá **a pantalla completa** (sin barra de título ni
   barra de tareas), con portada grande, información del juego y un carrusel
-  cinematográfico donde el juego seleccionado es mucho más ancho que el resto.
+  cinematográfico con **cuatro modos de visualización**: **Arco**, **Plano**,
+  **Anillo 3D** y **Rueda vertical**.
   - Se entra desde el menú → **Big Picture**, con `Ctrl+B` o con **Start** del
     mando.
   - Mando Xbox compatible (XInput): D-pad/stick para moverse, **A** jugar,
     **B** volver, **Y/Triángulo** abrir la ficha del juego (descripción y
-    timeline), **LB/RB** filtros, **X** favorito y **Start** para **salir**.
-  - También funciona con teclado (flechas, Enter, Esc, `I`, `[`/`]`, `F`) y
-    ratón; la ficha del juego se abre con el botón **Details**.
+    timeline), **LB/RB** cambiar el modo del carrusel, **X** favorito y
+    **Start** para **salir**.
+  - También funciona con teclado (flechas, Enter, Esc, `I`, `C`/`Tab` para el
+    modo, `[`/`]` para filtros, `F` favorito) y ratón; la ficha del juego se
+    abre con el botón **Details**.
+  - Las carátulas se muestran **completas, sin recortes**, y la tarjeta
+    seleccionada queda siempre **por encima de la barra de pistas**, sin
+    solaparse, en cualquier tamaño de ventana.
+  - Efecto visual moderno tipo consola: halo de acento, sombra en profundidad,
+    brillo de cristal, pista del anillo y transiciones suaves entre modos.
+  - La navegación se adapta al modo: arriba/abajo o izquierda/derecha para
+    moverse y para cambiar de filtro según el carrusel activo.
   - La salida con Start es directa; el botón **Exit** de la esquina mantiene
     una confirmación para el ratón.
+  - La barra superior es compacta para que el carrusel domine la pantalla; las
+    carátulas laterales mantienen un tamaño legible.
+  - El puntero del ratón se oculta al usar el mando y vuelve al mover el ratón.
   - El soporte nativo de mando usa **XInput en Windows**; en Linux o sin mando
     la interfaz funciona con teclado y ratón y la barra de pistas se adapta.
 - **Favoritos** persistentes, con filtro en la barra.
