@@ -2,80 +2,95 @@
 
 ## Descripción funcional
 
-- Modo **Big Picture** a pantalla completa dentro de la ventana, con estética de
-  sofá: portada grande, información del juego, carrusel horizontal, filtros y
-  barra de pistas de mando.
-- Entrada desde el menú superior, `Ctrl+B` o el botón **Start** del mando.
-- Totalmente manejable con mando Xbox/XInput:
-  - D-pad/stick izquierdo: seleccionar juego.
+- Modo **Big Picture** a pantalla completa (sin barra de título ni barra de
+  Windows), con portada grande, información del juego, filtros y un carrusel
+  cinematográfico.
+- El juego seleccionado ocupa mucho más ancho y alto que los laterales; el
+  resto queda en segundo plano con menor opacidad.
+- Entrada desde el menú, `Ctrl+B` o **Start** del mando.
+- Salida:
+  - **Start** vuelve a pulsarse y sale directamente del modo,
+  - botón **Exit** de la esquina para ratón (con confirmación),
+  - **B** es “volver”: cierra la ficha del juego, no sale del modo.
+- **Y/Triángulo** abre la ficha del juego seleccionado, con descripción,
+  metadata y timeline. También se abre con el botón **Details** del ratón.
+- Mando Xbox/XInput:
+  - D-pad/stick: navegar.
   - A: jugar.
-  - B: abrir confirmación de salida / cancelar.
-  - LB/RB: filtro All / Recent / Favorites.
+  - B: volver / cerrar ficha.
+  - Y: abrir/cerrar ficha.
+  - LB/RB: filtros.
   - X: favorito.
-  - Start: menú de salida.
-- Teclado: flechas, Enter, Escape, `[`/`]`, `F`. Ratón: tarjetas, filtros,
-  Play, favorito, flechas del carrusel, botón Exit y confirmación.
-- La salida siempre pide confirmación; nunca se sale por accidente.
+  - Start: salir.
+- Teclado: flechas, Enter, Esc, `I`, `[`/`]`, `F`. Ratón: tarjetas, flechas,
+  filtros, Play, Details, favorito, Exit y confirmación.
 
 ## Decisiones de arquitectura
 
-- `gamecenter/core/gamepad.py`: `GamepadManager(QObject)` basado en XInput
-  (`xinput1_4/1_3/9_1_0.dll`), sin dependencias nuevas.
-  - Sondeo a 30 Hz, detección de conexión, flancos de botones y repetición de
-    navegación (350 ms inicial, 130 ms).
-  - Señales semánticas: `navigate`, `accept`, `back`, `menu`, `pageLeft`,
-    `pageRight`, `favorite`, `connectedChanged`.
-  - `GC_NO_GAMEPAD=1` lo desactiva (tests/entornos sin XInput).
-- `LibraryModel`:
-  - `bigPictureGames` (`QVariantList`, notify `changed`) con todos los juegos.
-  - `launchById(gameId)` y `toggleFavoriteById(gameId)`.
-  - `changed` se emite al cambiar favoritos/playtime para refrescar la lista.
-- `BigPicture.qml`: overlay z=60, foco de teclado propio, carrusel con foco,
-  filtros, barra de pistas y diálogo de salida.
-- `Gamepad` se expone como contexto QML desde `create_engine`.
+- `GamepadManager` XInput añade la señal `details` mapeada a **Y**.
+- `Main.qml` enlaza `visibility` a `Window.FullScreen` al abrir Big Picture y
+  vuelve a `Window.Windowed` al cerrar. `requestActivate()` trae la ventana al
+  frente al entrar.
+- `BigPicture.qml` usa `uiScale` y alturas proporcionales al alto de pantalla
+  para adaptarse de 620 px a pantallas grandes.
+- Carrusel cinematográfico: el delegado actual usa `cinematicCardWidth` y toda
+  la altura; los laterales usan `smallCardWidth`/`smallCardHeight` y menor
+  opacidad, con animaciones de tamaño.
+- La ficha reutiliza `GameDetail.qml` dentro de Big Picture:
+  - `Library.gameDetailById`, `loadDetailsById`, `openFolderById`,
+    `copyAppIdById` evitan depender de filas filtradas.
+  - `GameDetail` gana `showArt` (oculta “Choose art” en Big Picture) y
+    `scrollBy()` para el scroll con stick/D-pad.
+  - La descripción carga con `Library.loadDetailsById`.
+- La B ya no abre la salida; Start cierra el modo directamente. El botón Exit
+  conserva confirmación.
 
 ## Contrato interno
 
 | Elemento | Tipo | Descripción |
 | --- | --- | --- |
 | `Gamepad.connected` | bool | Mando XInput activo. |
-| `Gamepad.navigate(dx, dy)` | signal | Movimiento. |
-| `Gamepad.accept/back/menu` | signals | A/B/Start. |
-| `Gamepad.pageLeft/pageRight` | signals | LB/RB. |
-| `Gamepad.favorite` | signal | X. |
-| `Library.bigPictureGames` | `QVariantList` | Juegos con carátula, fuente, favorito, etc. |
-| `Library.launchById(gameId)` | slot → `str` | Lanza y devuelve id de sesión. |
+| `Gamepad.navigate/accept/back/menu` | signals | D-pad/A/B/Start. |
+| `Gamepad.pageLeft/pageRight/favorite/details` | signals | LB/RB/X/Y. |
+| `Library.bigPictureGames` | `QVariantList` | Juegos para Big Picture. |
+| `Library.launchById(gameId)` | slot → `str` | Lanza y devuelve sesión. |
 | `Library.toggleFavoriteById(gameId)` | slot → `bool` | Alterna favorito. |
-| `BigPicture.opened` | bool | Visible. |
-| `BigPicture.closeRequested` | signal | Salida confirmada. |
+| `Library.gameDetailById(gameId)` | slot → `QVariantMap` | Ficha completa por id. |
+| `Library.loadDetailsById(gameId)` | slot | Carga descripción por id. |
+| `Library.openFolderById/copyAppIdById` | slots | Acciones por id. |
+| `BigPicture.detailOpen` | bool | Ficha abierta. |
+| `BigPicture.openDetail()` | función | Abre ficha del seleccionado. |
+| `GameDetail.scrollBy(delta)` | función | Scroll para mando/teclado. |
 
 ## Checklist
 
 ### Backend
-- [x] `gamepad.py` XInput con conexión, flancos y repetición.
+- [x] XInput con conexión, flancos, repetición y señal `details` (Y).
 - [x] `Gamepad` expuesto al contexto QML y desactivable.
-- [x] `Library.bigPictureGames`, `launchById`, `toggleFavoriteById`.
-- [x] `changed` al alternar favorito/terminar sesión.
-- [x] Tests de mapeo de ejes/botones.
+- [x] API de biblioteca por id + ficha completa.
+- [x] Carga de descripción por id y acciones de carpeta/AppID.
+- [x] Tests de mapeo y API.
 
 ### Frontend
-- [x] `BigPicture.qml` con portada, información, Play y favorito.
-- [x] Carrusel con foco, flechas de ratón, filtros y contador.
-- [x] Mando, teclado y ratón.
-- [x] Confirmación de salida con A/B/flechas/ratón.
-- [x] Barra de pistas y estado de conexión.
+- [x] Big Picture fullscreen y retorno a ventana.
+- [x] Layout responsive con `uiScale` y alturas proporcionales.
+- [x] Carrusel cinematográfico con seleccionado mucho más amplio.
+- [x] Start sale; B vuelve; Y abre ficha; botón Details para ratón.
+- [x] Ficha con descripción y timeline reutilizando `GameDetail`.
+- [x] Scroll de la ficha con stick/D-pad y teclado.
+- [x] Pistas de mando/teclado actualizadas.
 - [x] Entrada desde menú, `Ctrl+B` y Start.
-- [x] Integración en `Main.qml` sin romper modales existentes.
 
 ### Verificación
-- [x] `python -m pytest -q` → **122 passed**.
-- [x] Capturas 1180×800, 900×620 y confirmación de salida.
-- [x] Prueba QML de apertura, navegación y confirmación de salida.
+- [x] `python -m pytest -q` → **124 passed**.
+- [x] Capturas de Big Picture fullscreen, carrusel cinematográfico y ficha.
+- [x] Prueba QML de apertura de ficha y navegación.
 - [x] README/CHANGELOG actualizados.
 
 ## Notas
 
-- El soporte de mando nativo es **XInput (Windows)**; en Linux o sin mando la
-  interfaz queda disponible con teclado y ratón, y la barra de pistas cambia.
-- El modo Big Picture se dibuja dentro de la ventana actual, no fuerza
-  fullscreen del sistema.
+- El soporte nativo de mando es **XInput (Windows)**.
+- El modo se dibuja a pantalla completa real mediante `Window.FullScreen`;
+  al salir vuelve a `Window.Windowed`.
+- La ficha del juego dentro de Big Picture oculta el botón de carátula para
+  centrarse en descripción y timeline.

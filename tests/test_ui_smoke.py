@@ -164,6 +164,29 @@ def test_big_picture_games_and_launch_by_id(model, monkeypatch) -> None:
     assert model.launchById("missing:1") == ""
 
 
+def test_big_picture_detail_by_id(model, monkeypatch) -> None:
+    cached = {
+        "description": "A tiny space adventure.",
+        "developers": "Studio One",
+        "genres": "Adventure",
+        "releaseDate": "2024",
+    }
+    monkeypatch.setattr(
+        library_model.metadata, "cached", lambda game, language: cached
+    )
+
+    detail = model.gameDetailById("steam:1")
+    assert detail["id"] == "steam:1"
+    assert detail["title"] == "Alpha Quest"
+    assert detail["detailsLoaded"] is False
+
+    model.loadDetailsById("steam:1")
+    detail = model.gameDetailById("steam:1")
+    assert detail["description"] == "A tiny space adventure."
+    assert detail["detailsLoaded"] is True
+    assert detail["history"] == []
+
+
 def test_favorites_toggle_and_filter(model) -> None:
     assert model.rowCount() == 3
 
@@ -607,3 +630,36 @@ def test_qml_big_picture_navigation_and_exit_confirmation(app, model) -> None:
     QMetaObject.invokeMethod(picture, "activateExitFocus")
     app.processEvents()
     assert picture.property("exitConfirmOpen") is False
+
+
+def test_qml_big_picture_opens_the_game_detail(app, model, monkeypatch) -> None:
+    from PySide6.QtCore import QMetaObject, QObject
+
+    from gamecenter.ui.app import create_engine
+
+    cached = {
+        "description": "A tiny space adventure.",
+        "developers": "Studio One",
+        "genres": "Adventure",
+        "releaseDate": "2024",
+    }
+    monkeypatch.setattr(
+        library_model.metadata, "cached", lambda game, language: cached
+    )
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.setProperty("bigPictureOpen", True)
+    app.processEvents()
+
+    picture = root.findChild(QObject, "bigPicture")
+    assert picture is not None
+    QMetaObject.invokeMethod(picture, "openDetail")
+    app.processEvents()
+
+    assert picture.property("detailOpen") is True
+    detail = picture.property("detailGame")
+    if hasattr(detail, "toVariant"):
+        detail = detail.toVariant()
+    assert detail["id"] == "steam:1"
+    assert detail["description"] == "A tiny space adventure."

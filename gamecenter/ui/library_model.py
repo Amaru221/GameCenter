@@ -622,10 +622,18 @@ class LibraryModel(QAbstractListModel):
 
     @Slot(int)
     def loadDetails(self, row: int) -> None:
-        """Fetch (or load from cache) the description for one game."""
+        """Fetch (or load from cache) the description for one row."""
         game = self._at(row)
-        if game is None:
-            return
+        if game is not None:
+            self._load_details(game)
+
+    @Slot(str)
+    def loadDetailsById(self, game_id: str) -> None:
+        game = next((entry for entry in self._all if entry.id == game_id), None)
+        if game is not None:
+            self._load_details(game)
+
+    def _load_details(self, game: Game) -> None:
         language = self._i18n.language
         key = (game.id, language)
         if key in self._details_loaded or key in self._details_loading:
@@ -1151,8 +1159,16 @@ class LibraryModel(QAbstractListModel):
     @Slot(int)
     def openFolder(self, row: int) -> None:
         game = self._at(row)
-        if game is None:
-            return
+        if game is not None:
+            self._open_folder(game)
+
+    @Slot(str)
+    def openFolderById(self, game_id: str) -> None:
+        game = next((entry for entry in self._all if entry.id == game_id), None)
+        if game is not None:
+            self._open_folder(game)
+
+    def _open_folder(self, game: Game) -> None:
         if not game.install_dir or not game.install_dir.is_dir():
             self.failed.emit(tr("This game has no install folder."))
             return
@@ -1164,9 +1180,14 @@ class LibraryModel(QAbstractListModel):
     @Slot(int)
     def copyAppId(self, row: int) -> None:
         game = self._at(row)
-        if game is None:
-            return
-        QGuiApplication.clipboard().setText(game.app_id)
+        if game is not None:
+            QGuiApplication.clipboard().setText(game.app_id)
+
+    @Slot(str)
+    def copyAppIdById(self, game_id: str) -> None:
+        game = next((entry for entry in self._all if entry.id == game_id), None)
+        if game is not None:
+            QGuiApplication.clipboard().setText(game.app_id)
 
     @Slot(str, result=str)
     def localPath(self, url: str) -> str:
@@ -1271,7 +1292,17 @@ class LibraryModel(QAbstractListModel):
         game = self._at(row)
         if game is None:
             return {}
+        return self._detail_payload(game)
 
+    @Slot(str, result="QVariantMap")
+    def gameDetailById(self, game_id: str) -> dict:
+        """The same detail payload, looked up by game id."""
+        game = next((entry for entry in self._all if entry.id == game_id), None)
+        if game is None:
+            return {}
+        return self._detail_payload(game)
+
+    def _detail_payload(self, game: Game) -> dict:
         language = self._i18n.language
         key = (game.id, language)
         details = self._details.get(key, {})
@@ -1286,6 +1317,7 @@ class LibraryModel(QAbstractListModel):
         history_seconds = sum(item["seconds"] for item in history)
 
         return {
+            "id": game.id,
             "title": game.title,
             "source": self._source_label(game),
             "appId": game.app_id,
