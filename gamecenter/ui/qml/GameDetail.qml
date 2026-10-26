@@ -4,11 +4,13 @@ import QtQuick.Layouts
 
 Item {
     id: root
+    objectName: "gameDetail"
 
     property var game: ({})
     property bool opened: false
     property bool descriptionExpanded: false
     property bool showArt: true
+    property bool profileOpen: false
 
     signal closeRequested()
     signal playRequested()
@@ -16,6 +18,7 @@ Item {
     signal copyRequested()
     signal favoriteRequested()
     signal artRequested()
+    signal profileChanged()
 
     readonly property var history: root.game.history || []
 
@@ -49,6 +52,32 @@ Item {
         return peak;
     }
 
+    function statusLabel(key) {
+        if (key === "playing") return Tr.strings["Playing"];
+        if (key === "ongoing") return Tr.strings["On Going"];
+        if (key === "beaten") return Tr.strings["Beaten"];
+        if (key === "completed") return Tr.strings["Completed"];
+        if (key === "played") return Tr.strings["Played"];
+        if (key === "plan") return Tr.strings["Plan to Play"];
+        if (key === "onhold") return Tr.strings["On Hold"];
+        if (key === "notplayed") return Tr.strings["Not Played"];
+        if (key === "abandoned") return Tr.strings["Abandoned"];
+        return Tr.strings["Not set"];
+    }
+
+    function statusColor(key) {
+        if (key === "playing") return Library.accent;
+        if (key === "ongoing") return "#38bdf8";
+        if (key === "beaten") return "#a78bfa";
+        if (key === "completed") return "#34d399";
+        if (key === "played") return "#93c5fd";
+        if (key === "plan") return "#facc15";
+        if (key === "onhold") return "#fb923c";
+        if (key === "notplayed") return "#64748b";
+        if (key === "abandoned") return "#f87171";
+        return "#3a465c";
+    }
+
     function scrollBy(delta) {
         var maximum = Math.max(0, scroller.contentHeight - scroller.height);
         scroller.contentY = Math.max(
@@ -76,6 +105,11 @@ Item {
         if (root.game.developers) {
             out.push(root.game.developers);
         }
+        if (root.game.mergedIntoTitle) {
+            out.push(Tr.strings["Merged into {title}"].replace(
+                "{title}", root.game.mergedIntoTitle
+            ));
+        }
         return out;
     }
 
@@ -86,6 +120,7 @@ Item {
     onOpenedChanged: {
         if (opened) {
             descriptionExpanded = false;
+            profileOpen = false;
             scroller.contentY = 0;
             Qt.callLater(function() { scroller.contentY = 0; });
         }
@@ -126,6 +161,7 @@ Item {
 
         Flickable {
             id: scroller
+            objectName: "detailScroller"
             anchors.fill: parent
             anchors.margins: panel.compact ? 20 : 28
             contentWidth: width - 16
@@ -264,6 +300,169 @@ Item {
                                 Layout.alignment: Qt.AlignTop
                                 favorite: !!root.game.favorite
                                 onToggled: root.favoriteRequested()
+                            }
+                        }
+
+                        Rectangle {
+                            id: profileStrip
+                            Layout.fillWidth: true
+                            height: 74
+                            radius: 16
+                            color: "#0e131c"
+                            border.width: 1
+                            border.color: root.profileOpen ? Library.accent : "#232a36"
+
+                            readonly property bool hasRating: root.game.hasRating === true
+                            readonly property int score: hasRating
+                                                           ? Math.max(0, Math.min(100, root.game.rating))
+                                                           : 0
+                            readonly property string statusKey: root.game.status || ""
+
+                            Rectangle {
+                                anchors.right: parent.right
+                                anchors.top: parent.top
+                                anchors.bottom: parent.bottom
+                                width: 150
+                                radius: parent.radius
+                                color: Library.accent
+                                opacity: 0.05
+                            }
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.margins: 14
+                                spacing: 16
+
+                                ColumnLayout {
+                                    spacing: 3
+
+                                    Text {
+                                        text: Tr.strings["STATUS"]
+                                        color: "#6f7887"
+                                        font.family: "Chakra Petch"
+                                        font.pixelSize: 8
+                                        font.bold: true
+                                        font.letterSpacing: 1.6
+                                    }
+
+                                    RowLayout {
+                                        spacing: 6
+
+                                        Rectangle {
+                                            width: 6
+                                            height: 6
+                                            radius: 3
+                                            color: root.statusColor(profileStrip.statusKey)
+                                        }
+
+                                        Text {
+                                            text: root.statusLabel(profileStrip.statusKey)
+                                            color: profileStrip.statusKey !== ""
+                                                   ? "#dfe6f0"
+                                                   : "#7f8a9b"
+                                            font.family: "Sora"
+                                            font.pixelSize: 11
+                                            font.bold: profileStrip.statusKey !== ""
+                                        }
+                                    }
+                                }
+
+                                Rectangle {
+                                    width: 1
+                                    height: 38
+                                    color: "#232a36"
+                                }
+
+                                ColumnLayout {
+                                    spacing: 3
+
+                                    Text {
+                                        text: Tr.strings["SCORE"]
+                                        color: "#6f7887"
+                                        font.family: "Chakra Petch"
+                                        font.pixelSize: 8
+                                        font.bold: true
+                                        font.letterSpacing: 1.6
+                                    }
+
+                                    RowLayout {
+                                        spacing: 5
+
+                                        Text {
+                                            text: profileStrip.hasRating
+                                                  ? profileStrip.score
+                                                  : "—"
+                                            color: profileStrip.hasRating
+                                                   ? "#f2f5fa"
+                                                   : "#5f6a7b"
+                                            font.family: "Chakra Petch"
+                                            font.pixelSize: 20
+                                            font.bold: true
+                                        }
+
+                                        Text {
+                                            text: "/ 100"
+                                            color: "#6f7887"
+                                            font.family: "Sora"
+                                            font.pixelSize: 9
+                                            Layout.alignment: Qt.AlignBaseline
+                                        }
+
+                                        Rectangle {
+                                            width: 76
+                                            height: 5
+                                            radius: 2.5
+                                            color: "#1b2331"
+
+                                            Rectangle {
+                                                width: parent.width
+                                                       * (profileStrip.score / 100)
+                                                height: parent.height
+                                                radius: parent.radius
+                                                gradient: Gradient {
+                                                    GradientStop { position: 0.0; color: Library.accent }
+                                                    GradientStop { position: 1.0; color: "#a78bfa" }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Item { Layout.fillWidth: true }
+
+                                Rectangle {
+                                    width: Math.max(104, editProfileLabel.implicitWidth + 24)
+                                    height: 30
+                                    radius: 15
+                                    color: editProfileArea.containsMouse
+                                           ? "#1d2635"
+                                           : "#11161f"
+                                    border.width: 1
+                                    border.color: root.profileOpen
+                                                  ? Library.accent
+                                                  : "#2a3444"
+
+                                    Text {
+                                        id: editProfileLabel
+                                        anchors.centerIn: parent
+                                        text: root.profileOpen
+                                              ? Tr.strings["Close profile"]
+                                              : Tr.strings["Edit profile"]
+                                        color: root.profileOpen
+                                               ? Library.accent
+                                               : "#cfd6e2"
+                                        font.family: "Sora"
+                                        font.pixelSize: 10
+                                    }
+
+                                    MouseArea {
+                                        id: editProfileArea
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.profileOpen = !root.profileOpen
+                                    }
+                                }
                             }
                         }
 
@@ -471,6 +670,15 @@ Item {
                             }
                         }
 
+                        GameProfilePanel {
+                            id: profilePanel
+                            Layout.fillWidth: true
+                            game: root.game
+                            expanded: root.profileOpen
+                            onProfileEdited: root.profileChanged()
+                            onCloseRequested: root.profileOpen = false
+                        }
+
                         Text {
                             Layout.fillWidth: true
                             visible: (root.game.installDir || "") !== ""
@@ -621,6 +829,9 @@ Item {
                                         x: 30
                                         y: 28
                                         text: modelData.duration
+                                              + (modelData.imported
+                                                 ? " · " + Tr.strings["Imported"]
+                                                 : "")
                                         color: "#7b8494"
                                         font.family: "Chakra Petch"
                                         font.pixelSize: 10

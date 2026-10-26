@@ -25,7 +25,17 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QGuiApplication, QImage
 
 from .. import __version__
-from ..core import credentials, i18n, manual, metadata, playtime, stats as stats_module, steamgriddb, updater
+from ..core import (
+    credentials,
+    i18n,
+    manual,
+    metadata,
+    playtime,
+    profiles,
+    stats as stats_module,
+    steamgriddb,
+    updater,
+)
 from ..core.i18n import Translator, tr
 from ..core.launch import LaunchError, launch as launch_game, open_folder
 from ..core.models import SOURCE_LABELS, Game
@@ -1088,6 +1098,137 @@ class LibraryModel(QAbstractListModel):
         self.playtimeChanged.emit()
         self.changed.emit()
 
+    def _find_game(self, game_id: str) -> Game | None:
+        return next((entry for entry in self._all if entry.id == game_id), None)
+
+    @staticmethod
+    def _safe_int(value) -> int:
+        try:
+            return int(value or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    def _catalog_game(
+        self,
+        game_id: str,
+        title,
+        source,
+        seconds: int = 0,
+        last_played: int = 0,
+    ) -> Game:
+        source_key = str(source or game_id.split(":", 1)[0] or "")
+        app_id = game_id.split(":", 1)[1] if ":" in game_id else ""
+        return Game(
+            id=game_id,
+            title=str(title or game_id),
+            source=source_key,
+            app_id=app_id,
+            installed=False,
+            playtime_minutes=max(0, int(seconds)) // 60,
+            last_played=max(0, int(last_played or 0)),
+        )
+
+    def _known_catalog(self) -> dict[str, Game]:
+        """Current library plus entries that still have data after being removed."""
+        known = {game.id: game for game in self._all}
+        history = playtime.all_history()
+        meta = {}
+        totals = {}
+        for game_id, entries in history.items():
+            if entries:
+                meta[game_id] = entries[-1]
+                totals[game_id] = sum(
+                    self._safe_int(item.get("seconds")) for item in entries
+                )
+
+        for game_id, summary in playtime.all_summaries().items():
+            if game_id in known:
+                continue
+            entry = meta.get(game_id, {})
+            known[game_id] = self._catalog_game(
+                game_id,
+                summary.get("title") or entry.get("title"),
+                summary.get("source") or entry.get("source"),
+                max(
+                    self._safe_int(summary.get("seconds")),
+                    totals.get(game_id, 0),
+                ),
+                self._safe_int(summary.get("last_played")),
+            )
+
+        for game_id, entries in history.items():
+            if game_id in known or not entries:
+                continue
+            entry = entries[-1]
+            known[game_id] = self._catalog_game(
+                game_id,
+                entry.get("title"),
+                entry.get("source"),
+                totals.get(game_id, 0),
+                max(self._safe_int(item.get("start")) for item in entries),
+            )
+        return known
+
+    def _source_game(self, game_id: str) -> Game | None:
+        return self._find_game(game_id) or self._known_catalog().get(game_id)
+
+    def _history_seconds(self, game: Game) -> int:
+        return sum(
+            int(item.get("seconds") or 0) for item in playtime.history_for(game)
+        )
+
+    def _summary_seconds(self, game: Game) -> int:
+        history = self._history_seconds(game)
+        if game.source == "steam":
+            native = max(0, int(game.playtime_minutes)) * 60
+            return max(native, history)
+        return max(playtime.seconds_for(game), history)
+
+    def _sessions_for(self, game: Game) -> int:
+        summary = playtime.summary_for(game)
+        try:
+            count = int(summary.get("sessions") or 0)
+        except (TypeError, ValueError):
+            count = 0
+        return max(count, len(playtime.history_for(game)))
+
+    def _importable_sessions(self, game: Game) -> int:
+        """Sessions that will exist after importing, including Steam-only time."""
+        covered = self._history_seconds(game)
+        missing = max(0, self._summary_seconds(game) - covered)
+        return self._sessions_for(game) + (1 if missing else 0)
+
+    def _has_real_cover(self, game: Game) -> bool:
+        override = self._prefs.cover_for(game.id)
+        if override and Path(override).is_file():
+            return True
+        if game.source == "steam" and game.app_id.isdigit():
+            return artwork.cached_path(game.app_id) is not None
+        return False
+
+    def _save_recap_cover(self, game: Game) -> str:
+        """Snapshot the visible cover so it survives an uninstall or removal."""
+        image = self._art_image(game)
+        if image.isNull():
+            return ""
+        try:
+            profiles.cover_dir().mkdir(parents=True, exist_ok=True)
+            digest = hashlib.sha1(game.id.encode("utf-8")).hexdigest()[:10]
+            target = profiles.cover_dir() / f"{digest}-{time.time_ns()}.png"
+            if not image.save(str(target), "PNG"):
+                return ""
+            return str(target)
+        except OSError:
+            return ""
+
+    def _cover_url_from_path(self, path: str) -> str:
+        if not path:
+            return ""
+        file = Path(path)
+        if not file.is_file():
+            return ""
+        return "image://art/" + covers.art_key(str(file))
+
     def _cover_url(self, game: Game) -> str:
         override = self._prefs.cover_for(game.id)
         if override and Path(override).is_file():
@@ -1302,6 +1443,213 @@ class LibraryModel(QAbstractListModel):
             return {}
         return self._detail_payload(game)
 
+    @Slot(str, result=int)
+    def rowForId(self, game_id: str) -> int:
+        """Current visible row for a game id, or -1 when it is filtered out."""
+        for row, game in enumerate(self._visible):
+            if game.id == game_id:
+                return row
+        return -1
+
+    @Slot(str, result="QVariantList")
+    def mergeCandidates(self, game_id: str) -> list[dict]:
+        """Other known entries that can donate their data to this game."""
+        target = self._find_game(game_id)
+        if target is None:
+            return []
+        current_ids = {game.id for game in self._all}
+        items = []
+        for game in self._known_catalog().values():
+            if game.id == game_id:
+                continue
+            if profiles.get(game.id).get("merged_into"):
+                continue
+            seconds = self._summary_seconds(game)
+            items.append(
+                {
+                    "id": game.id,
+                    "title": game.title,
+                    "source": self._source_label(game),
+                    "sourceKey": game.source,
+                    "cover": self._cover_url(game),
+                    "playtimeText": _playtime_text(seconds // 60),
+                    "seconds": seconds,
+                    "sessions": self._importable_sessions(game),
+                    "installed": game.installed,
+                    "orphan": game.id not in current_ids,
+                    "sameTitle": game.title.casefold() == target.title.casefold(),
+                }
+            )
+        items.sort(
+            key=lambda item: (
+                not item["sameTitle"],
+                item["orphan"],
+                -item["seconds"],
+                item["title"].casefold(),
+                item["source"],
+            )
+        )
+        return items
+
+    @Slot(str, int, result=bool)
+    def setGameRating(self, game_id: str, rating: int) -> bool:
+        if self._find_game(game_id) is None:
+            return False
+        profiles.set_rating(game_id, rating)
+        self.changed.emit()
+        return True
+
+    @Slot(str, str, result=bool)
+    def setGameStatus(self, game_id: str, status: str) -> bool:
+        if self._find_game(game_id) is None:
+            return False
+        value = str(status or "").strip().lower()
+        if value and value not in profiles.STATUS_SET:
+            return False
+        profiles.set_status(game_id, value)
+        self.changed.emit()
+        return True
+
+    @Slot(str, str, bool, result="QVariantMap")
+    def mergeGameData(
+        self, source_id: str, target_id: str, hide_source: bool = True
+    ) -> dict:
+        """Move one entry's playtime, sessions and cover into another entry."""
+        source = self._source_game(source_id)
+        target = self._find_game(target_id)
+        if source is None or target is None:
+            message = tr("Couldn't unify the data.")
+            self.failed.emit(message)
+            return {"ok": False, "message": message}
+        if source.id == target.id:
+            message = tr("Choose a different game to import.")
+            self.failed.emit(message)
+            return {"ok": False, "message": message}
+        source_profile = profiles.get(source.id)
+        source_merged = source_profile.get("merged_into")
+        if source_merged:
+            merged_title = source_profile.get("merged_into_title") or source_merged
+            message = tr(
+                "This game was already unified into {title}.",
+                title=merged_title,
+            )
+            self.failed.emit(message)
+            return {"ok": False, "message": message}
+        try:
+            message = self._merge_game_data(source, target, hide_source)
+        except Exception as exc:  # noqa: BLE001 - reported as a toast
+            self.failed.emit(str(exc))
+            return {"ok": False, "message": tr("Couldn't unify the data.")}
+        self.refresh()
+        self.playtimeChanged.emit()
+        self.changed.emit()
+        self.notice.emit(message)
+        return {"ok": True, "message": message, "targetId": target.id}
+
+    def _merge_game_data(
+        self, source: Game, target: Game, hide_source: bool
+    ) -> str:
+        now = int(time.time())
+        source_summary = playtime.summary_for(source)
+        source_history = playtime.history_for(source)
+        source_seconds = self._summary_seconds(source)
+        source_sessions = self._sessions_for(source)
+        covered = sum(int(item.get("seconds") or 0) for item in source_history)
+        missing = max(0, source_seconds - covered)
+        effective_sessions = source_sessions + (1 if missing else 0)
+        try:
+            source_last = int(
+                source_summary.get("last_played") or source.last_played or 0
+            )
+        except (TypeError, ValueError):
+            source_last = int(source.last_played or 0)
+
+        target_summary = playtime.summary_for(target)
+        try:
+            target_seconds = int(target_summary.get("seconds") or 0)
+        except (TypeError, ValueError):
+            target_seconds = 0
+        try:
+            target_sessions = int(target_summary.get("sessions") or 0)
+        except (TypeError, ValueError):
+            target_sessions = 0
+        try:
+            target_last = int(
+                target_summary.get("last_played") or target.last_played or 0
+            )
+        except (TypeError, ValueError):
+            target_last = int(target.last_played or 0)
+
+        source_profile = profiles.get(source.id)
+        target_profile = profiles.get(target.id)
+        source_rating = source_profile.get("rating")
+        if target_profile.get("rating") is None and isinstance(source_rating, int):
+            profiles.set_rating(target.id, source_rating)
+        source_status = str(source_profile.get("status") or "")
+        if not target_profile.get("status") and source_status in profiles.STATUS_SET:
+            profiles.set_status(target.id, source_status)
+
+        cover_path = self._save_recap_cover(source)
+
+        if target.source == "steam":
+            profiles.add_extra(
+                target.id, source_seconds, effective_sessions, source_last
+            )
+        else:
+            playtime.write_summary(
+                target,
+                target_seconds + source_seconds,
+                target_sessions + effective_sessions,
+                max(target_last, source_last),
+            )
+
+        playtime.move_history(source.id, target.id)
+        playtime.clear_summary(source)
+
+        if missing:
+            synthetic = replace(target, title=source.title, source=source.source)
+            playtime.add_history_entry(
+                synthetic, source_last or now, missing, imported=True
+            )
+
+        profiles.mark_merged(
+            source.id,
+            target.id,
+            target.title,
+            source_seconds,
+            effective_sessions,
+            cover_path,
+            now,
+        )
+        profiles.add_merged_source(
+            target.id,
+            {
+                "id": source.id,
+                "title": source.title,
+                "source": self._source_label(source),
+                "sourceKey": source.source,
+                "at": now,
+                "seconds": source_seconds,
+                "sessions": effective_sessions,
+                "cover_path": cover_path,
+                "orphan": self._find_game(source.id) is None,
+            },
+        )
+
+        if cover_path and not self._has_real_cover(target):
+            self._prefs.set_cover(target.id, cover_path)
+            self._notify_cover(target.id)
+            self.artChanged.emit()
+
+        if hide_source and self._find_game(source.id) is not None:
+            self._prefs.hide_game(source.id)
+
+        return tr(
+            "{title} data imported into {target}.",
+            title=source.title,
+            target=target.title,
+        )
+
     def _detail_payload(self, game: Game) -> dict:
         language = self._i18n.language
         key = (game.id, language)
@@ -1311,10 +1659,47 @@ class LibraryModel(QAbstractListModel):
                 "timestamp": int(item["start"]),
                 "seconds": int(item["seconds"]),
                 "duration": _duration_text(int(item["seconds"])),
+                "imported": bool(item.get("imported")),
             }
             for item in playtime.history_for(game)
         ]
         history_seconds = sum(item["seconds"] for item in history)
+
+        profile = profiles.get(game.id)
+        raw_rating = profile.get("rating")
+        try:
+            rating = int(raw_rating) if raw_rating is not None else -1
+        except (TypeError, ValueError):
+            rating = -1
+
+        merged_sources = []
+        for item in profile.get("merged_sources") or []:
+            if not isinstance(item, dict):
+                continue
+            try:
+                seconds = int(item.get("seconds") or 0)
+            except (TypeError, ValueError):
+                seconds = 0
+            try:
+                sessions = int(item.get("sessions") or 0)
+            except (TypeError, ValueError):
+                sessions = 0
+            merged_sources.append(
+                {
+                    "id": str(item.get("id") or ""),
+                    "title": str(item.get("title") or ""),
+                    "source": str(item.get("source") or ""),
+                    "sourceKey": str(item.get("sourceKey") or ""),
+                    "at": int(item.get("at") or 0),
+                    "seconds": seconds,
+                    "secondsText": _duration_text(seconds) if seconds else "",
+                    "sessions": sessions,
+                    "orphan": bool(item.get("orphan")),
+                    "cover": self._cover_url_from_path(
+                        str(item.get("cover_path") or "")
+                    ),
+                }
+            )
 
         return {
             "id": game.id,
@@ -1337,6 +1722,12 @@ class LibraryModel(QAbstractListModel):
             "genres": str(details.get("genres") or ""),
             "releaseDate": str(details.get("releaseDate") or ""),
             "detailsLoaded": key in self._details_loaded,
+            "rating": rating,
+            "hasRating": rating >= 0,
+            "status": str(profile.get("status") or ""),
+            "mergedSources": merged_sources,
+            "mergedInto": str(profile.get("merged_into") or ""),
+            "mergedIntoTitle": str(profile.get("merged_into_title") or ""),
             "history": history,
             "sessionCount": len(history),
             "historyTotalText": _duration_text(history_seconds) if history_seconds else "",

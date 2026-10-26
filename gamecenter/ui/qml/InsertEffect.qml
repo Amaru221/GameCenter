@@ -29,7 +29,7 @@ Item {
         // Guard the slot update before the session appears, so the previous
         // cartridge stays in place while this one flies in.
         running = true;
-        sessionId = Library.launch(row);
+        sessionId = Library.launchById(gameData ? (gameData.id || "") : "");
         fly.restart();
     }
 

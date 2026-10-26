@@ -1235,6 +1235,7 @@ Item {
 
     GameDetail {
         id: gameModal
+        objectName: "bigPictureGameDetail"
         z: 70
         anchors.fill: parent
         opened: root.detailOpen
@@ -1252,5 +1253,10 @@ Item {
             root.detailGame = Library.gameDetailById(root.detailGame.id);
         }
         onArtRequested: {}
+        onProfileChanged: {
+            if (root.detailGame.id) {
+                root.detailGame = Library.gameDetailById(root.detailGame.id);
+            }
+        }
     }
 }

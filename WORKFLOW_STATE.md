@@ -1,5 +1,65 @@
 # WORKFLOW STATE — Big Picture con mando
 
+## Feature 0.16.0 — Perfil de juego, unificación y estado
+
+### Descripción funcional
+
+- Añadir a la ficha de cada juego un **perfil GameCenter** independiente de la
+  tienda: puntuación 0–100 y estado (Playing, On Going, Beaten, Completed,
+  Played, Plan to Play, On Hold, Not Played, Abandoned).
+- El perfil se muestra siempre en la información del juego con un diseño
+  moderno y se edita desde los **ajustes del juego** (engranaje / Edit profile).
+- Permitir **unificar manualmente** los datos de otra entrada conocida, aunque
+  ya no aparezca en la biblioteca, sobre el juego abierto (destino):
+  - suma horas y contador de sesiones,
+  - mueve el timeline de sesiones al ID destino,
+  - guarda una **captura de la carátula del origen** en disco para recaps,
+  - si el destino no tiene carátula real, adopta la del origen,
+  - deja un registro de trazabilidad (`mergedSources`) visible en la ficha,
+  - permite ocultar el origen tras unificar para no duplicar estadísticas.
+- La identidad sigue siendo el ID de tienda, pero el perfil permite reconstruir
+  una trazabilidad constante entre plataformas.
+
+### Contrato de API
+
+| Elemento | Tipo | Descripción |
+| --- | --- | --- |
+| `profiles.json` | archivo | `%APPDATA%/GameCenter/profiles.json`; metadatos por ID. |
+| `profiles.rating` | int/null | 0–100; `null` si no se ha puntuado. |
+| `profiles.status` | string | `playing`, `ongoing`, `beaten`, `completed`, `played`, `plan`, `onhold`, `notplayed`, `abandoned`. |
+| `profiles.merged_sources` | list | Registros importados con id, título, fuente, fecha, segundos, sesiones y captura. |
+| `profiles.merged_into` | string | ID destino cuando esta entrada ya fue unificada. |
+| `profiles.extra_seconds` | int | Horas importadas que se suman a las de Steam en el destino. |
+| `Library.mergeCandidates(gameId)` | slot → `QVariantList` | Entradas importables, incluidas las retiradas con datos (`orphan`); mismo título primero. |
+| `Library.mergeGameData(sourceId, targetId, hideSource)` | slot → `QVariantMap` | `{ok, message, targetId}`. |
+| `Library.setGameRating(gameId, rating)` | slot | Guarda 0–100. |
+| `Library.setGameStatus(gameId, status)` | slot | Guarda el estado validado. |
+| `Library.rowForId(gameId)` | slot → int | Fila visible actual o `-1`. |
+| `gameDetailById()/gameAt()` | payload | Añade `rating`, `hasRating`, `status`, `mergedSources`, `mergedInto`, `mergedIntoTitle`; cada sesión lleva `imported`. |
+| `GameDetail.profileChanged()` | signal | El padre recarga la ficha tras editar o unificar. |
+
+### Checklist
+
+#### Backend
+- [x] `profiles.py`: lectura/escritura atómica, estados válidos, rating 0–100, registros de fusión.
+- [x] `playtime.py`: helpers para escribir/limpiar resumen y mover historial entre IDs.
+- [x] `sources/__init__.py`: sumar `extra_seconds` del perfil a las horas de Steam y restar el tiempo ya unificado del origen.
+- [x] `LibraryModel`: candidatos, merge, rating y status; refresco de datos.
+- [x] Captura de carátula en `recap_covers/` y adopción si el destino no tiene.
+- [x] Tests de perfiles, merge, rating/status, entradas eliminadas y aislamiento de rutas.
+
+#### Frontend
+- [x] `GameProfilePanel.qml`: estados, slider 0–100, unificación, registros importados.
+- [x] `GameDetail.qml`: tira de perfil visible, botón de ajustes y panel expandible.
+- [x] `Main.qml`/`BigPicture.qml`: recargar ficha con `profileChanged`.
+- [x] Traducciones ES/FR/DE/IT/PT.
+- [x] Verificación visual en ventana normal, compacta y Big Picture.
+
+### Verificación
+- [x] `python -m pytest -q` → **138 passed**.
+- [x] Capturas de la ficha con perfil y del panel de unificación (normal, 900×620 y Big Picture).
+- [x] README/CHANGELOG/WORKFLOW actualizados.
+
 ## Versión 0.15.2
 
 - Carrusel de Big Picture con **cuatro modos**: **Arco**, **Plano**, **Anillo
@@ -131,3 +191,11 @@
   al salir vuelve a `Window.Windowed`.
 - La ficha del juego dentro de Big Picture oculta el botón de carátula para
   centrarse en descripción y timeline.
+- El perfil vive en `%APPDATA%/GameCenter/profiles.json`; las capturas de
+  carátula de las fusiones se guardan en `%APPDATA%/GameCenter/recap_covers/`.
+- El origen de una unificación se vacía (horas/sesiones/timeline) y, por
+  defecto, se oculta para no duplicar estadísticas. Se puede restaurar desde
+  Ajustes; un origen ya unificado no se puede volver a importar.
+- Las horas nativas de Steam se conservan en Steam; el tiempo importado hacia
+  un destino Steam se superpone desde el perfil (`extra_seconds`) sin tocar
+  `localconfig.vdf`.
