@@ -5,6 +5,8 @@ suite instead of only showing up when someone runs the app.
 """
 
 import os
+import time
+from datetime import date
 
 import pytest
 
@@ -525,3 +527,29 @@ def test_qml_detail_updates_when_the_description_arrives(app, model, monkeypatch
         detail = detail.toVariant()
     assert detail["description"] == "A tiny space adventure."
     assert detail["detailsLoaded"] is True
+
+
+def test_qml_stats_view_loads_the_year_summary(app, model) -> None:
+    from PySide6.QtCore import QObject
+
+    from gamecenter.ui.app import create_engine
+
+    game = model._all[0]
+    library_model.playtime.record_session(game, int(time.time()), 600)
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.setProperty("currentView", "stats")
+    app.processEvents()
+
+    stats = root.findChild(QObject, "statsView")
+    assert stats is not None
+    assert stats.property("visible") is True
+
+    data = stats.property("statsData")
+    if hasattr(data, "toVariant"):
+        data = data.toVariant()
+    assert data["year"] == date.today().year
+    assert data["sessionsCount"] == 1
+    assert data["months"]
+    assert data["river"]["layers"]

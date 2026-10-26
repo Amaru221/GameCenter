@@ -170,29 +170,47 @@ def record_session(game: Game, started_at: float, seconds: float) -> None:
         {
             "start": int(started_at or time.time() - int(seconds)),
             "seconds": int(seconds),
+            "title": game.title,
+            "source": game.source,
         }
     )
     data[game.id] = entries[-MAX_HISTORY:]
     _write(path, data)
 
 
+def all_history() -> dict[str, list[dict]]:
+    """Every stored session, grouped by game id."""
+    raw = _read(history_path())
+    out: dict[str, list[dict]] = {}
+    for game_id, entries in raw.items():
+        if not isinstance(entries, list):
+            continue
+        parsed: list[dict] = []
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            try:
+                start = int(entry.get("start") or 0)
+                seconds = int(entry.get("seconds") or 0)
+            except (TypeError, ValueError):
+                continue
+            if seconds <= 0:
+                continue
+            parsed.append(
+                {
+                    "start": start,
+                    "seconds": seconds,
+                    "title": str(entry.get("title") or ""),
+                    "source": str(entry.get("source") or ""),
+                }
+            )
+        if parsed:
+            out[str(game_id)] = parsed
+    return out
+
+
 def history_for(game: Game) -> list[dict]:
     """Finished sessions for a game, newest first."""
-    entries = _read(history_path()).get(game.id)
-    if not isinstance(entries, list):
-        return []
-
-    out: list[dict] = []
-    for entry in entries:
-        if not isinstance(entry, dict):
-            continue
-        try:
-            start = int(entry.get("start") or 0)
-            seconds = int(entry.get("seconds") or 0)
-        except (TypeError, ValueError):
-            continue
-        if seconds > 0:
-            out.append({"start": start, "seconds": seconds})
-
-    out.sort(key=lambda item: item["start"], reverse=True)
-    return out
+    entries = all_history().get(game.id, [])
+    entries.sort(key=lambda item: item["start"], reverse=True)
+    return entries
