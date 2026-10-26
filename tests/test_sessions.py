@@ -48,6 +48,23 @@ def test_session_lifecycle(app) -> None:
     assert tracker.count == 0
 
 
+def test_uri_launch_gets_a_startup_grace(app) -> None:
+    tracker = SessionTracker()
+    game = Game(id="steam:1", title="Alpha", source="steam")
+
+    session = tracker.start(game, None, "")
+    assert tracker.count == 1
+
+    # The launcher has not spawned the game yet: keep the session alive.
+    tracker.poll()
+    assert tracker.count == 1
+
+    # After the grace window, a session with no detectable process is dropped.
+    session.started_at -= 31
+    tracker.poll()
+    assert tracker.count == 0
+
+
 def test_session_end_reports_the_elapsed_time(app) -> None:
     now = [100.0]
     alive = [True]

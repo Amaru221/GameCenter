@@ -8,6 +8,9 @@
 - Launching another game while one is already in the slot keeps the previous
   cartridge visible during the insertion animation and swaps it when the new
   cartridge settles.
+- Sessions opened through a store URI now get a **30-second startup grace**
+  before the process check can drop them, so the dock chip and the slot
+  cartridge no longer vanish while the game is still starting.
 
 ## v0.13.0
 

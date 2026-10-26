@@ -68,10 +68,12 @@
 
 ## Resultado
 
-- `python -m pytest -q` → **95 passed**.
+- `python -m pytest -q` → **96 passed**.
 - Prueba de integración de la animación (QML + sesiones): durante el vuelo la
   ranura conserva `Alpha Quest`; al asentarse pasa a `Beta Racer` y la sesión
   anterior sigue viva en el dock.
+- Prueba específica de lanzamiento por URI (sin `pid`): la sesión sobrevive al
+  primer `poll` y la ranura sigue activa después de la animación.
 - Captura de `GC_DEMO=1 GC_SESSION=1`: el cartucho sobresale 44 px de la ranura,
   centrado, sin tapar la última fila de la biblioteca.
 
@@ -81,3 +83,7 @@
   para que la parte inferior quede oculta en el dock y no asome por debajo.
 - `InsertEffect` mantiene la guarda `running` mientras lanza la sesión, de modo
   que el cartucho anterior no desaparece antes de que el nuevo se asiente.
+- **Corrección del arranque**: las sesiones lanzadas por URI (Steam, Epic, etc.)
+  no tienen `pid`; el primer `poll` las eliminaba antes de que el proceso real
+  apareciera. Ahora `SessionTracker` concede `LAUNCH_GRACE = 30 s` para que el
+  cartucho permanezca mientras el juego arranca.
