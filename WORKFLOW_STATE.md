@@ -60,6 +60,9 @@
 
 ### Frontend
 - [x] `GameDetail.qml` rediseñado, responsive y con scroll.
+- [x] Separación de 16 px entre el contenido y la scrollbar.
+- [x] `CloseButton.qml` con X dibujada, hover y acento.
+- [x] Estrella de favoritos eliminada de las carátulas de la biblioteca.
 - [x] Timeline con fechas, duraciones, barras y estado vacío.
 - [x] `FavoriteButton.qml` con brillo, rebote y destello.
 - [x] Descripción con estados de carga/no disponible y “Leer más”.

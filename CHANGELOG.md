@@ -25,6 +25,9 @@
   of the modal layer.
 - The favourite star has been redesigned with a golden glow, a pop and a star
   burst when a game is added, plus a confirmation toast.
+- Removed the small favourite star from library covers; favourites are managed
+  from the detail view. The detail scrollbar now leaves a gutter for the
+  content, and the close control has a clearer icon and hover state.
 
 ## v0.13.0
 

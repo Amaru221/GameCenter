@@ -120,7 +120,7 @@ Item {
             id: scroller
             anchors.fill: parent
             anchors.margins: panel.compact ? 20 : 28
-            contentWidth: width
+            contentWidth: width - 16
             contentHeight: content.implicitHeight
             clip: true
             boundsBehavior: Flickable.StopAtBounds
@@ -140,7 +140,7 @@ Item {
 
             ColumnLayout {
                 id: content
-                width: scroller.width
+                width: scroller.width - 16
                 spacing: 16
 
                 RowLayout {
@@ -668,33 +668,13 @@ Item {
             }
         }
 
-        Rectangle {
-            width: 34
-            height: 34
-            radius: 17
+        CloseButton {
             z: 5
             anchors.top: parent.top
             anchors.right: parent.right
-            anchors.topMargin: 13
-            anchors.rightMargin: 13
-            color: closeArea.containsMouse ? "#232936" : "#121722"
-            border.width: 1
-            border.color: "#2a3140"
-
-            Text {
-                anchors.centerIn: parent
-                text: "×"
-                color: "#aeb8c7"
-                font.pixelSize: 18
-            }
-
-            MouseArea {
-                id: closeArea
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.closeRequested()
-            }
+            anchors.topMargin: 12
+            anchors.rightMargin: 12
+            onClicked: root.closeRequested()
         }
     }
 

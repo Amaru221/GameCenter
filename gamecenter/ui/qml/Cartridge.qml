@@ -12,7 +12,6 @@ Item {
     property string coverUrl: ""
     property bool gameInstalled: true
     property bool showTitle: true
-    property bool favorite: false
     property string style: "classic"
     property bool interactive: true
     property color cartridgeColor: Library.cartridgeColor
@@ -23,7 +22,6 @@ Item {
     signal launchRequested()
     signal contextRequested()
     signal clicked()
-    signal favoriteRequested()
 
     readonly property bool hovered: pointer.containsMouse
     readonly property int shellHeight: style === "ds" ? 210 : (style === "ps2" ? 232 : 230)
@@ -135,34 +133,6 @@ Item {
                              ? dsShell
                              : (card.style === "ps2" ? ps2Shell : classicShell)
             onLoaded: card.bindShell()
-        }
-    }
-
-    Rectangle {
-        x: card.width - 44
-        y: card.style === "classic" ? 10 : 18
-        width: 22
-        height: 22
-        radius: 11
-        color: "#0d0f14"
-        border.width: 1
-        border.color: card.favorite ? "#ffd166" : "#2a3140"
-        visible: card.interactive && (card.favorite || card.hovered)
-        opacity: card.favorite || card.hovered ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: 140 } }
-
-        Text {
-            anchors.centerIn: parent
-            text: card.favorite ? "★" : "☆"
-            color: card.favorite ? "#ffd166" : "#c9d2e0"
-            font.pixelSize: 12
-        }
-
-        MouseArea {
-            anchors.fill: parent
-            enabled: card.interactive
-            cursorShape: Qt.PointingHandCursor
-            onClicked: card.favoriteRequested()
         }
     }
 
