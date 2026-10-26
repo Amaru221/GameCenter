@@ -1,19 +1,46 @@
+# --- Python ---
 __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
 venv/
-build/
-dist/
 .pytest_cache/
 .coverage
 htmlcov/
+build/
+dist/
+
+# --- Node (MCP local) ---
+node_modules/
+
+# --- Herramientas locales de IA / agente (no forman parte de la app) ---
+.opencode/
+opencode.json
+opencode.jsonc
+graphify-out/
+mcp-architecture-context/
+.agents/
+.claude/
+.cursor/
+.aider*
+.aiderignore
+
+# --- Editores y sistema operativo ---
 .idea/
 .vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Artefactos temporales ---
 *.log
+*.tmp
+*.bak
+*.orig
+*.rej
 screenshot*.png
 
-# Never commit secrets or local app state
+# --- Secretos y estado local ---
 .env
 .env.*
 *.pem
@@ -21,4 +48,3 @@ screenshot*.png
 *.p12
 *.pfx
 settings.json
-
