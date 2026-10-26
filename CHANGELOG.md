@@ -28,6 +28,12 @@
 - Removed the small favourite star from library covers; favourites are managed
   from the detail view. The detail scrollbar now leaves a gutter for the
   content, and the close control has a clearer icon and hover state.
+- Added a **Statistics** section next to Library and Store with Week / Month /
+  Year / All time filters, a year browser, a review banner, the total time and
+  secondary metrics (comparison, active days, streak and sessions).
+- Added the **Month by Month** river chart (stacked game areas), a horizontal
+  carousel of month cards with top games, progress bars, daily activity and
+  “Open month”, plus a “Watch” auto-scroll mode.
 
 ## v0.13.0
 

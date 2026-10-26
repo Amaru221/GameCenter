@@ -25,7 +25,7 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QGuiApplication, QImage
 
 from .. import __version__
-from ..core import credentials, i18n, manual, metadata, playtime, steamgriddb, updater
+from ..core import credentials, i18n, manual, metadata, playtime, stats as stats_module, steamgriddb, updater
 from ..core.i18n import Translator, tr
 from ..core.launch import LaunchError, launch as launch_game, open_folder
 from ..core.models import SOURCE_LABELS, Game
@@ -1281,3 +1281,14 @@ class LibraryModel(QAbstractListModel):
             "cartridgeColor": self._cartridge_color(game),
             "installed": game.installed,
         }
+
+    @Slot(str, int, int, result="QVariantMap")
+    def stats(self, period: str, year: int, month: int = -1) -> dict:
+        """Aggregated playtime data for the Statistics view."""
+        return stats_module.build(
+            self._all,
+            period=period,
+            year=year,
+            language=self._i18n.language,
+            month=month,
+        )

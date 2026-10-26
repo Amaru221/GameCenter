@@ -12,6 +12,9 @@ Item {
     signal scanRequested(string source)
     signal restoreHiddenRequested()
     signal addRequested()
+    signal viewRequested(string view)
+
+    property string currentView: "library"
 
     function focusSearch() {
         search.forceActiveFocus();
@@ -37,7 +40,7 @@ Item {
         anchors.fill: parent
         anchors.leftMargin: 24
         anchors.rightMargin: 24
-        spacing: 16
+        spacing: 12
 
         RowLayout {
             spacing: 10
@@ -88,7 +91,10 @@ Item {
         Item { Layout.fillWidth: true }
 
         Rectangle {
-            Layout.preferredWidth: 420
+            Layout.preferredWidth: 380
+            Layout.fillWidth: true
+            Layout.minimumWidth: 140
+            Layout.maximumWidth: 420
             height: 40
             radius: 20
             color: "#0d0f14"
@@ -136,7 +142,7 @@ Item {
         Item { Layout.fillWidth: true }
 
         Rectangle {
-            width: 214
+            width: 300
             height: 38
             radius: 19
             color: "#0d0f14"
@@ -148,43 +154,46 @@ Item {
                 anchors.margins: 4
                 spacing: 2
 
-                Rectangle {
-                    width: 105
-                    height: 30
-                    radius: 15
-                    color: "#232936"
+                Repeater {
+                    model: [
+                        { label: "LIBRARY", value: "library" },
+                        { label: "STATS", value: "stats" },
+                        { label: "STORE", value: "store" }
+                    ]
 
-                    Text {
-                        anchors.centerIn: parent
-                        text: Tr.strings["LIBRARY"]
-                        color: "#f2f5fa"
-                        font.family: "Chakra Petch"
-                        font.pixelSize: 11
-                        font.bold: true
-                        font.letterSpacing: 1.4
-                    }
-                }
+                    delegate: Rectangle {
+                        width: (parent.width - 4) / 3
+                        height: 30
+                        radius: 15
+                        color: root.currentView === modelData.value
+                               ? "#232936"
+                               : "transparent"
 
-                Rectangle {
-                    width: 99
-                    height: 30
-                    radius: 15
-                    color: "transparent"
+                        Text {
+                            anchors.centerIn: parent
+                            text: Tr.strings[modelData.label]
+                            color: root.currentView === modelData.value
+                                   ? "#f2f5fa"
+                                   : "#7b8494"
+                            font.family: "Chakra Petch"
+                            font.pixelSize: 11
+                            font.bold: true
+                            font.letterSpacing: 1.4
+                        }
 
-                    Text {
-                        anchors.centerIn: parent
-                        text: Tr.strings["STORE"]
-                        color: "#7b8494"
-                        font.family: "Chakra Petch"
-                        font.pixelSize: 11
-                        font.bold: true
-                        font.letterSpacing: 1.4
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.toastRequested(Tr.strings["Store coming in v0.2"])
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (modelData.value === "store") {
+                                    root.toastRequested(
+                                        Tr.strings["Store coming in v0.2"]
+                                    );
+                                } else {
+                                    root.viewRequested(modelData.value);
+                                }
+                            }
+                        }
                     }
                 }
             }

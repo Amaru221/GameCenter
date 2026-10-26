@@ -31,6 +31,17 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   contenido se desplaza cuando la altura es reducida.
 - **Favoritos con efecto**: la estrella del detalle tiene brillo, rebote y un
   destello animado al añadir el juego, con aviso de “Añadido a favoritos”.
+- **Estadísticas**: nueva pestaña **STATS** junto a Library y Store, con filtros
+  **Week / Month / Year / All time**, selector de año, resumen de tiempo jugado,
+  comparación con el periodo anterior, días jugados, racha y sesiones.
+- La sección **Month by Month** incluye un gráfico de áreas apiladas (“a river”)
+  con los juegos principales, tarjetas mensuales deslizables con horas, mejores
+  juegos, barras de progreso y actividad diaria, y un botón **Open month** que
+  enfoca ese mes en el resumen. El botón **Watch** recorre los meses
+  automáticamente.
+- Las estadísticas se calculan con las sesiones registradas por GameCenter; el
+  tiempo anterior sin fecha no se inventa y sigue disponible como total
+  histórico en la ficha de cada juego.
 - **Favoritos** persistentes, con filtro en la barra.
 - **Dock de sesiones**: al lanzar un juego aparece con su tiempo en marcha y se
   retira solo cuando el proceso termina (o con la ×).
@@ -151,6 +162,7 @@ gamecenter/
     models.py           modelo Game
     i18n.py             catálogo de idiomas y traductor de la interfaz
     metadata.py         descripciones de Steam Store con caché local
+    stats.py            agregación de historial para estadísticas
     vdf.py              lector de VDF (formato de Valve)
     favorites.py        favoritos persistentes (JSON)
     sessions.py         seguimiento de juegos en ejecución
@@ -167,7 +179,7 @@ gamecenter/
     library_model.py    modelo, filtros, favoritos, orden y acciones
     artwork.py          carátulas del CDN de Steam con caché
     covers.py           portadas, fondo y logo generados con QPainter
-    qml/                Main, TopBar, Toolbar, Cartridge, GameDetail, Dock
+    qml/                Main, TopBar, Toolbar, StatsView, Cartridge, GameDetail, Dock
     fonts/              Sora y Chakra Petch (SIL OFL 1.1)
 tools/screenshot.py     render de la ventana a PNG (desarrollo)
 packaging/              PyInstaller, Inno Setup, icono y build de Windows

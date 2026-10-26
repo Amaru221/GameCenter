@@ -1,83 +1,85 @@
-# WORKFLOW STATE — Resumen de juego, timeline y favoritos
+# WORKFLOW STATE — Estadísticas
 
 ## Descripción funcional
 
-- El detalle del juego muestra primero un **resumen** con los datos actuales
-  (título, tienda, tamaño, instalación, tiempo total, última partida) más una
-  **descripción**, géneros, estudio y año.
-- El panel es **responsive**: dos columnas con cartucho grande en ventanas
-  anchas y una vista compacta con miniatura en ventanas estrechas; el contenido
-  se desplaza cuando la altura es reducida.
-- Debajo del resumen aparece un **timeline de sesiones** con fecha/hora y
-  duración, una tira de actividad y el tiempo total.
-- La **estrella de favoritos** se rediseña con brillo, rebote, destello y un
-  aviso al añadir el juego.
+- Nueva pestaña **STATS** junto a **LIBRARY** y **STORE**.
+- Barra superior de estadísticas con filtros **Week / Month / Year / All time**
+  (Year por defecto), selector de año con flechas y banner lateral **“Your
+  2026 so far, in review”** con botón **Watch** (recorrido automático de meses).
+- Tarjeta principal **Time Played** con el total grande y métricas secundarias:
+  comparación con el periodo anterior, días jugados/totales, racha y sesiones.
+- Sección **Month by Month**:
+  - Gráfico de áreas apiladas **“2026 as a river”** con los juegos principales.
+  - Carrusel horizontal de tarjetas mensuales con horas, días jugados, mejor
+    día, sesiones, top de juegos con barras de progreso y gráfico diario.
+  - Botón **Open month** para enfocar ese mes en el resumen.
+- Tema oscuro #0b0f19, tarjetas redondeadas con bordes sutiles, tipografía
+  Sora/Chakra Petch y acentos azul/naranja/púrpura/esmeralda.
 
 ## Decisiones de arquitectura
 
-- `gamecenter/core/metadata.py` obtiene descripciones de la API pública de
-  Steam Store:
-  - Steam con AppID numérico → `appdetails`.
-  - Otras tiendas → `storesearch` por título con umbral de similitud 0.94.
-  - Caché por juego/idioma en `%APPDATA%/GameCenter/metadata.json`; TTL de 30
-    días (24 h para “sin resultados”).
-  - `GC_NO_METADATA=1` desactiva las peticiones.
-- `playtime.py` añade un historial global `history.json` por juego con sesiones
-  `{start, seconds}` (máximo 200). Las sesiones de Steam también se registran
-  aquí, sin escribir en su `localconfig.vdf`.
-- `LibraryModel`:
-  - `loadDetails(row)` carga la descripción desde caché o en segundo plano.
-  - `gameAt(row)` añade `description`, `developers`, `genres`, `releaseDate`,
-    `detailsLoaded`, `history`, `sessionCount` y `historyTotalText`.
-  - `_session_ended` registra el timeline para todas las tiendas.
-- El detalle se dibuja con un `Flickable` y `panel.compact` para adaptar el
-  layout. El dock baja de capa mientras el detalle está abierto y recupera su
-  capa al cerrarlo, manteniendo la animación de inserción por encima del modal.
-- `FavoriteButton.qml` encapsula la estrella animada y el efecto de destello.
+- `gamecenter/core/stats.py` agrega `playtime.all_history()`:
+  - Cada sesión se atribuye a la fecha local de inicio.
+  - Periodos y comparaciones (semana/mes/año/anterior).
+  - Días jugados, días transcurridos, racha más larga y sesiones.
+  - Tarjetas mensuales, top games con porcentaje, actividad diaria y capas del
+    río apilado.
+- `playtime.record_session` guarda también `title` y `source` para que el
+  historial siga siendo legible si el juego ya no está en la biblioteca.
+- `LibraryModel.stats(period, year, month)` devuelve el `QVariantMap` completo.
+- `StatsView.qml` es una página con `Flickable` vertical, cabecera responsive
+  (banner en la misma fila o debajo según ancho), hero, river chart y carrusel.
+- Se corrigió un conflicto importante: la propiedad `data` del componente
+  sombreaba el `data` por defecto de `Item` en QML y los hijos visuales no se
+  emparentaban. Ahora se llama `statsData`.
+- El fondo animado de la app se oculta en la vista de estadísticas para dejar el
+  tema oscuro limpio y ahorrar composición.
 
 ## Contrato interno
 
 | Elemento | Tipo | Descripción |
 | --- | --- | --- |
-| `Library.loadDetails(row)` | slot | Carga la descripción (caché o red). |
-| `Library.gameAt(row)` | slot → `QVariantMap` | Incluye resumen, descripción e historial. |
-| `Library.detailsChanged` | signal | La descripción está lista. |
-| `metadata.cached(game, lang)` | función | Metadatos frescos o `None`. |
-| `metadata.fetch(game, lang)` | función | Descarga y cachea. |
-| `playtime.record_session(game, start, seconds)` | función | Añade una sesión al timeline. |
-| `playtime.history_for(game)` | función | Sesiones más recientes primero. |
-| `FavoriteButton.activate()` | función | Dispara el rebote y el destello. |
+| `Library.stats(period, year, month)` | slot → `QVariantMap` | Datos agregados. |
+| `statsData.periodLabel` | str | “2026”, “January 2026”, “This week”… |
+| `statsData.timeText` | str | Total del periodo, ej. “78h 20m”. |
+| `statsData.changeText` | str | “+3% vs 2025” o vacío. |
+| `statsData.daysText` | str | “60 of 299 days”. |
+| `statsData.streakText` | str | “2-day streak”. |
+| `statsData.sessionsText` | str | “100 sessions”. |
+| `statsData.months` | list | Tarjetas mensuales. |
+| `statsData.river` | map | `{months, layers}` para el gráfico. |
+| `StatsView.setPeriod/changeYear/openMonth` | funciones | Cambian el periodo. |
+| `StatsView.toggleReview` | función | Activa el auto-scroll de meses. |
 
 ## Checklist
 
 ### Backend
-- [x] `metadata.py` con búsqueda, limpieza HTML, caché y tests.
-- [x] `playtime.py` con historial global y tests.
-- [x] `LibraryModel.loadDetails` + `detailsChanged`.
-- [x] `gameAt` con descripción e historial.
-- [x] Timeline registrado también para Steam.
-- [x] i18n para textos nuevos, duraciones y avisos de favoritos.
+- [x] Historial con título/fuente por sesión.
+- [x] Agregador de periodos, comparaciones, días, rachas y sesiones.
+- [x] Tarjetas mensuales con top games, progreso y actividad diaria.
+- [x] Río apilado por juego y colores estables.
+- [x] `Library.stats` expuesto a QML.
+- [x] Tests unitarios de estadísticas.
 
 ### Frontend
-- [x] `GameDetail.qml` rediseñado, responsive y con scroll.
-- [x] Separación de 16 px entre el contenido y la scrollbar.
-- [x] `CloseButton.qml` con X dibujada, hover y acento.
-- [x] Estrella de favoritos eliminada de las carátulas de la biblioteca.
-- [x] Timeline con fechas, duraciones, barras y estado vacío.
-- [x] `FavoriteButton.qml` con brillo, rebote y destello.
-- [x] Descripción con estados de carga/no disponible y “Leer más”.
-- [x] Capas del dock/detalle corregidas.
+- [x] Pestaña STATS y navegación Library/Stats/Store.
+- [x] Barra de filtros, selector de año y banner Watch.
+- [x] Hero “Time Played” y métricas secundarias.
+- [x] River chart y leyenda.
+- [x] Carrusel mensual con Open month y barras diarias.
+- [x] Responsive: banner debajo en ventanas estrechas, scroll vertical.
+- [x] Corrección de `data` → `statsData` para el emparentado visual.
 
 ### Verificación
-- [x] `python -m pytest -q` → **108 passed**.
-- [x] Capturas en 1180×800 y 900×620 con descripción e historial de prueba.
-- [x] Estrella animada verificada con `activate()` (destello en movimiento).
+- [x] `python -m pytest -q` → **116 passed**.
+- [x] Capturas en 1180×800 y 900×620.
+- [x] Comprobación de periodos y tarjetas con historial de prueba.
 - [x] Carga QML de la ventana completa.
 
 ## Notas
 
-- Las sesiones anteriores a esta versión no tienen fecha y no se inventan: el
-  timeline empieza a llenarse con las sesiones nuevas. El tiempo total anterior
-  sigue apareciendo en “All time”.
-- Las descripciones de tiendas sin coincidencia exacta en Steam muestran “No
-  hay descripción disponible” y se reintentan tras 24 h.
+- Las estadísticas se construyen desde el historial de sesiones registrado por
+  GameCenter; las partidas anteriores a esa función no tienen fecha y no se
+  inventan.
+- El resumen total de Steam sigue usando su `localconfig.vdf`; el historial
+  mensual usa las sesiones lanzadas desde GameCenter.

@@ -21,6 +21,7 @@ Window {
     property bool demoInsert: false
     property var slotGame: ({})
     property string slotSessionId: ""
+    property string currentView: "library"
 
     function latestSession() {
         var list = Sessions.list;
@@ -86,6 +87,7 @@ Window {
 
     Image {
         anchors.fill: parent
+        visible: window.currentView === "library"
         source: "image://bg/1"
         fillMode: Image.PreserveAspectCrop
         smooth: true
@@ -93,6 +95,7 @@ Window {
 
     Rectangle {
         anchors.fill: parent
+        visible: window.currentView === "library"
         gradient: Gradient {
             GradientStop { position: 0.0; color: "#00000000" }
             GradientStop { position: 0.55; color: "#12070a0d" }
@@ -104,17 +107,20 @@ Window {
         id: topBar
         width: parent.width
         anchors.top: parent.top
+        currentView: window.currentView
         onToastRequested: (message) => toast.show(message)
         onSettingsRequested: settingsOpen = true
         onUpdateRequested: updateOpen = true
         onScanRequested: (source) => Library.scanStore(source)
         onRestoreHiddenRequested: Library.restoreHiddenGames()
         onAddRequested: addOpen = true
+        onViewRequested: (view) => window.currentView = view
     }
 
     Toolbar {
         id: toolbar
         width: parent.width
+        visible: window.currentView === "library"
         anchors.top: topBar.bottom
         onToastRequested: (message) => toast.show(message)
         onAddRequested: addOpen = true
@@ -128,6 +134,7 @@ Window {
         anchors.leftMargin: 24
         anchors.rightMargin: 24
         anchors.bottomMargin: 104
+        visible: window.currentView === "library"
 
         onDetailRequested: (index) => {
             detailOpen = true;
@@ -135,6 +142,15 @@ Window {
             detailGame = Library.gameAt(index);
             Library.loadDetails(index);
         }
+    }
+
+    StatsView {
+        id: statsView
+        anchors.top: topBar.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        visible: window.currentView === "stats"
     }
 
     UpdateBanner {
@@ -329,7 +345,12 @@ Window {
 
     Shortcut {
         sequence: "F5"
-        onActivated: Library.refresh()
+        onActivated: {
+            Library.refresh();
+            if (window.currentView === "stats") {
+                statsView.refresh();
+            }
+        }
     }
 
     Shortcut {
