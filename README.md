@@ -3,7 +3,7 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.11.0** — Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
+> Estado: **v0.12.0** — Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 
@@ -193,10 +193,10 @@ Steam sigue siendo la fuente de verdad para sus horas.
 ## Actualizaciones
 
 La app consulta como máximo **una vez al día** la API pública de GitHub
-Releases. Si hay una versión más nueva, muestra un aviso discreto con
-**Download** (abre la página del release) y **Later**, además de un **botón ↑**
-junto a LIBRARY/STORE que abre un modal con los detalles. No descarga ni
-instala nada por su cuenta.
+Releases. Si hay una versión más nueva, muestra un aviso discreto y un **icono
+de descarga** junto a LIBRARY/STORE. Al pulsar **Update now**, GameCenter
+descarga el instalador, comprueba su **SHA-256**, lo ejecuta en silencio y se
+reinicia solo. Todo ocurre dentro de la app, sin abrir GitHub.
 
 Se puede desactivar en **Ajustes → Updates**, o comprobar manualmente con
 **Check now**. La petición solo envía la IP y el `User-Agent` a
@@ -210,7 +210,8 @@ Hay dos peticiones de red, ambas opcionales:
   Steam (`shared.akamai.steamstatic.com`) y la imagen se guarda en
   `~/.cache/gamecenter/art`.
 - **Actualizaciones**: como máximo una vez al día se consulta
-  `api.github.com` para ver si hay una versión nueva.
+  `api.github.com` para ver si hay una versión nueva. El instalador solo se
+  descarga si el usuario pulsa **Update now**.
 
 No se envían cuentas, rutas ni datos del equipo.
 

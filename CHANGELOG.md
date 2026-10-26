@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.12.0
+
+- The pending-update icon in the navbar is now a proper download glyph with a
+  pulsing badge, hover state and tooltip.
+- Updates are downloaded and installed from inside GameCenter: live progress,
+  SHA-256 verification, silent installer and automatic restart. No more
+  redirect to GitHub.
+- The update dialog, the update banner and Settings all open the same in-app
+  update flow.
+
 ## v0.11.0
 
 - The DS cartridge back now has **18 gold contacts**. The two end pads and the
