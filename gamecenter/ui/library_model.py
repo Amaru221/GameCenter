@@ -25,7 +25,8 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QGuiApplication, QImage
 
 from .. import __version__
-from ..core import credentials, manual, playtime, steamgriddb, updater
+from ..core import credentials, i18n, manual, playtime, steamgriddb, updater
+from ..core.i18n import Translator, tr
 from ..core.launch import LaunchError, launch as launch_game, open_folder
 from ..core.models import SOURCE_LABELS, Game
 from ..core.preferences import (
@@ -68,26 +69,32 @@ def _playtime_text(minutes: int) -> str:
     if minutes <= 0:
         return ""
     if minutes < 60:
-        return f"{minutes} min played"
+        return tr("{minutes} min played", minutes=minutes)
     hours = minutes // 60
-    return "1 hour played" if hours == 1 else f"{hours:,} hours played"
+    if hours == 1:
+        return tr("1 hour played")
+    return tr("{hours} hours played", hours=f"{hours:,}")
 
 
 def _played_text(timestamp: int) -> str:
     if not timestamp:
-        return "Never played"
+        return tr("Never played")
     days = (time.time() - timestamp) / 86400
     if days < 1:
-        return "Played today"
+        return tr("Played today")
     if days < 2:
-        return "Played yesterday"
+        return tr("Played yesterday")
     if days < 30:
-        return f"Played {int(days)} days ago"
+        return tr("Played {days} days ago", days=int(days))
     if days < 365:
         months = int(days // 30)
-        return f"Played {months} month{'s' if months != 1 else ''} ago"
+        if months == 1:
+            return tr("Played {months} month ago", months=months)
+        return tr("Played {months} months ago", months=months)
     years = int(days // 365)
-    return f"Played {years} year{'s' if years != 1 else ''} ago"
+    if years == 1:
+        return tr("Played {years} year ago", years=years)
+    return tr("Played {years} years ago", years=years)
 
 
 class LibraryModel(QAbstractListModel):
@@ -119,6 +126,9 @@ class LibraryModel(QAbstractListModel):
         self._source = ""
         self._sort = "recent"
         self._prefs = Preferences(settings_path)
+        self._i18n = Translator(self._prefs)
+        i18n.set_active(self._i18n)
+        self._i18n.languageChanged.connect(self._on_language_changed)
         self._all = [
             game for game in scan_all() if not self._prefs.is_hidden(game.id)
         ]
@@ -183,11 +193,14 @@ class LibraryModel(QAbstractListModel):
         if role == ROLE_TITLE:
             return game.title
         if role == ROLE_SOURCE:
-            return game.source_label
+            return self._source_label(game)
         if role == ROLE_APP_ID:
             return game.app_id
         if role == ROLE_META:
-            return f"{game.source_label.upper()} · {game.app_id or '—'} · {_tag(game.title)}"
+            return (
+                f"{self._source_label(game).upper()} · "
+                f"{game.app_id or '—'} · {_tag(game.title)}"
+            )
         if role == ROLE_COVER:
             return self._cover_url(game)
         if role == ROLE_INSTALLED:
@@ -381,7 +394,7 @@ class LibraryModel(QAbstractListModel):
     @Property(str, notify=updatesChanged)
     def updateBytesText(self) -> str:
         if self._update_installing:
-            return "Installing..."
+            return tr("Installing...")
         if self._update_downloading:
             done = self._update_downloaded_bytes / (1024 * 1024)
             if self._update_total_bytes:
@@ -405,7 +418,7 @@ class LibraryModel(QAbstractListModel):
     def lastUpdateCheckText(self) -> str:
         stamp = self._prefs.last_update_check
         if not stamp:
-            return "Never"
+            return tr("Never")
         return time.strftime("%Y-%m-%d %H:%M", time.localtime(stamp))
 
     @Property(bool, notify=credentialsChanged)
@@ -456,13 +469,13 @@ class LibraryModel(QAbstractListModel):
     def downloadUpdate(self) -> None:
         info = self._update_available
         if info is None:
-            self._update_error = "No update available."
+            self._update_error = tr("No update available.")
             self.updatesChanged.emit()
             return
         if self._update_downloading or self._update_installing:
             return
         if not info.installer_url:
-            self._update_error = "This release doesn't include a Windows installer."
+            self._update_error = tr("This release doesn't include a Windows installer.")
             self.updatesChanged.emit()
             return
 
@@ -472,7 +485,7 @@ class LibraryModel(QAbstractListModel):
         self._update_downloaded_bytes = 0
         self._update_total_bytes = int(info.installer_size or 0)
         self._update_installer = ""
-        self._update_status = "Downloading update..."
+        self._update_status = tr("Downloading update...")
         self._update_error = ""
         self.updatesChanged.emit()
 
@@ -497,13 +510,13 @@ class LibraryModel(QAbstractListModel):
             return
         installer = Path(self._update_installer) if self._update_installer else None
         if installer is None or not installer.is_file():
-            self._on_update_failed("The update file is missing.")
+            self._on_update_failed(tr("The update file is missing."))
             return
 
         self._update_downloading = False
         self._update_installing = True
         self._update_progress = 1.0
-        self._update_status = "Installing update. GameCenter will restart..."
+        self._update_status = tr("Installing update. GameCenter will restart...")
         self._update_error = ""
         self.updatesChanged.emit()
 
@@ -541,7 +554,7 @@ class LibraryModel(QAbstractListModel):
         self._update_downloading = False
         self._update_installer = path
         self._update_progress = 1.0
-        self._update_status = "Update downloaded. Installing..."
+        self._update_status = tr("Update downloaded. Installing...")
         self.updatesChanged.emit()
         QTimer.singleShot(600, self.installUpdate)
 
@@ -581,9 +594,9 @@ class LibraryModel(QAbstractListModel):
         saved = credentials.set_key(value)
         self._has_key = saved
         self._credentials_message = (
-            "Saved to the system credential store."
+            tr("Saved to the system credential store.")
             if saved
-            else "Couldn't save to the credential store."
+            else tr("Couldn't save to the credential store.")
         )
         self.credentialsChanged.emit()
 
@@ -591,7 +604,7 @@ class LibraryModel(QAbstractListModel):
     def clearSteamGridKey(self) -> None:
         credentials.clear_key()
         self._has_key = False
-        self._credentials_message = "Key removed."
+        self._credentials_message = tr("Key removed.")
         self.credentialsChanged.emit()
 
     @Slot(int)
@@ -602,7 +615,7 @@ class LibraryModel(QAbstractListModel):
         self._reset_art_state()
         self._art_game = game
         if not self._has_key:
-            self._art_error = "Add a SteamGridDB API key in Settings first."
+            self._art_error = tr("Add a SteamGridDB API key in Settings first.")
             self._art_loading = False
             self.artOptionsChanged.emit()
             return
@@ -740,7 +753,7 @@ class LibraryModel(QAbstractListModel):
         )
         self._art_error = ""
         if not self._art_options_all and not self._art_page_full:
-            self._art_error = "No portrait artwork found for this game."
+            self._art_error = tr("No portrait artwork found for this game.")
         self.artOptionsChanged.emit()
 
     @Slot(str, str)
@@ -768,13 +781,33 @@ class LibraryModel(QAbstractListModel):
     def sessions(self) -> SessionTracker:
         return self._sessions
 
+    @Property(QObject, constant=True)
+    def translator(self) -> Translator:
+        return self._i18n
+
     @Property("QVariantList", notify=changed)
     def sourceOptions(self) -> list[dict]:
-        keys = sorted({game.source for game in self._all})
+        known = [key for key in SOURCE_LABELS if key != "local"]
+        known += sorted({game.source for game in self._all} - set(SOURCE_LABELS))
         return [
-            {"text": SOURCE_LABELS.get(key, key.capitalize()), "value": key}
-            for key in keys
+            {
+                "text": SOURCE_LABELS.get(key, key.capitalize()),
+                "value": key,
+            }
+            for key in known
         ]
+
+    def _source_label(self, game: Game) -> str:
+        if game.source == "local":
+            return tr("Local")
+        return SOURCE_LABELS.get(game.source, game.source.capitalize())
+
+    def _on_language_changed(self) -> None:
+        if self._visible:
+            top = self.index(0, 0)
+            bottom = self.index(len(self._visible) - 1, 0)
+            self.dataChanged.emit(top, bottom)
+        self.changed.emit()
 
     # -- filtering --------------------------------------------------------
 
@@ -791,6 +824,8 @@ class LibraryModel(QAbstractListModel):
             rows.sort(key=lambda g: g.title.casefold())
         elif self._sort == "size":
             rows.sort(key=lambda g: -g.size_bytes)
+        elif self._sort == "most":
+            rows.sort(key=lambda g: (-g.playtime_minutes, g.title.casefold()))
         else:
             rows.sort(key=lambda g: (-g.last_played, g.title.casefold()))
 
@@ -838,14 +873,18 @@ class LibraryModel(QAbstractListModel):
     def scanStore(self, source: str) -> None:
         if not source:
             self.refresh()
-            self.notice.emit(f"Library rescanned: {len(self._all)} game(s).")
+            self.notice.emit(
+                tr("Library rescanned: {count} game(s).", count=len(self._all))
+            )
             return
 
         label = SOURCE_LABELS.get(source, source.title())
         try:
             games = scan_source(source)
         except Exception as exc:  # noqa: BLE001 - reported as a toast
-            self.failed.emit(f"Couldn't scan {label}: {exc}")
+            self.failed.emit(
+                tr("Couldn't scan {label}: {error}", label=label, error=exc)
+            )
             return
 
         games = [game for game in games if not self._prefs.is_hidden(game.id)]
@@ -853,16 +892,18 @@ class LibraryModel(QAbstractListModel):
         self._all.sort(key=lambda game: (not game.installed, game.title.casefold()))
         self._refresh_rows()
         self._start_art()
-        self.notice.emit(f"{label}: {len(games)} game(s) found.")
+        self.notice.emit(
+            tr("{label}: {count} game(s) found.", label=label, count=len(games))
+        )
 
     @Slot()
     def restoreHiddenGames(self) -> None:
         count = self._prefs.clear_hidden_games()
         self.refresh()
         if count:
-            self.notice.emit(f"Restored {count} removed game(s).")
+            self.notice.emit(tr("Restored {count} removed game(s).", count=count))
         else:
-            self.notice.emit("No removed games to restore.")
+            self.notice.emit(tr("No removed games to restore."))
 
     # -- cover art --------------------------------------------------------
 
@@ -979,7 +1020,10 @@ class LibraryModel(QAbstractListModel):
         if self._prefs.cartridge_style != "ds":
             return ""
         override = self._prefs.cover_for(game.id)
-        meta = f"{game.source_label.upper()} · {game.app_id or '—'} · {_tag(game.title)}"
+        meta = (
+            f"{self._source_label(game).upper()} · "
+            f"{game.app_id or '—'} · {_tag(game.title)}"
+        )
         key = hashlib.sha1(
             f"{game.id}|{game.title}|{game.app_id}|{self._art_revision}|{override}|{meta}".encode(
                 "utf-8"
@@ -1015,7 +1059,7 @@ class LibraryModel(QAbstractListModel):
         if game is None:
             return
         if not game.install_dir or not game.install_dir.is_dir():
-            self.failed.emit("This game has no install folder.")
+            self.failed.emit(tr("This game has no install folder."))
             return
         try:
             open_folder(game.install_dir)
@@ -1066,7 +1110,7 @@ class LibraryModel(QAbstractListModel):
             self._prefs.hide_game(game.id)
         self._all = [item for item in self._all if item.id != game.id]
         self._refresh_rows()
-        self.notice.emit(f"Removed {game.title} from the library.")
+        self.notice.emit(tr("Removed {title} from the library.", title=game.title))
 
     @Slot(int)
     def removeManualGame(self, row: int) -> None:
@@ -1127,9 +1171,12 @@ class LibraryModel(QAbstractListModel):
             return {}
         return {
             "title": game.title,
-            "source": game.source_label,
+            "source": self._source_label(game),
             "appId": game.app_id,
-            "meta": f"{game.source_label.upper()} · {game.app_id or '—'} · {_tag(game.title)}",
+            "meta": (
+                f"{self._source_label(game).upper()} · "
+                f"{game.app_id or '—'} · {_tag(game.title)}"
+            ),
             "cover": self._cover_url(game),
             "cartridgeColor": self._cartridge_color(game),
             "texture": self._texture_url(game),

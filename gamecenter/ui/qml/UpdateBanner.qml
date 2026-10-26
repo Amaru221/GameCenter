@@ -31,7 +31,7 @@ Rectangle {
             spacing: 2
 
             Text {
-                text: "Update available"
+                text: Tr.strings["Update available"]
                 color: "#f2f5fa"
                 font.family: "Sora"
                 font.pixelSize: 12
@@ -54,7 +54,7 @@ Rectangle {
 
             Text {
                 anchors.centerIn: parent
-                text: "Update now"
+                text: Tr.strings["Update now"]
                 color: Library.accentText
                 font.family: "Sora"
                 font.pixelSize: 11

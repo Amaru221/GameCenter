@@ -68,7 +68,7 @@ Rectangle {
             }
 
             Text {
-                text: "Ready"
+                text: Tr.strings["Ready"]
                 color: "#dfe6f0"
                 font.family: "Sora"
                 font.pixelSize: 12
@@ -88,7 +88,7 @@ Rectangle {
             }
 
             Text {
-                text: "Inserting..."
+                text: Tr.strings["Inserting..."]
                 color: "#dfe6f0"
                 font.family: "Sora"
                 font.pixelSize: 12

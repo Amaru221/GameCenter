@@ -81,7 +81,7 @@ Item {
                     spacing: 2
 
                     Text {
-                        text: "Add a game"
+                        text: Tr.strings["Add a game"]
                         color: "#f2f5fa"
                         font.family: "Sora"
                         font.pixelSize: 22
@@ -89,7 +89,7 @@ Item {
                     }
 
                     Text {
-                        text: "Pick the root folder and the executable to launch."
+                        text: Tr.strings["Pick the root folder and the executable to launch."]
                         color: "#8b95a5"
                         font.family: "Sora"
                         font.pixelSize: 11
@@ -120,7 +120,7 @@ Item {
             }
 
             Text {
-                text: "Title"
+                text: Tr.strings["Title"]
                 color: "#dfe6f0"
                 font.family: "Sora"
                 font.pixelSize: 12
@@ -129,7 +129,7 @@ Item {
             TextField {
                 id: titleField
                 Layout.fillWidth: true
-                placeholderText: "Game title"
+                placeholderText: Tr.strings["Game title"]
                 color: "#e8edf5"
                 placeholderTextColor: "#6f7887"
                 font.family: "Sora"
@@ -145,7 +145,7 @@ Item {
             }
 
             Text {
-                text: "Root folder"
+                text: Tr.strings["Root folder"]
                 color: "#dfe6f0"
                 font.family: "Sora"
                 font.pixelSize: 12
@@ -169,7 +169,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         anchors.leftMargin: 10
                         anchors.rightMargin: 10
-                        text: root.folder === "" ? "No folder selected" : Library.localPath(root.folder)
+                        text: root.folder === "" ? Tr.strings["No folder selected"] : Library.localPath(root.folder)
                         color: root.folder === "" ? "#6f7887" : "#cfd6e2"
                         font.family: "Sora"
                         font.pixelSize: 11
@@ -187,7 +187,7 @@ Item {
 
                     Text {
                         anchors.centerIn: parent
-                        text: "Browse..."
+                        text: Tr.strings["Browse..."]
                         color: "#cfd6e2"
                         font.family: "Sora"
                         font.pixelSize: 11
@@ -202,7 +202,7 @@ Item {
             }
 
             Text {
-                text: "Executable"
+                text: Tr.strings["Executable"]
                 color: "#dfe6f0"
                 font.family: "Sora"
                 font.pixelSize: 12
@@ -219,7 +219,7 @@ Item {
             Text {
                 Layout.fillWidth: true
                 visible: root.folder !== "" && root.executableEntries.length === 0
-                text: "No executable found. Choose another folder or put the game executable at its root."
+                text: Tr.strings["No executable found. Choose another folder or put the game executable at its root."]
                 color: "#ff8a8a"
                 font.family: "Sora"
                 font.pixelSize: 11
@@ -228,7 +228,7 @@ Item {
 
             Text {
                 Layout.fillWidth: true
-                text: "You can choose a SteamGridDB cover later from the game's detail view."
+                text: Tr.strings["You can choose a SteamGridDB cover later from the game's detail view."]
                 color: "#6f7887"
                 font.family: "Sora"
                 font.pixelSize: 10
@@ -253,7 +253,7 @@ Item {
 
                     Text {
                         anchors.centerIn: parent
-                        text: "Cancel"
+                        text: Tr.strings["Cancel"]
                         color: "#cfd6e2"
                         font.family: "Sora"
                         font.pixelSize: 12
@@ -280,7 +280,7 @@ Item {
 
                     Text {
                         anchors.centerIn: parent
-                        text: "Add game"
+                        text: Tr.strings["Add game"]
                         color: Library.accentText
                         font.family: "Sora"
                         font.pixelSize: 12
@@ -308,7 +308,7 @@ Item {
 
     FolderDialog {
         id: folderDialog
-        title: "Choose the game folder"
+        title: Tr.strings["Choose the game folder"]
         onAccepted: {
             root.folder = selectedFolder.toString();
             root.refreshExecutables();

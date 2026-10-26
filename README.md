@@ -27,6 +27,10 @@ la muestra como una estantería y lanza los juegos con un doble clic.
     inclina arriba/abajo mientras arrastras. El reverso muestra los contactos
     metálicos. En la biblioteca los cartuchos DS se muestran de frente y no
     giran. Los cartuchos llevan la marca **GC**.
+- **Idioma de la interfaz**: en Ajustes se puede elegir entre **English,
+  Español, Français, Deutsch, Italiano y Português**. El cambio es inmediato y se
+  guarda en `%APPDATA%\GameCenter\settings.json`; los textos se traducen sin
+  reiniciar la aplicación.
 - **Animación de inserción**: al pulsar Play, el cartucho vuela desde el detalle
   y se inserta en la ranura central del dock “Ready”, que se ilumina mientras
   muestra “Inserting…”.
@@ -60,7 +64,11 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   en negrita.
 - **Tiempo jugado propio** para las tiendas que no lo registran: las sesiones
   lanzadas desde GameCenter se guardan en la raíz del juego (ver abajo).
-- Busca por título y filtra por tienda; ordena por reciente, título o tamaño.
+- **Filtro de tiendas completo**: el desplegable **All stores** lista siempre
+  Steam, Epic Games, GOG, Battle.net, Riot y Local, aunque una tienda todavía no
+  tenga juegos instalados.
+- Busca por título y filtra por tienda; ordena por **Más jugados**, reciente,
+  título o tamaño.
 - Lanza cada juego con el método de su tienda (URI de Steam/Epic, ejecutable o
   cliente de Riot).
 - Menú contextual: lanzar, abrir carpeta, copiar App ID, color y quitar de la
@@ -87,6 +95,10 @@ Salidas:
 El instalador es **por usuario** (no pide administrador), instala en
 `%LOCALAPPDATA%\Programs\GameCenter` y crea accesos directos. No está firmado
 digitalmente, así que SmartScreen puede mostrar un aviso la primera vez.
+
+El asistente del instalador está disponible en **inglés, español, francés,
+alemán, italiano, portugués, portugués de Brasil, neerlandés, polaco, ruso y
+japonés**.
 
 El workflow `.github/workflows/release.yml` compila y publica el instalador al
 empujar un tag `v*`.
@@ -119,6 +131,7 @@ gamecenter/
   cli.py                entrada: GUI o --scan
   core/
     models.py           modelo Game
+    i18n.py             catálogo de idiomas y traductor de la interfaz
     vdf.py              lector de VDF (formato de Valve)
     favorites.py        favoritos persistentes (JSON)
     sessions.py         seguimiento de juegos en ejecución

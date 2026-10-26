@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- **All stores** now always lists Steam, Epic Games, GOG, Battle.net and Riot,
+  even when a store has no installed games yet.
+- Added a **Most played** sort mode (descending playtime, ties by title).
+- Added an **interface language** selector in Settings: English, Spanish,
+  French, German, Italian and Portuguese. The choice applies instantly and is
+  stored in `settings.json`.
+- The Windows installer wizard now ships English, Spanish, French, German,
+  Italian, Portuguese, Brazilian Portuguese, Dutch, Polish, Russian and
+  Japanese.
+
 ## v0.12.0
 
 - The pending-update icon in the navbar is now a proper download glyph with a

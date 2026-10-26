@@ -180,7 +180,7 @@ Window {
         onCloseRequested: addOpen = false
         onAdded: {
             addOpen = false;
-            toast.show("Game added to your library");
+            toast.show(Tr.strings["Game added to your library"]);
         }
     }
 
@@ -216,6 +216,15 @@ Window {
         opened: updateOpen
         onCloseRequested: updateOpen = false
         onDownloadRequested: Library.downloadUpdate()
+    }
+
+    Connections {
+        target: Tr
+        function onLanguageChanged() {
+            if (detailOpen) {
+                detailGame = Library.gameAt(detailIndex);
+            }
+        }
     }
 
     Connections {
