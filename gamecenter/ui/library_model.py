@@ -762,6 +762,7 @@ class LibraryModel(QAbstractListModel):
         self.artOptionsChanged.emit()
         self._notify_cover(game.id)
         self.artChanged.emit()
+        self.changed.emit()
 
     def _notify_cover(self, game_id: str) -> None:
         for row, game in enumerate(self._visible):
@@ -813,6 +814,7 @@ class LibraryModel(QAbstractListModel):
         self.artOptionsChanged.emit()
         self._notify_cover(game_id)
         self.artChanged.emit()
+        self.changed.emit()
 
     @Slot(str, str)
     def _on_art_failed(self, message: str, game_id: str) -> None:
@@ -845,6 +847,29 @@ class LibraryModel(QAbstractListModel):
                 "value": key,
             }
             for key in known
+        ]
+
+    @Property("QVariantList", notify=changed)
+    def bigPictureGames(self) -> list[dict]:
+        rows = sorted(self._all, key=lambda game: game.title.casefold())
+        return [
+            {
+                "id": game.id,
+                "title": game.title,
+                "source": self._source_label(game),
+                "appId": game.app_id,
+                "meta": self._meta_line(game),
+                "cover": self._cover_url(game),
+                "cartridgeColor": self._cartridge_color(game),
+                "installed": game.installed,
+                "favorite": self._prefs.is_favorite(game.id),
+                "sizeText": f"{game.size_gb:.1f} GB" if game.size_gb else "",
+                "playtimeText": _playtime_text(game.playtime_minutes),
+                "lastPlayed": _played_text(game.last_played),
+                "lastPlayedTimestamp": game.last_played,
+                "playtimeMinutes": game.playtime_minutes,
+            }
+            for game in rows
         ]
 
     def _source_label(self, game: Game) -> str:
@@ -1005,6 +1030,7 @@ class LibraryModel(QAbstractListModel):
                 index = self.index(row, 0)
                 self.dataChanged.emit(index, index, [ROLE_COVER])
                 break
+        self.changed.emit()
 
     # -- actions ----------------------------------------------------------
 
@@ -1052,6 +1078,7 @@ class LibraryModel(QAbstractListModel):
                 for entry in self._visible
             ]
         self.playtimeChanged.emit()
+        self.changed.emit()
 
     def _cover_url(self, game: Game) -> str:
         override = self._prefs.cover_for(game.id)
@@ -1102,6 +1129,16 @@ class LibraryModel(QAbstractListModel):
         game = self._at(row)
         if game is None:
             return ""
+        return self._launch(game)
+
+    @Slot(str, result=str)
+    def launchById(self, game_id: str) -> str:
+        game = next((entry for entry in self._all if entry.id == game_id), None)
+        if game is None:
+            return ""
+        return self._launch(game)
+
+    def _launch(self, game: Game) -> str:
         try:
             pid = launch_game(game)
         except (LaunchError, OSError) as exc:
@@ -1220,6 +1257,13 @@ class LibraryModel(QAbstractListModel):
             return
         index = self.index(row, 0)
         self.dataChanged.emit(index, index, [ROLE_FAVORITE])
+        self.changed.emit()
+
+    @Slot(str, result=bool)
+    def toggleFavoriteById(self, game_id: str) -> bool:
+        value = self._prefs.toggle_favorite(game_id)
+        self.changed.emit()
+        return value
 
     @Slot(int, result="QVariantMap")
     def gameAt(self, row: int) -> dict:

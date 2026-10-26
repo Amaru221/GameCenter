@@ -13,6 +13,7 @@ Item {
     signal restoreHiddenRequested()
     signal addRequested()
     signal viewRequested(string view)
+    signal bigPictureRequested()
 
     property string currentView: "library"
 
@@ -408,6 +409,10 @@ Item {
                 MenuItem {
                     text: Tr.strings["Add game manually..."]
                     onTriggered: root.addRequested()
+                }
+                MenuItem {
+                    text: Tr.strings["Big Picture"]
+                    onTriggered: root.bigPictureRequested()
                 }
                 MenuItem {
                     text: Tr.strings["Settings"]

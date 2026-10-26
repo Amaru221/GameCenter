@@ -22,6 +22,13 @@ Window {
     property var slotGame: ({})
     property string slotSessionId: ""
     property string currentView: "library"
+    property bool bigPictureOpen: false
+
+    onBigPictureOpenChanged: {
+        if (bigPictureOpen) {
+            requestActivate();
+        }
+    }
 
     function latestSession() {
         var list = Sessions.list;
@@ -115,6 +122,7 @@ Window {
         onRestoreHiddenRequested: Library.restoreHiddenGames()
         onAddRequested: addOpen = true
         onViewRequested: (view) => window.currentView = view
+        onBigPictureRequested: window.bigPictureOpen = true
     }
 
     Toolbar {
@@ -301,6 +309,14 @@ Window {
         onDownloadRequested: Library.downloadUpdate()
     }
 
+    BigPicture {
+        id: bigPicture
+        anchors.fill: parent
+        appActive: window.active
+        opened: window.bigPictureOpen
+        onCloseRequested: window.bigPictureOpen = false
+    }
+
     Connections {
         target: Tr
         function onLanguageChanged() {
@@ -316,6 +332,21 @@ Window {
         target: Sessions
         function onChanged() {
             refreshSlot();
+        }
+    }
+
+    Connections {
+        target: Gamepad
+        function onMenu() {
+            if (!window.bigPictureOpen
+                    && window.active
+                    && !window.detailOpen
+                    && !window.settingsOpen
+                    && !window.updateOpen
+                    && !window.addOpen
+                    && !window.artOpen) {
+                window.bigPictureOpen = true;
+            }
         }
     }
 
@@ -345,6 +376,7 @@ Window {
 
     Shortcut {
         sequence: "F5"
+        enabled: !window.bigPictureOpen
         onActivated: {
             Library.refresh();
             if (window.currentView === "stats") {
@@ -355,6 +387,7 @@ Window {
 
     Shortcut {
         sequence: "Escape"
+        enabled: !window.bigPictureOpen
         onActivated: {
             if (updateOpen) {
                 updateOpen = false;
@@ -371,12 +404,25 @@ Window {
     }
 
     Shortcut {
+        sequence: "Ctrl+B"
+        enabled: !window.bigPictureOpen
+        onActivated: {
+            if (!bigPictureOpen && !detailOpen && !settingsOpen
+                    && !updateOpen && !addOpen && !artOpen) {
+                bigPictureOpen = true;
+            }
+        }
+    }
+
+    Shortcut {
         sequence: "Ctrl+,"
+        enabled: !window.bigPictureOpen
         onActivated: settingsOpen = true
     }
 
     Shortcut {
         sequence: "Ctrl+F"
+        enabled: !window.bigPictureOpen
         onActivated: topBar.focusSearch()
     }
 }

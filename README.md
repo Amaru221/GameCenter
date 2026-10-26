@@ -42,6 +42,18 @@ la muestra como una estantería y lanza los juegos con un doble clic.
 - Las estadísticas se calculan con las sesiones registradas por GameCenter; el
   tiempo anterior sin fecha no se inventa y sigue disponible como total
   histórico en la ficha de cada juego.
+- **Big Picture**: modo de sofá a pantalla completa dentro de la ventana, con
+  portada grande, información del juego, carrusel horizontal, filtros
+  **All games / Recent / Favorites** y barra de pistas de mando.
+  - Se entra desde el menú → **Big Picture**, con `Ctrl+B` o con **Start** del
+    mando.
+  - Mando Xbox compatible (XInput): D-pad/stick para moverse, **A** jugar,
+    **B** salir, **LB/RB** filtros, **X** favorito y **Start** menú de salida.
+  - También funciona con teclado (flechas, Enter, Esc, `[`/`]`, `F`) y ratón.
+  - La salida siempre pide confirmación (Cancel/Exit) y puede hacerse con el
+    mando o con el botón **Exit** de la esquina.
+  - El soporte nativo de mando usa **XInput en Windows**; en Linux o sin mando
+    la interfaz funciona con teclado y ratón y la barra de pistas se adapta.
 - **Favoritos** persistentes, con filtro en la barra.
 - **Dock de sesiones**: al lanzar un juego aparece con su tiempo en marcha y se
   retira solo cuando el proceso termina (o con la ×).
@@ -163,6 +175,7 @@ gamecenter/
     i18n.py             catálogo de idiomas y traductor de la interfaz
     metadata.py         descripciones de Steam Store con caché local
     stats.py            agregación de historial para estadísticas
+    gamepad.py          soporte XInput para Big Picture
     vdf.py              lector de VDF (formato de Valve)
     favorites.py        favoritos persistentes (JSON)
     sessions.py         seguimiento de juegos en ejecución
@@ -179,7 +192,7 @@ gamecenter/
     library_model.py    modelo, filtros, favoritos, orden y acciones
     artwork.py          carátulas del CDN de Steam con caché
     covers.py           portadas, fondo y logo generados con QPainter
-    qml/                Main, TopBar, Toolbar, StatsView, Cartridge, GameDetail, Dock
+    qml/                Main, TopBar, Toolbar, StatsView, BigPicture, Cartridge, GameDetail, Dock
     fonts/              Sora y Chakra Petch (SIL OFL 1.1)
 tools/screenshot.py     render de la ventana a PNG (desarrollo)
 packaging/              PyInstaller, Inno Setup, icono y build de Windows

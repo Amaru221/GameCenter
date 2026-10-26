@@ -1,85 +1,81 @@
-# WORKFLOW STATE — Estadísticas
+# WORKFLOW STATE — Big Picture con mando
 
 ## Descripción funcional
 
-- Nueva pestaña **STATS** junto a **LIBRARY** y **STORE**.
-- Barra superior de estadísticas con filtros **Week / Month / Year / All time**
-  (Year por defecto), selector de año con flechas y banner lateral **“Your
-  2026 so far, in review”** con botón **Watch** (recorrido automático de meses).
-- Tarjeta principal **Time Played** con el total grande y métricas secundarias:
-  comparación con el periodo anterior, días jugados/totales, racha y sesiones.
-- Sección **Month by Month**:
-  - Gráfico de áreas apiladas **“2026 as a river”** con los juegos principales.
-  - Carrusel horizontal de tarjetas mensuales con horas, días jugados, mejor
-    día, sesiones, top de juegos con barras de progreso y gráfico diario.
-  - Botón **Open month** para enfocar ese mes en el resumen.
-- Tema oscuro #0b0f19, tarjetas redondeadas con bordes sutiles, tipografía
-  Sora/Chakra Petch y acentos azul/naranja/púrpura/esmeralda.
+- Modo **Big Picture** a pantalla completa dentro de la ventana, con estética de
+  sofá: portada grande, información del juego, carrusel horizontal, filtros y
+  barra de pistas de mando.
+- Entrada desde el menú superior, `Ctrl+B` o el botón **Start** del mando.
+- Totalmente manejable con mando Xbox/XInput:
+  - D-pad/stick izquierdo: seleccionar juego.
+  - A: jugar.
+  - B: abrir confirmación de salida / cancelar.
+  - LB/RB: filtro All / Recent / Favorites.
+  - X: favorito.
+  - Start: menú de salida.
+- Teclado: flechas, Enter, Escape, `[`/`]`, `F`. Ratón: tarjetas, filtros,
+  Play, favorito, flechas del carrusel, botón Exit y confirmación.
+- La salida siempre pide confirmación; nunca se sale por accidente.
 
 ## Decisiones de arquitectura
 
-- `gamecenter/core/stats.py` agrega `playtime.all_history()`:
-  - Cada sesión se atribuye a la fecha local de inicio.
-  - Periodos y comparaciones (semana/mes/año/anterior).
-  - Días jugados, días transcurridos, racha más larga y sesiones.
-  - Tarjetas mensuales, top games con porcentaje, actividad diaria y capas del
-    río apilado.
-- `playtime.record_session` guarda también `title` y `source` para que el
-  historial siga siendo legible si el juego ya no está en la biblioteca.
-- `LibraryModel.stats(period, year, month)` devuelve el `QVariantMap` completo.
-- `StatsView.qml` es una página con `Flickable` vertical, cabecera responsive
-  (banner en la misma fila o debajo según ancho), hero, river chart y carrusel.
-- Se corrigió un conflicto importante: la propiedad `data` del componente
-  sombreaba el `data` por defecto de `Item` en QML y los hijos visuales no se
-  emparentaban. Ahora se llama `statsData`.
-- El fondo animado de la app se oculta en la vista de estadísticas para dejar el
-  tema oscuro limpio y ahorrar composición.
+- `gamecenter/core/gamepad.py`: `GamepadManager(QObject)` basado en XInput
+  (`xinput1_4/1_3/9_1_0.dll`), sin dependencias nuevas.
+  - Sondeo a 30 Hz, detección de conexión, flancos de botones y repetición de
+    navegación (350 ms inicial, 130 ms).
+  - Señales semánticas: `navigate`, `accept`, `back`, `menu`, `pageLeft`,
+    `pageRight`, `favorite`, `connectedChanged`.
+  - `GC_NO_GAMEPAD=1` lo desactiva (tests/entornos sin XInput).
+- `LibraryModel`:
+  - `bigPictureGames` (`QVariantList`, notify `changed`) con todos los juegos.
+  - `launchById(gameId)` y `toggleFavoriteById(gameId)`.
+  - `changed` se emite al cambiar favoritos/playtime para refrescar la lista.
+- `BigPicture.qml`: overlay z=60, foco de teclado propio, carrusel con foco,
+  filtros, barra de pistas y diálogo de salida.
+- `Gamepad` se expone como contexto QML desde `create_engine`.
 
 ## Contrato interno
 
 | Elemento | Tipo | Descripción |
 | --- | --- | --- |
-| `Library.stats(period, year, month)` | slot → `QVariantMap` | Datos agregados. |
-| `statsData.periodLabel` | str | “2026”, “January 2026”, “This week”… |
-| `statsData.timeText` | str | Total del periodo, ej. “78h 20m”. |
-| `statsData.changeText` | str | “+3% vs 2025” o vacío. |
-| `statsData.daysText` | str | “60 of 299 days”. |
-| `statsData.streakText` | str | “2-day streak”. |
-| `statsData.sessionsText` | str | “100 sessions”. |
-| `statsData.months` | list | Tarjetas mensuales. |
-| `statsData.river` | map | `{months, layers}` para el gráfico. |
-| `StatsView.setPeriod/changeYear/openMonth` | funciones | Cambian el periodo. |
-| `StatsView.toggleReview` | función | Activa el auto-scroll de meses. |
+| `Gamepad.connected` | bool | Mando XInput activo. |
+| `Gamepad.navigate(dx, dy)` | signal | Movimiento. |
+| `Gamepad.accept/back/menu` | signals | A/B/Start. |
+| `Gamepad.pageLeft/pageRight` | signals | LB/RB. |
+| `Gamepad.favorite` | signal | X. |
+| `Library.bigPictureGames` | `QVariantList` | Juegos con carátula, fuente, favorito, etc. |
+| `Library.launchById(gameId)` | slot → `str` | Lanza y devuelve id de sesión. |
+| `Library.toggleFavoriteById(gameId)` | slot → `bool` | Alterna favorito. |
+| `BigPicture.opened` | bool | Visible. |
+| `BigPicture.closeRequested` | signal | Salida confirmada. |
 
 ## Checklist
 
 ### Backend
-- [x] Historial con título/fuente por sesión.
-- [x] Agregador de periodos, comparaciones, días, rachas y sesiones.
-- [x] Tarjetas mensuales con top games, progreso y actividad diaria.
-- [x] Río apilado por juego y colores estables.
-- [x] `Library.stats` expuesto a QML.
-- [x] Tests unitarios de estadísticas.
+- [x] `gamepad.py` XInput con conexión, flancos y repetición.
+- [x] `Gamepad` expuesto al contexto QML y desactivable.
+- [x] `Library.bigPictureGames`, `launchById`, `toggleFavoriteById`.
+- [x] `changed` al alternar favorito/terminar sesión.
+- [x] Tests de mapeo de ejes/botones.
 
 ### Frontend
-- [x] Pestaña STATS y navegación Library/Stats/Store.
-- [x] Barra de filtros, selector de año y banner Watch.
-- [x] Hero “Time Played” y métricas secundarias.
-- [x] River chart y leyenda.
-- [x] Carrusel mensual con Open month y barras diarias.
-- [x] Responsive: banner debajo en ventanas estrechas, scroll vertical.
-- [x] Corrección de `data` → `statsData` para el emparentado visual.
+- [x] `BigPicture.qml` con portada, información, Play y favorito.
+- [x] Carrusel con foco, flechas de ratón, filtros y contador.
+- [x] Mando, teclado y ratón.
+- [x] Confirmación de salida con A/B/flechas/ratón.
+- [x] Barra de pistas y estado de conexión.
+- [x] Entrada desde menú, `Ctrl+B` y Start.
+- [x] Integración en `Main.qml` sin romper modales existentes.
 
 ### Verificación
-- [x] `python -m pytest -q` → **116 passed**.
-- [x] Capturas en 1180×800 y 900×620.
-- [x] Comprobación de periodos y tarjetas con historial de prueba.
-- [x] Carga QML de la ventana completa.
+- [x] `python -m pytest -q` → **122 passed**.
+- [x] Capturas 1180×800, 900×620 y confirmación de salida.
+- [x] Prueba QML de apertura, navegación y confirmación de salida.
+- [x] README/CHANGELOG actualizados.
 
 ## Notas
 
-- Las estadísticas se construyen desde el historial de sesiones registrado por
-  GameCenter; las partidas anteriores a esa función no tienen fecha y no se
-  inventan.
-- El resumen total de Steam sigue usando su `localconfig.vdf`; el historial
-  mensual usa las sesiones lanzadas desde GameCenter.
+- El soporte de mando nativo es **XInput (Windows)**; en Linux o sin mando la
+  interfaz queda disponible con teclado y ratón, y la barra de pistas cambia.
+- El modo Big Picture se dibuja dentro de la ventana actual, no fuerza
+  fullscreen del sistema.
