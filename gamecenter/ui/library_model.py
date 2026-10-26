@@ -25,7 +25,7 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QGuiApplication, QImage
 
 from .. import __version__
-from ..core import credentials, i18n, manual, playtime, steamgriddb, updater
+from ..core import credentials, i18n, manual, metadata, playtime, steamgriddb, updater
 from ..core.i18n import Translator, tr
 from ..core.launch import LaunchError, launch as launch_game, open_folder
 from ..core.models import SOURCE_LABELS, Game
@@ -97,6 +97,16 @@ def _played_text(timestamp: int) -> str:
     return tr("Played {years} years ago", years=years)
 
 
+def _duration_text(seconds: int) -> str:
+    minutes = max(1, int(round(max(0, seconds) / 60)))
+    if minutes < 60:
+        return tr("{minutes} min", minutes=minutes)
+    hours, rest = divmod(minutes, 60)
+    if rest:
+        return tr("{hours} h {minutes} min", hours=hours, minutes=rest)
+    return tr("{hours} h", hours=hours)
+
+
 class LibraryModel(QAbstractListModel):
     changed = Signal()
     failed = Signal(str)
@@ -108,9 +118,11 @@ class LibraryModel(QAbstractListModel):
     credentialsChanged = Signal()
     updatesChanged = Signal()
     playtimeChanged = Signal()
+    detailsChanged = Signal()
     _artOptionsReady = Signal(object, int, str, bool)
     _artDownloaded = Signal(str, str)
     _artFailed = Signal(str, str)
+    _detailsReady = Signal(str, str, object)
     _updateChecked = Signal(object, str)
     _updateProgress = Signal(int, int)
     _updateDownloaded = Signal(str)
@@ -147,6 +159,10 @@ class LibraryModel(QAbstractListModel):
         self._artOptionsReady.connect(self._on_art_options, Qt.QueuedConnection)
         self._artDownloaded.connect(self._on_art_downloaded, Qt.QueuedConnection)
         self._artFailed.connect(self._on_art_failed, Qt.QueuedConnection)
+        self._details: dict[tuple[str, str], dict] = {}
+        self._details_loaded: set[tuple[str, str]] = set()
+        self._details_loading: set[tuple[str, str]] = set()
+        self._detailsReady.connect(self._on_details_ready, Qt.QueuedConnection)
         self._sessions = SessionTracker(on_end=self._session_ended)
         self._session_timer = QTimer(self)
         self._session_timer.setInterval(1000)
@@ -605,6 +621,43 @@ class LibraryModel(QAbstractListModel):
         self.credentialsChanged.emit()
 
     @Slot(int)
+    def loadDetails(self, row: int) -> None:
+        """Fetch (or load from cache) the description for one game."""
+        game = self._at(row)
+        if game is None:
+            return
+        language = self._i18n.language
+        key = (game.id, language)
+        if key in self._details_loaded or key in self._details_loading:
+            return
+
+        cached = metadata.cached(game, language)
+        if cached is not None:
+            self._details[key] = cached
+            self._details_loaded.add(key)
+            self.detailsChanged.emit()
+            return
+
+        self._details_loading.add(key)
+
+        def work():
+            try:
+                data = metadata.fetch(game, language)
+            except Exception:  # noqa: BLE001 - metadata is optional
+                data = {}
+            self._detailsReady.emit(game.id, language, data)
+
+        threading.Thread(target=work, daemon=True).start()
+
+    @Slot(str, str, object)
+    def _on_details_ready(self, game_id: str, language: str, data) -> None:
+        key = (game_id, language)
+        self._details_loading.discard(key)
+        self._details[key] = data if isinstance(data, dict) else {}
+        self._details_loaded.add(key)
+        self.detailsChanged.emit()
+
+    @Slot(int)
     def loadArtOptions(self, row: int) -> None:
         game = self._at(row)
         if game is None:
@@ -961,39 +1014,43 @@ class LibraryModel(QAbstractListModel):
         return None
 
     def _session_ended(self, session, seconds: float) -> None:
-        """Persist a finished session for a non-Steam game."""
-        if session.source == "steam":
-            return
+        """Persist the finished session and its timeline entry."""
         game = next((entry for entry in self._all if entry.id == session.game_id), None)
         if game is None:
             return
 
-        playtime.add_seconds(game, seconds)
-        summary = playtime.summary_for(game)
-        try:
-            total = int(summary.get("seconds") or 0)
-        except (TypeError, ValueError):
-            total = 0
-        try:
-            last_played = int(summary.get("last_played") or 0)
-        except (TypeError, ValueError):
-            last_played = 0
+        # Every store gets a timeline entry, including Steam (whose total time
+        # is still owned by localconfig.vdf).
+        playtime.record_session(game, session.started_at, seconds)
+        last_played = max(game.last_played, int(session.started_at or 0))
 
-        minutes = total // 60
-        if minutes == game.playtime_minutes and (
-            not last_played or last_played == game.last_played
-        ):
-            return
+        if session.source != "steam":
+            playtime.add_seconds(game, seconds)
+            summary = playtime.summary_for(game)
+            try:
+                total = int(summary.get("seconds") or 0)
+            except (TypeError, ValueError):
+                total = 0
+            try:
+                last_played = int(summary.get("last_played") or last_played)
+            except (TypeError, ValueError):
+                pass
+            updated = replace(
+                game,
+                playtime_minutes=total // 60,
+                last_played=last_played or game.last_played,
+            )
+        else:
+            updated = replace(game, last_played=last_played or game.last_played)
 
-        updated = replace(
-            game,
-            playtime_minutes=minutes,
-            last_played=last_played or game.last_played,
-        )
-        self._all = [updated if entry.id == game.id else entry for entry in self._all]
-        self._visible = [
-            updated if entry.id == game.id else entry for entry in self._visible
-        ]
+        if updated != game:
+            self._all = [
+                updated if entry.id == game.id else entry for entry in self._all
+            ]
+            self._visible = [
+                updated if entry.id == game.id else entry
+                for entry in self._visible
+            ]
         self.playtimeChanged.emit()
 
     def _cover_url(self, game: Game) -> str:
@@ -1170,6 +1227,20 @@ class LibraryModel(QAbstractListModel):
         game = self._at(row)
         if game is None:
             return {}
+
+        language = self._i18n.language
+        key = (game.id, language)
+        details = self._details.get(key, {})
+        history = [
+            {
+                "timestamp": int(item["start"]),
+                "seconds": int(item["seconds"]),
+                "duration": _duration_text(int(item["seconds"])),
+            }
+            for item in playtime.history_for(game)
+        ]
+        history_seconds = sum(item["seconds"] for item in history)
+
         return {
             "title": game.title,
             "source": self._source_label(game),
@@ -1185,6 +1256,14 @@ class LibraryModel(QAbstractListModel):
             "lastPlayed": _played_text(game.last_played),
             "installDir": str(game.install_dir) if game.install_dir else "",
             "hasFolder": bool(game.install_dir and game.install_dir.is_dir()),
+            "description": str(details.get("description") or ""),
+            "developers": str(details.get("developers") or ""),
+            "genres": str(details.get("genres") or ""),
+            "releaseDate": str(details.get("releaseDate") or ""),
+            "detailsLoaded": key in self._details_loaded,
+            "history": history,
+            "sessionCount": len(history),
+            "historyTotalText": _duration_text(history_seconds) if history_seconds else "",
         }
 
     @Slot(str, result="QVariantMap")

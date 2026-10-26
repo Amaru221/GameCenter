@@ -53,12 +53,10 @@ Item {
             gameMeta: model.meta
             coverUrl: model.cover
             gameInstalled: model.installed
-            favorite: model.favorite
             style: Library.cartridgeStyle
             cartridgeColor: model.cartridgeColor
 
             onLaunchRequested: Library.launch(index)
-            onFavoriteRequested: Library.toggleFavorite(index)
             onClicked: root.detailRequested(index)
             onContextRequested: {
                 contextMenu.row = index;

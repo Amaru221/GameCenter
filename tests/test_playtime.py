@@ -9,6 +9,7 @@ from gamecenter.core.models import Game
 @pytest.fixture(autouse=True)
 def isolated_fallback(monkeypatch, tmp_path):
     monkeypatch.setattr(playtime, "_fallback_path", lambda: tmp_path / "fallback.json")
+    monkeypatch.setattr(playtime, "history_path", lambda: tmp_path / "history.json")
 
 
 def _game(folder, source="epic") -> Game:
@@ -119,3 +120,54 @@ def test_missing_folder_does_not_create_it(monkeypatch, tmp_path) -> None:
 
     assert not folder.exists()
     assert playtime.seconds_for(game) == 60
+
+
+def test_history_is_newest_first(tmp_path) -> None:
+    game = _game(tmp_path)
+
+    playtime.record_session(game, 1_700_000_000, 60)
+    playtime.record_session(game, 1_700_000_100, 120)
+    playtime.record_session(game, 1_700_000_200, 30)
+
+    history = playtime.history_for(game)
+    assert [item["start"] for item in history] == [
+        1_700_000_200,
+        1_700_000_100,
+        1_700_000_000,
+    ]
+    assert [item["seconds"] for item in history] == [30, 120, 60]
+
+
+def test_history_is_trimmed(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(playtime, "MAX_HISTORY", 2)
+    game = _game(tmp_path)
+
+    for second in range(4):
+        playtime.record_session(game, 1_700_000_000 + second, 60)
+
+    history = playtime.history_for(game)
+    assert len(history) == 2
+    assert [item["start"] for item in history] == [
+        1_700_000_003,
+        1_700_000_002,
+    ]
+
+
+def test_steam_sessions_still_get_history(tmp_path) -> None:
+    game = _game(tmp_path, source="steam")
+
+    playtime.record_session(game, 1_700_000_000, 300)
+
+    assert playtime.seconds_for(game) == 0
+    assert len(playtime.history_for(game)) == 1
+
+
+def test_history_ignores_empty_or_invalid_sessions(tmp_path) -> None:
+    game = _game(tmp_path)
+
+    playtime.record_session(game, 1_700_000_000, 0)
+    playtime.record_session(game, 1_700_000_000, 1)
+
+    history = playtime.history_for(game)
+    assert len(history) == 1
+    assert history[0]["seconds"] == 1

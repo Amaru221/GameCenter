@@ -1,89 +1,83 @@
-# WORKFLOW STATE — Cartucho en ejecución dentro de la ranura
+# WORKFLOW STATE — Resumen de juego, timeline y favoritos
 
 ## Descripción funcional
 
-- Mientras un juego está en ejecución, su cartucho queda **visible sobresaliendo
-  de la ranura de inserción** del dock. No desaparece al terminar la animación.
-- Si hay **varios juegos ejecutándose**, la ranura muestra el **último lanzado**
-  (el último elemento de `Sessions.list`).
-- Al **lanzar otro juego mientras hay uno en la ranura**, el cartucho anterior
-  permanece visible durante la animación de aproximación; cuando el nuevo
-  cartucho se asienta en la ranura, lo reemplaza.
-- Cuando un juego termina o se expulsa, la ranura pasa al siguiente juego en
-  ejecución más reciente; si no queda ninguno, el cartucho se oculta con un
-  fundido.
+- El detalle del juego muestra primero un **resumen** con los datos actuales
+  (título, tienda, tamaño, instalación, tiempo total, última partida) más una
+  **descripción**, géneros, estudio y año.
+- El panel es **responsive**: dos columnas con cartucho grande en ventanas
+  anchas y una vista compacta con miniatura en ventanas estrechas; el contenido
+  se desplaza cuando la altura es reducida.
+- Debajo del resumen aparece un **timeline de sesiones** con fecha/hora y
+  duración, una tira de actividad y el tiempo total.
+- La **estrella de favoritos** se rediseña con brillo, rebote, destello y un
+  aviso al añadir el juego.
 
-## Decisión de arquitectura
+## Decisiones de arquitectura
 
-- La ranura se dibuja con un nuevo `SlotCartridge.qml`, situado en `Main.qml`
-  entre el `InsertEffect` (z=15) y el `Dock` (z=20). Su parte inferior queda
-  tapada por el dock, de modo que solo sobresale la parte superior.
-- `Library` expone:
-  - `launch(row)` ahora devuelve el **id de sesión** (`""` si falla).
-  - `sessionCard(gameId)` devuelve los datos completos de la tarjeta
-    (título, tienda, meta, carátula, color) para una sesión en ejecución.
-- `InsertEffect` conserva su animación y emite `inserted(sessionId)` justo
-  cuando el cartucho se asienta; en ese momento `Main` actualiza la ranura.
-- `Main` centraliza la elección de la sesión visible:
-  - `commitSlot(id)` prioriza la sesión indicada y cae al último juego en
-    ejecución si esa sesión ya terminó.
-  - `refreshSlot()` se ejecuta cuando cambia `Sessions` o el idioma y mantiene
-    la tarjeta actual si la animación está en curso.
-- Se amplía el margen inferior de `LibraryGrid` para que el cartucho sobresalga
-  sin tapar la última fila de juegos.
+- `gamecenter/core/metadata.py` obtiene descripciones de la API pública de
+  Steam Store:
+  - Steam con AppID numérico → `appdetails`.
+  - Otras tiendas → `storesearch` por título con umbral de similitud 0.94.
+  - Caché por juego/idioma en `%APPDATA%/GameCenter/metadata.json`; TTL de 30
+    días (24 h para “sin resultados”).
+  - `GC_NO_METADATA=1` desactiva las peticiones.
+- `playtime.py` añade un historial global `history.json` por juego con sesiones
+  `{start, seconds}` (máximo 200). Las sesiones de Steam también se registran
+  aquí, sin escribir en su `localconfig.vdf`.
+- `LibraryModel`:
+  - `loadDetails(row)` carga la descripción desde caché o en segundo plano.
+  - `gameAt(row)` añade `description`, `developers`, `genres`, `releaseDate`,
+    `detailsLoaded`, `history`, `sessionCount` y `historyTotalText`.
+  - `_session_ended` registra el timeline para todas las tiendas.
+- El detalle se dibuja con un `Flickable` y `panel.compact` para adaptar el
+  layout. El dock baja de capa mientras el detalle está abierto y recupera su
+  capa al cerrarlo, manteniendo la animación de inserción por encima del modal.
+- `FavoriteButton.qml` encapsula la estrella animada y el efecto de destello.
 
 ## Contrato interno
 
 | Elemento | Tipo | Descripción |
 | --- | --- | --- |
-| `Library.launch(row)` | slot → `str` | Inicia el juego y devuelve el id de sesión. |
-| `Library.sessionCard(gameId)` | slot → `QVariantMap` | Datos de cartucho para una sesión. |
-| `InsertEffect.inserted(sessionId)` | signal | El cartucho acaba de asentarse en la ranura. |
-| `Main.slotGame` | `var` | Datos del cartucho que se muestra en la ranura. |
-| `Main.commitSlot(id)` | function | Fija la sesión visible al terminar la inserción. |
-| `Main.refreshSlot(force)` | function | Recalcula la sesión visible. |
-| `SlotCartridge.game` | `var` | Datos del cartucho a dibujar. |
+| `Library.loadDetails(row)` | slot | Carga la descripción (caché o red). |
+| `Library.gameAt(row)` | slot → `QVariantMap` | Incluye resumen, descripción e historial. |
+| `Library.detailsChanged` | signal | La descripción está lista. |
+| `metadata.cached(game, lang)` | función | Metadatos frescos o `None`. |
+| `metadata.fetch(game, lang)` | función | Descarga y cachea. |
+| `playtime.record_session(game, start, seconds)` | función | Añade una sesión al timeline. |
+| `playtime.history_for(game)` | función | Sesiones más recientes primero. |
+| `FavoriteButton.activate()` | función | Dispara el rebote y el destello. |
 
 ## Checklist
 
 ### Backend
-- [x] `LibraryModel.launch` devuelve el id de sesión.
-- [x] `LibraryModel.sessionCard` devuelve los datos de la tarjeta.
-- [x] Tests del id de sesión y de `sessionCard`.
+- [x] `metadata.py` con búsqueda, limpieza HTML, caché y tests.
+- [x] `playtime.py` con historial global y tests.
+- [x] `LibraryModel.loadDetails` + `detailsChanged`.
+- [x] `gameAt` con descripción e historial.
+- [x] Timeline registrado también para Steam.
+- [x] i18n para textos nuevos, duraciones y avisos de favoritos.
 
 ### Frontend
-- [x] Nuevo `SlotCartridge.qml` con cartucho escalado y fundido.
-- [x] `Main.qml`: propiedades/funciones de ranura, conexión con `Sessions`,
-      `InsertEffect.inserted` y ajuste del margen inferior.
-- [x] `InsertEffect.qml`: guarda `sessionId`, bloquea la actualización durante
-      la animación y emite `inserted` al asentarse.
-- [x] La ranura refleja el último juego, el anterior al expulsar y se oculta al
-      no quedar sesiones.
+- [x] `GameDetail.qml` rediseñado, responsive y con scroll.
+- [x] Separación de 16 px entre el contenido y la scrollbar.
+- [x] `CloseButton.qml` con X dibujada, hover y acento.
+- [x] Estrella de favoritos eliminada de las carátulas de la biblioteca.
+- [x] Timeline con fechas, duraciones, barras y estado vacío.
+- [x] `FavoriteButton.qml` con brillo, rebote y destello.
+- [x] Descripción con estados de carga/no disponible y “Leer más”.
+- [x] Capas del dock/detalle corregidas.
 
 ### Verificación
-- [x] `python -m pytest -q`.
-- [x] Captura con `GC_DEMO=1 GC_SESSION=1` para revisar el cartucho sobresalido.
-- [x] Prueba manual: lanzar dos juegos y comprobar que el segundo reemplaza al
-      primero al finalizar su animación.
-
-## Resultado
-
-- `python -m pytest -q` → **96 passed**.
-- Prueba de integración de la animación (QML + sesiones): durante el vuelo la
-  ranura conserva `Alpha Quest`; al asentarse pasa a `Beta Racer` y la sesión
-  anterior sigue viva en el dock.
-- Prueba específica de lanzamiento por URI (sin `pid`): la sesión sobrevive al
-  primer `poll` y la ranura sigue activa después de la animación.
-- Captura de `GC_DEMO=1 GC_SESSION=1`: el cartucho sobresale 44 px de la ranura,
-  centrado, sin tapar la última fila de la biblioteca.
+- [x] `python -m pytest -q` → **108 passed**.
+- [x] Capturas en 1180×800 y 900×620 con descripción e historial de prueba.
+- [x] Estrella animada verificada con `activate()` (destello en movimiento).
+- [x] Carga QML de la ventana completa.
 
 ## Notas
 
-- El carrito de la ranura se dibuja en un contenedor recortado (`SlotCartridge`)
-  para que la parte inferior quede oculta en el dock y no asome por debajo.
-- `InsertEffect` mantiene la guarda `running` mientras lanza la sesión, de modo
-  que el cartucho anterior no desaparece antes de que el nuevo se asiente.
-- **Corrección del arranque**: las sesiones lanzadas por URI (Steam, Epic, etc.)
-  no tienen `pid`; el primer `poll` las eliminaba antes de que el proceso real
-  apareciera. Ahora `SessionTracker` concede `LAUNCH_GRACE = 30 s` para que el
-  cartucho permanezca mientras el juego arranca.
+- Las sesiones anteriores a esta versión no tienen fecha y no se inventan: el
+  timeline empieza a llenarse con las sesiones nuevas. El tiempo total anterior
+  sigue apareciendo en “All time”.
+- Las descripciones de tiendas sin coincidencia exacta en Steam muestran “No
+  hay descripción disponible” y se reintentan tras 24 h.
