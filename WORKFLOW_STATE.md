@@ -1,6 +1,6 @@
 # WORKFLOW STATE — Big Picture con mando
 
-## Feature 0.17.0 — Modal de juego a pantalla completa
+## Feature 0.16.5 — Modal de juego a pantalla completa
 
 ### Descripción funcional
 

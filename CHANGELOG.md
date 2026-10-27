@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.16.5
 
 - **Game detail is now a full-screen modal** with a frosted, opaque translucent
   backdrop (the library behind it is blurred and captured once per opening), so
