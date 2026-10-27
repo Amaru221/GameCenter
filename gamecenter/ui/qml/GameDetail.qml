@@ -849,109 +849,149 @@ Item {
                         }
                     }
 
-                    Column {
+                    Flickable {
+                        id: sessionFlick
+                        objectName: "sessionFlick"
                         Layout.fillWidth: true
-                        spacing: 0
+                        Layout.preferredHeight: Math.min(
+                            360,
+                            Math.max(72, sessionColumn.implicitHeight)
+                        )
+                        contentWidth: width
+                        contentHeight: sessionColumn.implicitHeight
+                        clip: true
+                        boundsBehavior: Flickable.StopAtBounds
                         visible: root.history.length > 0
 
-                        Repeater {
-                            model: root.history
+                        ScrollBar.vertical: ScrollBar {
+                            id: sessionScrollBar
+                            policy: ScrollBar.AsNeeded
+                            width: 6
+                            background: Item {}
+                            contentItem: Rectangle {
+                                implicitWidth: 5
+                                radius: 2.5
+                                color: sessionScrollBar.pressed
+                                       ? Library.accent
+                                       : "#4a586f"
+                                opacity: sessionScrollBar.pressed ? 1 : 0.85
+                            }
+                        }
 
-                            Item {
-                                width: parent.width
-                                height: 56
-                                readonly property var sessionShots: modelData.screenshots || []
-                                readonly property var previewShots: modelData.previewScreenshots || []
-                                readonly property var overflowShot: modelData.overflowScreenshot || ({})
-                                readonly property int overflowCount: modelData.overflowCount || 0
-                                readonly property bool hasShots: sessionShots.length > 0
+                        Column {
+                            id: sessionColumn
+                            width: sessionFlick.width - 12
+                            spacing: 0
 
-                                Rectangle {
-                                    x: 8
-                                    y: index === 0 ? 27 : 0
-                                    width: 2
-                                    height: index === 0
-                                            ? 29
-                                            : (index === root.history.length - 1
-                                               ? 27
-                                               : 56)
-                                    color: "#26303f"
-                                }
+                            Repeater {
+                                model: root.history
 
-                                Rectangle {
-                                    x: 3
-                                    y: 21
-                                    width: 12
-                                    height: 12
-                                    radius: 6
-                                    color: index === 0
-                                           ? Library.accent
-                                           : "#2a3140"
-                                    border.width: 2
-                                    border.color: index === 0
-                                                  ? Qt.lighter(Library.accent, 1.3)
-                                                  : "#11151d"
-                                }
+                                Item {
+                                    width: parent.width
+                                    height: 72
+                                    readonly property var sessionShots: modelData.screenshots || []
+                                    readonly property var previewShots: modelData.previewScreenshots || []
+                                    readonly property var overflowShot: modelData.overflowScreenshot || ({})
+                                    readonly property int overflowCount: modelData.overflowCount || 0
+                                    readonly property bool hasShots: sessionShots.length > 0
 
-                                Text {
-                                    x: 30
-                                    y: 10
-                                    width: Math.max(
-                                        20,
-                                        parent.width - 30
-                                        - (shotRow.visible ? shotRow.width + 16 : 0)
-                                    )
-                                    text: root.sessionDate(modelData.timestamp)
-                                    color: "#cfd6e2"
-                                    font.family: "Sora"
-                                    font.pixelSize: 11
-                                    elide: Text.ElideRight
-                                }
-
-                                Text {
-                                    x: 30
-                                    y: 28
-                                    width: Math.max(
-                                        20,
-                                        parent.width - 30
-                                        - (shotRow.visible ? shotRow.width + 16 : 0)
-                                    )
-                                    text: modelData.duration
-                                          + (modelData.imported
-                                             ? " - " + Tr.strings["Imported"]
-                                             : "")
-                                    color: "#7b8494"
-                                    font.family: "Chakra Petch"
-                                    font.pixelSize: 10
-                                    font.letterSpacing: 0.6
-                                    elide: Text.ElideRight
-                                }
-
-                                Row {
-                                    id: shotRow
-                                    anchors.right: parent.right
-                                    anchors.rightMargin: 8
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    spacing: 5
-                                    visible: hasShots
-
-                                    Repeater {
-                                        model: previewShots
-
-                                        ShotThumb {
-                                            shot: modelData
-                                            onClicked: root.openViewer(
-                                                sessionShots, index
-                                            )
-                                        }
+                                    Rectangle {
+                                        x: 8
+                                        y: index === 0 ? 36 : 0
+                                        width: 2
+                                        height: index === 0
+                                                ? 36
+                                                : (index === root.history.length - 1
+                                                   ? 36
+                                                   : 72)
+                                        color: "#26303f"
                                     }
 
-                                    ShotThumb {
-                                        visible: overflowCount > 0
-                                        more: true
-                                        moreCount: overflowCount
-                                        shot: overflowShot
-                                        onClicked: root.openViewer(sessionShots, 2)
+                                    Rectangle {
+                                        x: 2
+                                        y: 29
+                                        width: 14
+                                        height: 14
+                                        radius: 7
+                                        color: index === 0
+                                               ? Library.accent
+                                               : "#2a3140"
+                                        border.width: 2
+                                        border.color: index === 0
+                                                      ? Qt.lighter(Library.accent, 1.3)
+                                                      : "#11151d"
+                                    }
+
+                                    Text {
+                                        x: 30
+                                        y: 13
+                                        width: Math.max(
+                                            20,
+                                            parent.width - 30
+                                            - (shotRow.visible
+                                               ? shotRow.width + 16
+                                               : 0)
+                                        )
+                                        text: root.sessionDate(modelData.timestamp)
+                                        color: "#cfd6e2"
+                                        font.family: "Sora"
+                                        font.pixelSize: 11
+                                        elide: Text.ElideRight
+                                    }
+
+                                    Text {
+                                        x: 30
+                                        y: 33
+                                        width: Math.max(
+                                            20,
+                                            parent.width - 30
+                                            - (shotRow.visible
+                                               ? shotRow.width + 16
+                                               : 0)
+                                        )
+                                        text: modelData.duration
+                                              + (modelData.imported
+                                                 ? " - " + Tr.strings["Imported"]
+                                                 : "")
+                                        color: "#7b8494"
+                                        font.family: "Chakra Petch"
+                                        font.pixelSize: 10
+                                        font.letterSpacing: 0.6
+                                        elide: Text.ElideRight
+                                    }
+
+                                    Row {
+                                        id: shotRow
+                                        anchors.right: parent.right
+                                        anchors.rightMargin: 8
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        spacing: 5
+                                        visible: hasShots
+
+                                        Repeater {
+                                            model: previewShots
+
+                                            ShotThumb {
+                                                thumbWidth: 64
+                                                thumbHeight: 40
+                                                corner: 8
+                                                shot: modelData
+                                                onClicked: root.openViewer(
+                                                    sessionShots, index
+                                                )
+                                            }
+                                        }
+
+                                        ShotThumb {
+                                            visible: overflowCount > 0
+                                            more: true
+                                            moreCount: overflowCount
+                                            thumbWidth: 64
+                                            thumbHeight: 40
+                                            corner: 8
+                                            shot: overflowShot
+                                            onClicked: root.openViewer(sessionShots, 2)
+                                        }
                                     }
                                 }
                             }

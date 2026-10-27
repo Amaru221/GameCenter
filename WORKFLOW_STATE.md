@@ -74,6 +74,9 @@
 - [x] `SessionTracker.startedAt` y `ScreenshotManager` con `lastCapture`.
 - [x] Overlay top-level con flash y tarjeta click-through.
 - [x] Timeline con 2 miniaturas + contador `+N`.
+- [x] Miniaturas más grandes, líneas separadas y scroll propio del timeline.
+- [x] X de “Add a game” anclada a la esquina superior derecha.
+- [x] Scrollbar de Ajustes separada de la X de cierre.
 - [x] Galería SCREENSHOTS en la ficha.
 - [x] Visor a pantalla completa con anterior/siguiente y teclado.
 - [x] Traducciones ES/FR/DE/IT/PT.
@@ -85,6 +88,9 @@
 
 - [x] `python -m pytest -q` → **161 passed**.
 - [x] Captura del detalle con timeline (2 miniaturas + `+2`), galería y visor.
+- [x] Timeline con 9 sesiones: scroll vertical, miniaturas 64×40 y líneas largas.
+- [x] Captura del diálogo Add a game con la X en la esquina derecha.
+- [x] Captura de Ajustes con scrollbar visible sin solapar la X.
 - [x] Comprobado el overlay como ventana independiente (`opened=true`,
   `cardOpacity=1`, geometría de pantalla).
 - [x] Índice aislado en tests; sin residuos en `%APPDATA%`.

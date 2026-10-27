@@ -14,6 +14,10 @@
   - a new **SCREENSHOTS** section in the game detail gathers every capture of
     the game,
   - thumbnails open a full-screen viewer with prev/next, counter and date.
+- Timeline refinements: larger thumbnails, longer session connectors and a
+  dedicated vertical scroll area when there are many sessions.
+- UI fixes: the Add-game close button is pinned to the panel's top-right
+  corner, and the Settings scrollbar no longer overlaps the close button.
 - Legacy PNGs without an index entry are recovered by their game-title prefix
   and filename timestamp.
 - Screenshots are stored, as before, under

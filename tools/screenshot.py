@@ -133,6 +133,12 @@ def main() -> int:
                 title="Neon Drifter",
                 taken_at=session_start + 300 + index * 240,
             )
+        for offset in range(1, 5):
+            playtime.record_session(
+                _demo_games()[0],
+                session_start - offset * 86400,
+                600,
+            )
 
     if os.environ.get("GC_STYLE"):
         library.setCartridgeStyle(os.environ["GC_STYLE"])

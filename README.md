@@ -33,8 +33,10 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   `%APPDATA%\GameCenter\history.json` (también para Steam, sin tocar su
   `localconfig.vdf`).
   - Las capturas hechas durante una sesión aparecen **a la derecha de esa
-    sesión**: las dos primeras como miniaturas y, si hay más, la siguiente con
-    un contador **+N**.
+    sesión** con miniaturas grandes: las dos primeras y, si hay más, la
+    siguiente con un contador **+N**.
+  - El timeline tiene **scroll vertical propio** cuando hay muchas sesiones,
+    con las líneas y los puntos separados para leer mejor cada partida.
   - La ficha incluye una sección **SCREENSHOTS** con todas las capturas del
     juego. Al pulsar cualquier miniatura se abre un visor a pantalla completa
     con navegación anterior/siguiente, contador y fecha.
