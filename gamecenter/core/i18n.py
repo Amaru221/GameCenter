@@ -84,6 +84,46 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "Back": "Atrás",
         "Select": "Seleccionar",
         "Details": "Detalles",
+        "GAME PROFILE": "PERFIL DEL JUEGO",
+        "STATUS": "ESTADO",
+        "SCORE": "PUNTUACIÓN",
+        "Edit profile": "Editar perfil",
+        "Close profile": "Cerrar perfil",
+        "Playing": "Jugando",
+        "On Going": "En curso",
+        "Beaten": "Pasado",
+        "Completed": "Completado",
+        "Played": "Jugado",
+        "Plan to Play": "Por jugar",
+        "On Hold": "En pausa",
+        "Not Played": "Sin jugar",
+        "Abandoned": "Abandonado",
+        "Not set": "Sin definir",
+        "TRACEABILITY": "TRAZABILIDAD",
+        "Import another entry's playtime, sessions and cover into this game.": (
+            "Importa las horas, sesiones y carátula de otra entrada a este juego."
+        ),
+        "Source game": "Juego de origen",
+        "Choose a game": "Elige un juego",
+        "Hide the source after unifying": "Ocultar el origen tras unificar",
+        "Avoids duplicate stats. You can restore it from Settings.": (
+            "Evita estadísticas duplicadas. Puedes restaurarlo desde Ajustes."
+        ),
+        "Unify data": "Unificar datos",
+        "No games to import.": "No hay juegos para importar.",
+        "Choose a different game to import.": "Elige un juego distinto para importar.",
+        "Couldn't unify the data.": "No se pudieron unificar los datos.",
+        "This game was already unified into {title}.": (
+            "Este juego ya se unificó en {title}."
+        ),
+        "{title} data imported into {target}.": (
+            "Datos de {title} importados en {target}."
+        ),
+        "IMPORTED GAMES": "JUEGOS IMPORTADOS",
+        "No entries imported yet.": "Todavía no hay entradas importadas.",
+        "Merged into {title}": "Unificado en {title}",
+        "Imported": "Importado",
+        "Removed": "Eliminado",
         "Arc": "Arco",
         "Flat": "Plano",
         "3D Ring": "Anillo 3D",
@@ -388,6 +428,48 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "Back": "Retour",
         "Select": "Sélectionner",
         "Details": "Détails",
+        "GAME PROFILE": "PROFIL DU JEU",
+        "STATUS": "STATUT",
+        "SCORE": "NOTE",
+        "Edit profile": "Modifier le profil",
+        "Close profile": "Fermer le profil",
+        "Playing": "En cours",
+        "On Going": "En progression",
+        "Beaten": "Terminé",
+        "Completed": "Complété",
+        "Played": "Joué",
+        "Plan to Play": "À jouer",
+        "On Hold": "En pause",
+        "Not Played": "Non joué",
+        "Abandoned": "Abandonné",
+        "Not set": "Non défini",
+        "TRACEABILITY": "TRAÇABILITÉ",
+        "Import another entry's playtime, sessions and cover into this game.": (
+            "Importez les heures, sessions et la jaquette d'une autre entrée "
+            "dans ce jeu."
+        ),
+        "Source game": "Jeu source",
+        "Choose a game": "Choisir un jeu",
+        "Hide the source after unifying": "Masquer la source après l'unification",
+        "Avoids duplicate stats. You can restore it from Settings.": (
+            "Évite les statistiques en double. Vous pouvez la restaurer dans "
+            "les Réglages."
+        ),
+        "Unify data": "Unifier les données",
+        "No games to import.": "Aucun jeu à importer.",
+        "Choose a different game to import.": "Choisissez un autre jeu à importer.",
+        "Couldn't unify the data.": "Impossible d'unifier les données.",
+        "This game was already unified into {title}.": (
+            "Ce jeu a déjà été unifié dans {title}."
+        ),
+        "{title} data imported into {target}.": (
+            "Données de {title} importées dans {target}."
+        ),
+        "IMPORTED GAMES": "JEUX IMPORTÉS",
+        "No entries imported yet.": "Aucune entrée importée pour l'instant.",
+        "Merged into {title}": "Unifié dans {title}",
+        "Imported": "Importé",
+        "Removed": "Retiré",
         "Arc": "Arc",
         "Flat": "Plat",
         "3D Ring": "Anneau 3D",
@@ -698,6 +780,54 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "Back": "Zurück",
         "Select": "Auswählen",
         "Details": "Details",
+        "GAME PROFILE": "SPIELPROFIL",
+        "STATUS": "STATUS",
+        "SCORE": "WERTUNG",
+        "Edit profile": "Profil bearbeiten",
+        "Close profile": "Profil schließen",
+        "Playing": "Spielend",
+        "On Going": "Laufend",
+        "Beaten": "Geschafft",
+        "Completed": "Abgeschlossen",
+        "Played": "Gespielt",
+        "Plan to Play": "Geplant",
+        "On Hold": "Pausiert",
+        "Not Played": "Nicht gespielt",
+        "Abandoned": "Abgebrochen",
+        "Not set": "Nicht festgelegt",
+        "TRACEABILITY": "NACHVOLLZIEHBARKEIT",
+        "Import another entry's playtime, sessions and cover into this game.": (
+            "Importiere Spielzeit, Sitzungen und Cover eines anderen Eintrags "
+            "in dieses Spiel."
+        ),
+        "Source game": "Quellspiel",
+        "Choose a game": "Spiel auswählen",
+        "Hide the source after unifying": (
+            "Quelle nach dem Zusammenführen ausblenden"
+        ),
+        "Avoids duplicate stats. You can restore it from Settings.": (
+            "Vermeidet doppelte Statistiken. Du kannst sie in den Einstellungen "
+            "wiederherstellen."
+        ),
+        "Unify data": "Daten zusammenführen",
+        "No games to import.": "Keine Spiele zum Importieren.",
+        "Choose a different game to import.": (
+            "Wähle ein anderes Spiel zum Importieren."
+        ),
+        "Couldn't unify the data.": (
+            "Die Daten konnten nicht zusammengeführt werden."
+        ),
+        "This game was already unified into {title}.": (
+            "Dieses Spiel wurde bereits in {title} zusammengeführt."
+        ),
+        "{title} data imported into {target}.": (
+            "Daten von {title} in {target} importiert."
+        ),
+        "IMPORTED GAMES": "IMPORTIERTE SPIELE",
+        "No entries imported yet.": "Noch keine Einträge importiert.",
+        "Merged into {title}": "Zusammengeführt in {title}",
+        "Imported": "Importiert",
+        "Removed": "Entfernt",
         "Arc": "Bogen",
         "Flat": "Flach",
         "3D Ring": "3D-Ring",
@@ -1017,6 +1147,50 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "Back": "Indietro",
         "Select": "Seleziona",
         "Details": "Dettagli",
+        "GAME PROFILE": "PROFILO DEL GIOCO",
+        "STATUS": "STATO",
+        "SCORE": "PUNTEGGIO",
+        "Edit profile": "Modifica profilo",
+        "Close profile": "Chiudi profilo",
+        "Playing": "In gioco",
+        "On Going": "In corso",
+        "Beaten": "Superato",
+        "Completed": "Completato",
+        "Played": "Giocato",
+        "Plan to Play": "Da giocare",
+        "On Hold": "In pausa",
+        "Not Played": "Non giocato",
+        "Abandoned": "Abbandonato",
+        "Not set": "Non impostato",
+        "TRACEABILITY": "TRACCIABILITÀ",
+        "Import another entry's playtime, sessions and cover into this game.": (
+            "Importa ore, sessioni e copertina di un'altra voce in questo gioco."
+        ),
+        "Source game": "Gioco di origine",
+        "Choose a game": "Scegli un gioco",
+        "Hide the source after unifying": (
+            "Nascondi l'origine dopo l'unificazione"
+        ),
+        "Avoids duplicate stats. You can restore it from Settings.": (
+            "Evita statistiche duplicate. Puoi ripristinarla dalle Impostazioni."
+        ),
+        "Unify data": "Unifica dati",
+        "No games to import.": "Nessun gioco da importare.",
+        "Choose a different game to import.": (
+            "Scegli un altro gioco da importare."
+        ),
+        "Couldn't unify the data.": "Impossibile unificare i dati.",
+        "This game was already unified into {title}.": (
+            "Questo gioco è già stato unificato in {title}."
+        ),
+        "{title} data imported into {target}.": (
+            "Dati di {title} importati in {target}."
+        ),
+        "IMPORTED GAMES": "GIOCHI IMPORTATI",
+        "No entries imported yet.": "Nessuna voce importata.",
+        "Merged into {title}": "Unificato in {title}",
+        "Imported": "Importato",
+        "Removed": "Rimosso",
         "Arc": "Arco",
         "Flat": "Piatto",
         "3D Ring": "Anello 3D",
@@ -1331,6 +1505,48 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "Back": "Voltar",
         "Select": "Selecionar",
         "Details": "Detalhes",
+        "GAME PROFILE": "PERFIL DO JOGO",
+        "STATUS": "ESTADO",
+        "SCORE": "PONTUAÇÃO",
+        "Edit profile": "Editar perfil",
+        "Close profile": "Fechar perfil",
+        "Playing": "Jogando",
+        "On Going": "Em andamento",
+        "Beaten": "Vencido",
+        "Completed": "Concluído",
+        "Played": "Jogado",
+        "Plan to Play": "Para jogar",
+        "On Hold": "Em pausa",
+        "Not Played": "Não jogado",
+        "Abandoned": "Abandonado",
+        "Not set": "Não definido",
+        "TRACEABILITY": "RASTREABILIDADE",
+        "Import another entry's playtime, sessions and cover into this game.": (
+            "Importa as horas, sessões e capa de outra entrada para este jogo."
+        ),
+        "Source game": "Jogo de origem",
+        "Choose a game": "Escolhe um jogo",
+        "Hide the source after unifying": "Ocultar a origem após unificar",
+        "Avoids duplicate stats. You can restore it from Settings.": (
+            "Evita estatísticas duplicadas. Podes restaurá-la nas Configurações."
+        ),
+        "Unify data": "Unificar dados",
+        "No games to import.": "Não há jogos para importar.",
+        "Choose a different game to import.": (
+            "Escolhe um jogo diferente para importar."
+        ),
+        "Couldn't unify the data.": "Não foi possível unificar os dados.",
+        "This game was already unified into {title}.": (
+            "Este jogo já foi unificado em {title}."
+        ),
+        "{title} data imported into {target}.": (
+            "Dados de {title} importados em {target}."
+        ),
+        "IMPORTED GAMES": "JOGOS IMPORTADOS",
+        "No entries imported yet.": "Ainda não há entradas importadas.",
+        "Merged into {title}": "Unificado em {title}",
+        "Imported": "Importado",
+        "Removed": "Removido",
         "Arc": "Arco",
         "Flat": "Plano",
         "3D Ring": "Anel 3D",

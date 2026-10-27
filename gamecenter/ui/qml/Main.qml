@@ -242,11 +242,12 @@ Window {
             insertEffect.play(detailGame, detailIndex, from, to);
             detailOpen = false;
         }
-        onFolderRequested: Library.openFolder(detailIndex)
-        onCopyRequested: Library.copyAppId(detailIndex)
+        onFolderRequested: Library.openFolderById(detailGame.id)
+        onCopyRequested: Library.copyAppIdById(detailGame.id)
         onFavoriteRequested: {
-            Library.toggleFavorite(detailIndex);
-            detailGame = Library.gameAt(detailIndex);
+            var gameId = detailGame.id;
+            Library.toggleFavoriteById(gameId);
+            detailGame = Library.gameDetailById(gameId);
             toast.show(detailGame.favorite
                        ? Tr.strings["Added to favorites"]
                        : Tr.strings["Removed from favorites"]);
@@ -254,6 +255,16 @@ Window {
         onArtRequested: {
             artOpen = true;
             Library.loadArtOptions(detailIndex);
+        }
+        onProfileChanged: {
+            if (detailGame.id) {
+                var gameId = detailGame.id;
+                detailGame = Library.gameDetailById(gameId);
+                var row = Library.rowForId(gameId);
+                if (row >= 0) {
+                    detailIndex = row;
+                }
+            }
         }
     }
 
@@ -364,13 +375,23 @@ Window {
             artOpen = false;
         }
         function onPlaytimeChanged() {
-            if (detailOpen) {
-                detailGame = Library.gameAt(detailIndex);
+            if (detailOpen && detailGame.id) {
+                var gameId = detailGame.id;
+                var row = Library.rowForId(gameId);
+                if (row >= 0) {
+                    detailIndex = row;
+                }
+                detailGame = Library.gameDetailById(gameId);
             }
         }
         function onDetailsChanged() {
-            if (detailOpen) {
-                detailGame = Library.gameAt(detailIndex);
+            if (detailOpen && detailGame.id) {
+                var gameId = detailGame.id;
+                var row = Library.rowForId(gameId);
+                if (row >= 0) {
+                    detailIndex = row;
+                }
+                detailGame = Library.gameDetailById(gameId);
             }
         }
     }

@@ -3,7 +3,7 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.15.2** — Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
+> Estado: **v0.16.0** — Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 
@@ -70,6 +70,22 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   - El soporte nativo de mando usa **XInput en Windows**; en Linux o sin mando
     la interfaz funciona con teclado y ratón y la barra de pistas se adapta.
 - **Favoritos** persistentes, con filtro en la barra.
+- **Perfil de juego** en la ficha, independiente de la tienda:
+  - **puntuación 0–100** con una barra visual y **estado** elegible entre
+    *Playing, On Going, Beaten, Completed, Played, Plan to Play, On Hold,
+    Not Played y Abandoned*; se guarda por ID en `profiles.json`.
+  - Botón **Edit profile** en la ficha para abrir el editor; la tira de estado y
+    puntuación queda siempre visible.
+  - **Unificación manual entre plataformas**: el campo de origen empieza
+    **vacío** y tú eliges la entrada; nada se preselecciona. Puedes elegir otra
+    entrada de la biblioteca —aunque ya no aparezca en la tienda pero conserve
+    datos en GameCenter— y traer sus horas, sesiones y timeline al juego actual.
+  - El timeline importado se marca como **Imported**; la carátula del origen se
+    guarda en `recap_covers/` para recaps y, si el destino no tiene carátula
+    real, se adopta automáticamente.
+  - Los juegos importados quedan listados en la ficha como trazabilidad. El
+    origen se puede **ocultar tras unificar** para no duplicar estadísticas;
+    se restaura desde Ajustes.
 - **Dock de sesiones**: al lanzar un juego aparece con su tiempo en marcha y se
   retira solo cuando el proceso termina (o con la ×).
 - **Ajustes** (engranaje o `Ctrl+,`): color de acento entre 24 opciones,

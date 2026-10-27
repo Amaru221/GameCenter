@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from dataclasses import replace
 
-from .. import playtime
+from .. import playtime, profiles
 from ..models import Game
 from . import battlenet, epic, gog, local, riot, steam
 
@@ -21,6 +21,21 @@ SOURCES = (steam, epic, gog, battlenet, riot, local)
 def _with_playtime(games: list[Game]) -> list[Game]:
     out: list[Game] = []
     for game in games:
+        merged = profiles.merged_seconds(game.id)
+        if merged:
+            game = replace(
+                game,
+                playtime_minutes=max(0, game.playtime_minutes - merged // 60),
+            )
+        extra = profiles.extra_seconds(game.id)
+        if extra:
+            game = replace(
+                game,
+                playtime_minutes=game.playtime_minutes + extra // 60,
+                last_played=max(
+                    game.last_played, profiles.extra_last_played(game.id)
+                ),
+            )
         if game.source != "steam":
             playtime.restore_to_root(game)
             summary = playtime.summary_for(game)

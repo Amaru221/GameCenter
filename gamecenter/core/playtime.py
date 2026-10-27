@@ -53,6 +53,16 @@ def _write(path: Path, data: dict) -> bool:
         return False
 
 
+def all_summaries() -> dict[str, dict]:
+    """Every fallback summary, including games no longer in any store."""
+    data = _read(_fallback_path())
+    out: dict[str, dict] = {}
+    for game_id, entry in data.items():
+        if isinstance(entry, dict):
+            out[str(game_id)] = entry
+    return out
+
+
 def file_for(game: Game) -> Path | None:
     """The per-game file, or None when there is no writable game folder."""
     if (
@@ -155,6 +165,118 @@ def add_seconds(game: Game, seconds: float) -> None:
     _fallback_write(game.id, entry)
 
 
+def write_summary(
+    game: Game, seconds: int, sessions: int, last_played: int = 0
+) -> None:
+    """Overwrite a non-Steam game summary, keeping the fallback mirror in sync."""
+    if game.source == "steam":
+        return
+    entry = {
+        "seconds": max(0, int(seconds)),
+        "sessions": max(0, int(sessions)),
+        "last_played": max(0, int(last_played or 0)),
+        "title": game.title,
+        "source": game.source,
+    }
+    path = file_for(game)
+    if path is not None and _write(path, entry):
+        _fallback_write(game.id, entry)
+        return
+    _fallback_write(game.id, entry)
+
+
+def clear_summary(game: Game) -> None:
+    """Drop a game's stored summary after its data has been merged elsewhere."""
+    path = file_for(game)
+    if path is not None:
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
+    data = _read(_fallback_path())
+    if game.id in data:
+        del data[game.id]
+        _write(_fallback_path(), data)
+
+
+def _history_key(item: dict) -> tuple[int, int, str, str] | None:
+    try:
+        return (
+            int(item.get("start") or 0),
+            int(item.get("seconds") or 0),
+            str(item.get("title") or ""),
+            str(item.get("source") or ""),
+        )
+    except (TypeError, ValueError, AttributeError):
+        return None
+
+
+def _history_start(item: dict) -> int:
+    try:
+        return int(item.get("start") or 0)
+    except (TypeError, ValueError, AttributeError):
+        return 0
+
+
+def move_history(source_id: str, target_id: str) -> int:
+    """Move timeline entries to another game id and return how many moved."""
+    if not source_id or not target_id or source_id == target_id:
+        return 0
+    data = _read(history_path())
+    entries = data.pop(source_id, [])
+    target = data.get(target_id)
+    target = list(target) if isinstance(target, list) else []
+
+    seen = set()
+    for item in target:
+        if isinstance(item, dict):
+            key = _history_key(item)
+            if key is not None:
+                seen.add(key)
+    moved = 0
+    for item in entries:
+        if not isinstance(item, dict):
+            continue
+        key = _history_key(item)
+        if key is None or key in seen:
+            continue
+        seen.add(key)
+        target.append(item)
+        moved += 1
+
+    target.sort(key=_history_start)
+    data[target_id] = target
+    _write(history_path(), data)
+    return moved
+
+
+def add_history_entry(
+    game: Game,
+    started_at: float,
+    seconds: float,
+    imported: bool = False,
+) -> None:
+    """Append one already-finished entry, including synthetic imported time."""
+    total = int(seconds)
+    if total < 1:
+        return
+    path = history_path()
+    data = _read(path)
+    entries = data.get(game.id)
+    entries = list(entries) if isinstance(entries, list) else []
+    entry = {
+        "start": int(started_at) or int(time.time()) - total,
+        "seconds": total,
+        "title": game.title,
+        "source": game.source,
+    }
+    if imported:
+        entry["imported"] = True
+    entries.append(entry)
+    data[game.id] = entries
+    _write(path, data)
+
+
 def record_session(game: Game, started_at: float, seconds: float) -> None:
     """Append one session to the global, per-game timeline."""
     if seconds < 1:
@@ -202,6 +324,7 @@ def all_history() -> dict[str, list[dict]]:
                     "seconds": seconds,
                     "title": str(entry.get("title") or ""),
                     "source": str(entry.get("source") or ""),
+                    "imported": bool(entry.get("imported")),
                 }
             )
         if parsed:

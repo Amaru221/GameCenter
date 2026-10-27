@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.16.0
+
+- Added a **game profile** to the detail view: a 0–100 score and a status
+  (Playing, On Going, Beaten, Completed, Played, Plan to Play, On Hold,
+  Not Played, Abandoned), persisted per game id in `profiles.json`.
+- Added **manual cross-platform unification** from the game settings:
+  - the source field starts empty and the user explicitly picks the entry to
+    import (nothing is pre-selected),
+  - pick another library entry — including an entry that no longer appears in
+    the store but still has GameCenter data — and import its playtime and
+    session timeline,
+  - the imported timeline keeps an **"Imported"** marker,
+  - the source cover is snapshotted under `recap_covers/` for recaps,
+  - if the target has no real cover, it adopts the imported one,
+  - imported entries stay listed in the target as traceability, and
+  - the source can be hidden after merging to avoid duplicate statistics.
+- Steam-only native time imported into a Steam target is layered on top of
+  Steam's own playtime, and a source that was already unified is protected
+  against double imports.
+- Detail view now shows a compact status/score strip with an **Edit profile**
+  action, and status pills, a score slider and the traceability panel adapt to
+  normal and Big Picture layouts.
+- Added translations for the new UI in ES/FR/DE/IT/PT.
+
 ## v0.15.2
 
 - **Big Picture carousel with four presentation modes**: **Arc**, **Flat**,

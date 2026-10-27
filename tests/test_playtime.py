@@ -171,3 +171,40 @@ def test_history_ignores_empty_or_invalid_sessions(tmp_path) -> None:
     history = playtime.history_for(game)
     assert len(history) == 1
     assert history[0]["seconds"] == 1
+
+def test_write_and_clear_summary(tmp_path) -> None:
+    game = Game(id="epic:9", title="Test", source="epic")
+
+    playtime.write_summary(game, 7200, 3, 1_700_000_000)
+
+    summary = playtime.summary_for(game)
+    assert summary["seconds"] == 7200
+    assert summary["sessions"] == 3
+    assert summary["last_played"] == 1_700_000_000
+
+    playtime.clear_summary(game)
+    assert playtime.seconds_for(game) == 0
+
+
+def test_move_history_to_another_game() -> None:
+    source = Game(id="epic:1", title="Old", source="epic")
+    target = Game(id="epic:2", title="New", source="epic")
+    playtime.record_session(source, 1_700_000_000, 60)
+    playtime.record_session(source, 1_700_000_100, 120)
+    playtime.record_session(target, 1_700_000_200, 30)
+
+    assert playtime.move_history(source.id, target.id) == 2
+    assert playtime.history_for(source) == []
+    assert [item["seconds"] for item in playtime.history_for(target)] == [30, 120, 60]
+    assert playtime.move_history(source.id, target.id) == 0
+    assert len(playtime.history_for(target)) == 3
+
+
+def test_add_imported_history_entry() -> None:
+    game = Game(id="epic:3", title="Imported", source="steam")
+
+    playtime.add_history_entry(game, 1_700_000_300, 900, imported=True)
+
+    entry = playtime.history_for(game)[0]
+    assert entry["seconds"] == 900
+    assert entry["imported"] is True

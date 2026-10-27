@@ -25,6 +25,16 @@ def app():
     return QApplication.instance() or QApplication([])
 
 
+@pytest.fixture(autouse=True)
+def release_qml_engines():
+    # Each QML test creates an engine; collect it before the next one so a
+    # delayed destruction cannot happen inside another engine's event loop.
+    yield
+    import gc
+
+    gc.collect()
+
+
 @pytest.fixture
 def games() -> list[Game]:
     return [
@@ -54,13 +64,23 @@ def games() -> list[Game]:
 
 @pytest.fixture
 def model(app, monkeypatch, games, tmp_path):
-    monkeypatch.setattr(library_model, "scan_all", lambda: games)
+    from gamecenter.core import sources
+
+    monkeypatch.setattr(
+        library_model, "scan_all", lambda: sources._with_playtime(games)
+    )
     monkeypatch.setattr(library_model.credentials, "get_key", lambda: "")
     monkeypatch.setattr(
         library_model.playtime, "_fallback_path", lambda: tmp_path / "playtime.json"
     )
     monkeypatch.setattr(
         library_model.playtime, "history_path", lambda: tmp_path / "history.json"
+    )
+    monkeypatch.setattr(
+        library_model.profiles, "path", lambda: tmp_path / "profiles.json"
+    )
+    monkeypatch.setattr(
+        library_model.profiles, "cover_dir", lambda: tmp_path / "recap_covers"
     )
     monkeypatch.setattr(library_model.artwork, "CACHE", tmp_path / "art")
     monkeypatch.setattr(
@@ -690,3 +710,134 @@ def test_gamepad_cursor_toggle(app) -> None:
     assert manager._cursor_hidden is True
     manager.showCursor()
     assert manager._cursor_hidden is False
+
+
+def test_game_profile_rating_and_status(model) -> None:
+    assert model.setGameRating("epic:3", 87) is True
+    assert model.setGameStatus("epic:3", "playing") is True
+
+    detail = model.gameDetailById("epic:3")
+    assert detail["rating"] == 87
+    assert detail["hasRating"] is True
+    assert detail["status"] == "playing"
+    assert detail["mergedSources"] == []
+
+    assert model.setGameRating("epic:3", 140) is True
+    assert model.gameDetailById("epic:3")["rating"] == 100
+    assert model.setGameStatus("epic:3", "nonsense") is False
+    assert model.setGameStatus("epic:3", "") is True
+    assert model.gameDetailById("epic:3")["status"] == ""
+
+
+def test_merge_moves_playtime_sessions_and_cover(model) -> None:
+    from gamecenter.core import playtime
+
+    source = next(game for game in model._all if game.id == "steam:2")
+    target = next(game for game in model._all if game.id == "epic:3")
+    playtime.write_summary(target, 1800, 2, 1_700_000_000)
+    playtime.record_session(source, 1_700_000_100, 3000)
+
+    result = model.mergeGameData("steam:2", "epic:3", True)
+
+    assert result["ok"] is True
+    detail = model.gameDetailById("epic:3")
+    assert detail["mergedSources"][0]["id"] == "steam:2"
+    assert detail["mergedSources"][0]["cover"].startswith("image://art/")
+    assert "2" in detail["playtimeText"]
+    assert detail["sessionCount"] >= 2
+    assert model.rowCount() == 2
+    assert model.rowForId("epic:3") >= 0
+    assert model.rowForId("steam:2") == -1
+    assert model._prefs.is_hidden("steam:2")
+    assert library_model.profiles.merged_seconds("steam:2") == 7200
+    assert library_model.profiles.get("steam:2")["merged_into"] == "epic:3"
+    assert library_model.profiles.extra_seconds("epic:3") == 0
+    assert model._prefs.cover_for("epic:3")
+
+
+def test_merge_into_steam_layers_imported_time(model) -> None:
+    from gamecenter.core import playtime
+
+    source = next(game for game in model._all if game.id == "epic:3")
+    playtime.write_summary(source, 3600, 1, 1_700_000_000)
+    playtime.record_session(source, 1_700_000_100, 3600)
+
+    result = model.mergeGameData("epic:3", "steam:1", False)
+
+    assert result["ok"] is True
+    assert library_model.profiles.extra_seconds("steam:1") == 3600
+    detail = model.gameDetailById("steam:1")
+    assert "1" in detail["playtimeText"]
+    assert detail["mergedSources"][0]["id"] == "epic:3"
+    assert model.rowCount() == 3
+    assert playtime.seconds_for(source) == 0
+
+
+def test_qml_game_profile_panel_loads(app, model) -> None:
+    from PySide6.QtCore import QObject
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.setProperty("detailIndex", 0)
+    root.setProperty("detailGame", model.gameAt(0))
+    root.setProperty("detailOpen", True)
+    app.processEvents()
+
+    detail = root.findChild(QObject, "gameDetail")
+    assert detail is not None
+    detail.setProperty("profileOpen", True)
+    app.processEvents()
+
+    panel = root.findChild(QObject, "gameProfilePanel")
+    assert panel is not None
+    assert panel.property("expanded") is True
+    assert panel.property("sourceId") == ""
+    combo = panel.findChild(QObject, "profileSourceCombo")
+    assert combo is not None
+    assert combo.property("currentIndex") == -1
+    candidates = panel.property("candidateModel")
+    if hasattr(candidates, "toVariant"):
+        candidates = candidates.toVariant()
+    assert len(candidates) == 2
+
+
+def test_merge_from_a_removed_entry(model) -> None:
+    from gamecenter.core import playtime
+
+    removed = Game(id="epic:removed", title="Removed Game", source="epic")
+    playtime.write_summary(removed, 1800, 2, 1_700_000_000)
+    playtime.record_session(removed, 1_700_000_100, 1800)
+
+    candidates = model.mergeCandidates("epic:3")
+    entry = next(item for item in candidates if item["id"] == "epic:removed")
+    assert entry["orphan"] is True
+    assert entry["seconds"] == 1800
+    assert entry["sessions"] == 2
+
+    result = model.mergeGameData("epic:removed", "epic:3", False)
+
+    assert result["ok"] is True
+    detail = model.gameDetailById("epic:3")
+    assert detail["mergedSources"][0]["id"] == "epic:removed"
+    assert playtime.seconds_for(removed) == 0
+    assert playtime.history_for(removed) == []
+    assert model.rowCount() == 3
+    assert all(
+        item["id"] != "epic:removed"
+        for item in model.mergeCandidates("epic:3")
+    )
+
+
+def test_a_source_can_only_be_merged_once(model) -> None:
+    from gamecenter.core import playtime
+
+    source = next(game for game in model._all if game.id == "epic:3")
+    playtime.write_summary(source, 1800, 1, 1_700_000_000)
+
+    assert model.mergeGameData("epic:3", "steam:1", False)["ok"] is True
+    second = model.mergeGameData("epic:3", "steam:1", False)
+
+    assert second["ok"] is False
+    assert "already" in second["message"].casefold()
