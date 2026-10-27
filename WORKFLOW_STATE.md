@@ -1,5 +1,80 @@
 # WORKFLOW STATE — Big Picture con mando
 
+## Feature 0.17.0 — Modal de juego a pantalla completa
+
+### Descripción funcional
+
+- La ficha del juego deja de ser una caja centrada: pasa a ocupar **toda la
+  ventana** con un fondo **blur opaco translúcido** (cristal esmerilado) sobre
+  la escena que queda detrás.
+- La **carátula/cartucho 3D** se dibuja en una capa libre, fuera del área de
+  scroll y sin ningún marco que recorte el modelo:
+  - arrastrar con el botón izquierdo **mueve** la carátula por la ventana,
+  - arrastrar con el botón derecho (o `Shift` + izquierdo) **rota** el modelo,
+  - doble clic sigue lanzando el juego.
+- El **buscador se oculta en Estadísticas** (y `Ctrl+F` solo funciona en la
+  biblioteca).
+- Si el buscador tiene el foco y se pulsa en cualquier otro sitio de la
+  ventana, el campo **pierde el foco** y desaparece el cursor de escritura,
+  sin bloquear el clic que se estaba haciendo.
+
+### Decisión de arquitectura
+
+- `GameDetail.qml` recibe `backdropItem` (la escena a difuminar). Se captura
+  una sola vez por apertura con `ShaderEffectSource` (`live: false`) y se
+  procesa con `MultiEffect` de `QtQuick.Effects`; es barato y no requiere
+  refactorizar el render.
+- `Main.qml` agrupa la escena de biblioteca en un `Item` (`libraryScene`) para
+  poder pasarla como `backdropItem`. La ficha y el toast quedan fuera.
+- En Big Picture no se captura la escena (la ficha es hija del propio root):
+  `backdropItem` queda a `null` y la ficha usa `image://bg/1` difuminado como
+  respaldo. `GameDetail` funciona igual en ambos contextos.
+- El cartucho vive en `cartridgeHost` (Item posicionado por
+  `cartridgeX`/`cartridgeY`), fuera del `Flickable` que recorta el contenido.
+- La ficha compacta (<940 px) mantiene la portada pequeña dentro del contenido
+  y oculta el cartucho flotante para no tapar la lectura.
+- El buscador se oculta con `visible` en `TopBar.qml`; el foco se limpia con una
+  capa `MouseArea` de guardia en `Main.qml` que deja pasar el pulso
+  (`mouse.accepted = false` + `propagateComposedEvents`).
+
+### Contrato de API (QML)
+
+| Elemento | Tipo | Descripción |
+| --- | --- | --- |
+| `GameDetail.backdropItem` | `Item` | Escena a desenfocar; `null` usa `image://bg/1`. |
+| `GameDetail.compact` | `bool` (readonly) | `width < 940`; layout de una columna. |
+| `GameDetail.cartridgeX/Y` | `real` | Posición libre del cartucho (se reinicia al abrir). |
+| `GameDetail.resetCartridge()` | función | Recoloca el cartucho en su sitio inicial. |
+| `GameDetail.scrollBy(delta)` | función | Sin cambios (mando/teclado en Big Picture). |
+| `TopBar.searchFocused` | `bool` (readonly) | El `TextField` tiene el foco activo. |
+| `TopBar.clearSearchFocus()` | función | Quita el foco del buscador. |
+| `DsCartridge3D.interactive` | `bool` | Desactiva su `MouseArea` para que la ficha gestione el arrastre. |
+| `Cartridge.interactive` | `bool` | Ya existe; se pone a `false` en la ficha. |
+
+### Checklist
+
+#### Backend
+- [x] Traducciones nuevas (ES/FR/DE/IT/PT) de las pistas de arrastre.
+
+#### Frontend
+- [x] `GameDetail.qml`: overlay a pantalla completa, sin caja, con blur + tinte.
+- [x] `GameDetail.qml`: carátula flotante arrastrable, nunca recortada.
+- [x] `Main.qml`: escena envuelta para el blur, `backdropItem` y toast recolocado.
+- [x] `TopBar.qml`: buscador oculto en Estadísticas y API de foco.
+- [x] `Main.qml`: capa de guardia para limpiar el foco al pulsar fuera.
+- [x] `DsCartridge3D.qml`/`Cartridge.qml`: modo no interactivo para la ficha.
+- [x] `BigPicture.qml`: pasa `backdropItem: null` explícito y conserva el scroll.
+- [x] Tests QML: buscador oculto en stats, foco del buscador y ficha abierta.
+- [x] README/CHANGELOG/WORKFLOW actualizados.
+- [x] Verificación visual (normal, compacta y Big Picture).
+
+### Verificación
+- [x] `python -m pytest -q` → **140 passed**.
+- [x] Capturas de la ficha a 1180×800 (clásico y DS 3D), 900×620 (compacta) y
+  dentro de Big Picture.
+- [x] Comprobado con `QTest`: el buscador se oculta en Stats, el clic fuera
+  quita el foco y el clic sigue abriendo la ficha del juego.
+
 ## Feature 0.16.0 — Perfil de juego, unificación y estado
 
 ### Descripción funcional

@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+- **Game detail is now a full-screen modal** with a frosted, opaque translucent
+  backdrop (the library behind it is blurred and captured once per opening), so
+  there is no centered box or border anymore.
+- The **cartridge floats in a free layer** outside the scrolling column: it is
+  never clipped by a frame, including the 3D DS model.
+  - left-drag moves the cartridge anywhere in the window,
+  - right-drag (or `Shift` + drag) rotates the 3D model,
+  - double-click still plays, and the compact layout keeps the small cover.
+- The **search box is hidden in Stats** and `Ctrl+F` only focuses it from the
+  library.
+- **Clicking outside the search box clears its focus**, so the text cursor
+  disappears while the click still reaches the item below.
+- New ES/FR/DE/IT/PT translation for the drag hint.
+
 ## v0.16.0
 
 - Added a **game profile** to the detail view: a 0–100 score and a status

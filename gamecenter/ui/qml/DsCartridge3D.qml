@@ -7,6 +7,9 @@ Item {
     property string textureUrl: ""
     property real yaw: -16
     property real pitch: -10
+    // The game detail view manages the drag itself (move + rotate) so the card
+    // must not swallow the pointer events there.
+    property bool interactive: true
 
     // Real DS game cards are almost square but slightly taller and thin, with
     // three pointed corners and a rounded bottom-left corner.
@@ -376,6 +379,7 @@ Item {
 
     MouseArea {
         anchors.fill: parent
+        enabled: root.interactive
         hoverEnabled: true
         cursorShape: dragging ? Qt.ClosedHandCursor : Qt.OpenHandCursor
 

@@ -620,6 +620,74 @@ def test_qml_stats_view_loads_the_year_summary(app, model) -> None:
     assert data["river"]["layers"]
 
 
+def test_qml_detail_is_a_fullscreen_overlay_with_a_floating_cartridge(app, model) -> None:
+    from PySide6.QtCore import QObject
+    from PySide6.QtTest import QTest
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.resize(1180, 800)
+    root.show()
+    app.processEvents()
+    root.setProperty("detailIndex", 0)
+    root.setProperty("detailGame", model.gameAt(0))
+    root.setProperty("detailOpen", True)
+    app.processEvents()
+    QTest.qWait(260)
+
+    detail = root.findChild(QObject, "gameDetail")
+    assert detail is not None
+    assert detail.property("backdropItem") is not None
+    # The modal fills the window instead of the old centered panel.
+    assert detail.property("width") == root.property("width")
+    assert detail.property("height") == root.property("height")
+
+    card = root.findChild(QObject, "detailCartridge")
+    assert card is not None
+    assert card.property("visible") is True
+    assert card.property("width") > 0
+    # The cartridge is not inside the clipped scroller, so the 3D model can be
+    # dragged anywhere without a frame cutting it.
+    scroller = detail.findChild(QObject, "detailScroller")
+    assert scroller is not None
+    ancestor = card.parent()
+    while ancestor is not None:
+        assert ancestor is not scroller
+        ancestor = ancestor.parent()
+
+
+def test_qml_search_hides_in_stats_and_clears_focus_outside(app, model) -> None:
+    from PySide6.QtCore import QMetaObject, QObject, QPoint, Qt
+    from PySide6.QtTest import QTest
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.show()
+    app.processEvents()
+
+    top = root.findChild(QObject, "topBar")
+    box = root.findChild(QObject, "searchBox")
+    assert top is not None and box is not None
+    assert box.property("visible") is True
+
+    QMetaObject.invokeMethod(top, "focusSearch")
+    app.processEvents()
+    assert top.property("searchFocused") is True
+
+    QTest.mouseClick(root, Qt.LeftButton, Qt.NoModifier, QPoint(640, 400))
+    app.processEvents()
+    assert top.property("searchFocused") is False
+
+    root.setProperty("currentView", "stats")
+    app.processEvents()
+    assert box.property("visible") is False
+    assert top.property("searchFocused") is False
+
+
 def test_qml_big_picture_navigation_and_exit_confirmation(app, model) -> None:
     from PySide6.QtCore import Q_ARG, QMetaObject, QObject
 
