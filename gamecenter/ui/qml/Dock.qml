@@ -3,6 +3,7 @@ import QtQuick.Layouts
 
 Rectangle {
     id: dock
+    objectName: "dock"
     readonly property bool idle: Sessions.count === 0
     property bool inserting: false
     width: idle ? 380 : Math.min(920, 180 + Sessions.count * 204)

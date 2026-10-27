@@ -604,8 +604,20 @@ def test_qml_stats_view_loads_the_year_summary(app, model) -> None:
 
     engine = create_engine(model)
     root = engine.rootObjects()[0]
+    root.resize(1180, 800)
+    root.show()
+    app.processEvents()
+
+    # The library dock (Ready/clock/cartridge slot) is only for the library.
+    dock = root.findChild(QObject, "dock")
+    layer = root.findChild(QObject, "libraryDock")
+    assert dock is not None and layer is not None
+    assert layer.property("visible") is True
+
     root.setProperty("currentView", "stats")
     app.processEvents()
+
+    assert layer.property("visible") is False
 
     stats = root.findChild(QObject, "statsView")
     assert stats is not None
@@ -618,6 +630,14 @@ def test_qml_stats_view_loads_the_year_summary(app, model) -> None:
     assert data["sessionsCount"] == 1
     assert data["months"]
     assert data["river"]["layers"]
+
+    # The carousel lists the current month first and January last.
+    months = stats.property("months")
+    if hasattr(months, "toVariant"):
+        months = months.toVariant()
+    order = [month["monthIndex"] for month in months]
+    assert order == sorted(order, reverse=True)
+    assert order[0] == len(order) - 1
 
 
 def test_qml_detail_is_fullscreen_with_a_pinned_rotatable_cartridge(app, model) -> None:

@@ -174,31 +174,40 @@ Window {
             visible: window.currentView === "stats"
         }
 
-        UpdateBanner {
-            id: updateBanner
-            z: 5
-            anchors.left: parent.left
-            anchors.bottom: dock.top
-            anchors.leftMargin: 24
-            anchors.bottomMargin: 12
-            onOpenRequested: updateOpen = true
-        }
+        // Library dock: only exists in the library view. Stats is a clean,
+        // dedicated window with no cartridge slot, clock or update banner.
+        Item {
+            id: libraryDock
+            objectName: "libraryDock"
+            anchors.fill: parent
+            visible: window.currentView === "library"
 
-        Dock {
-            id: dock
-            z: detailOpen ? 5 : 20
-            inserting: insertEffect.running
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 10
-        }
+            UpdateBanner {
+                id: updateBanner
+                z: 5
+                anchors.left: parent.left
+                anchors.bottom: dock.top
+                anchors.leftMargin: 24
+                anchors.bottomMargin: 12
+                onOpenRequested: updateOpen = true
+            }
 
-        SlotCartridge {
-            id: slotCard
-            z: detailOpen ? 5 : 19
-            x: dock.x + dock.width / 2 - width / 2
-            y: dock.y - height
-            game: window.slotGame
+            Dock {
+                id: dock
+                z: detailOpen ? 5 : 20
+                inserting: insertEffect.running
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 10
+            }
+
+            SlotCartridge {
+                id: slotCard
+                z: detailOpen ? 5 : 19
+                x: dock.x + dock.width / 2 - width / 2
+                y: dock.y - height
+                game: window.slotGame
+            }
         }
     }
 

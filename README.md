@@ -42,9 +42,12 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   comparación con el periodo anterior, días jugados, racha y sesiones. El
   buscador se oculta al entrar en Stats (y `Ctrl+F` solo actúa en la
   biblioteca); al pulsar fuera del buscador se quita el foco y el cursor de
-  escritura.
+  escritura. Stats es una ventana dedicada: no muestra el dock inferior
+  (Ready, reloj ni cartucho insertado) ni el aviso de actualización, y usa todo
+  el alto de la ventana.
 - La sección **Month by Month** incluye un gráfico de áreas apiladas (“a river”)
-  con los juegos principales, tarjetas mensuales deslizables con horas, mejores
+  con los juegos principales y tarjetas mensuales deslizables, **del mes actual
+  al más antiguo** (octubre primero, enero al final), con horas, mejores
   juegos, barras de progreso y actividad diaria, y un botón **Open month** que
   enfoca ese mes en el resumen. El botón **Watch** recorre los meses
   automáticamente.

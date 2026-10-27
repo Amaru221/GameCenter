@@ -13,7 +13,11 @@
   - arrastrar sobre el cartucho **rota** el modelo (sin desplazarlo),
   - doble clic sigue lanzando el juego.
 - El **buscador se oculta en Estadísticas** (y `Ctrl+F` solo funciona en la
-  biblioteca).
+  biblioteca). Al entrar en Stats tampoco se muestra el **dock inferior**
+  (ranura Ready, reloj y cartucho insertado) ni el aviso de actualización: es
+  una ventana dedicada solo a estadísticas.
+- El **carrusel de meses va del más reciente al más antiguo**: primero el mes
+  actual y al final enero.
 - Si el buscador tiene el foco y se pulsa en cualquier otro sitio de la
   ventana, el campo **pierde el foco** y desaparece el cursor de escritura,
   sin bloquear el clic que se estaba haciendo.
@@ -39,6 +43,13 @@
 - El buscador se oculta con `visible` en `TopBar.qml`; el foco se limpia con una
   capa `MouseArea` de guardia en `Main.qml` que deja pasar el pulso
   (`mouse.accepted = false` + `propagateComposedEvents`).
+- El dock, la ranura y el `UpdateBanner` viven en `libraryDock` (dentro de
+  `libraryScene`) y solo son visibles en la biblioteca. `StatsView` usa todo el
+  alto disponible.
+- `StatsView.months` invierte `statsData.months` (que sigue en orden
+  cronológico en el backend) y `carouselIndexForMonth()` traduce el mes
+  calendario a su posición invertida; el `MonthCard` conserva el
+  `monthIndex` original para abrir el mes correcto.
 
 ### Contrato de API (QML)
 
@@ -52,6 +63,8 @@
 | `GameDetail.scrollBy(delta)` | función | Sin cambios (mando/teclado en Big Picture). |
 | `TopBar.searchFocused` | `bool` (readonly) | El `TextField` tiene el foco activo. |
 | `TopBar.clearSearchFocus()` | función | Quita el foco del buscador. |
+| `StatsView.months` | `list` (readonly) | Meses en orden inverso (actual → enero). |
+| `StatsView.carouselIndexForMonth(monthIndex)` | función | Índice del mes en el carrusel invertido. |
 | `DsCartridge3D.interactive` | `bool` | Desactiva su `MouseArea` para que la ficha gestione la rotación. |
 | `Cartridge.interactive` | `bool` | El 2D sigue interactivo (hover y doble clic) pero sin desplazarse. |
 
@@ -66,10 +79,13 @@
 - [x] `DsCartridge3D.qml`: visor ampliado (`modelScale`) para no cortar esquinas al rotar.
 - [x] `Main.qml`: escena envuelta para el blur, `backdropItem` y toast recolocado.
 - [x] `TopBar.qml`: buscador oculto en Estadísticas y API de foco.
+- [x] `Main.qml`: ocultar dock/ranura/aviso en Stats y usar todo el alto.
+- [x] `StatsView.qml`: meses del actual a enero conservando `monthIndex`.
 - [x] `Main.qml`: capa de guardia para limpiar el foco al pulsar fuera.
 - [x] `DsCartridge3D.qml`/`Cartridge.qml`: el 3D desactiva su `MouseArea` (rota la ficha); el 2D mantiene hover y doble clic.
 - [x] `BigPicture.qml`: pasa `backdropItem: null` explícito y conserva el scroll.
 - [x] Tests QML: buscador oculto en stats, foco del buscador y ficha abierta.
+- [x] Tests QML: dock oculto en stats y meses en orden inverso.
 - [x] README/CHANGELOG/WORKFLOW actualizados.
 - [x] Verificación visual (normal, compacta y Big Picture).
 
@@ -80,6 +96,8 @@
   giro completo) para comprobar que no se corta ninguna esquina.
 - [x] Comprobado con `QTest`: el buscador se oculta en Stats, el clic fuera
   quita el foco y el clic sigue abriendo la ficha del juego.
+- [x] Captura de Stats sin dock (todo el alto) con octubre primero y la
+  comprobación de que la lista termina en enero.
 
 ## Feature 0.16.0 — Perfil de juego, unificación y estado
 

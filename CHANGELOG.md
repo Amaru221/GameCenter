@@ -14,6 +14,12 @@
   - double-click still plays, and the compact layout keeps the small cover.
 - The **search box is hidden in Stats** and `Ctrl+F` only focuses it from the
   library.
+- **Stats is now a dedicated window**: the bottom dock (Ready slot, clock and
+  inserted cartridge) and the update banner are hidden there, and the view uses
+  the full window height.
+- The **Month by Month carousel runs newest first**: the current month (e.g.
+  October) leads and January closes the list. Each card keeps its real calendar
+  index, so *Open month* still selects the right month.
 - **Clicking outside the search box clears its focus**, so the text cursor
   disappears while the click still reaches the item below.
 - New ES/FR/DE/IT/PT translation for the rotate hint.
