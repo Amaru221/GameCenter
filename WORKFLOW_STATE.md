@@ -1,5 +1,104 @@
 # WORKFLOW STATE — Big Picture con mando
 
+## Feature 0.17.0 — Modal de juego a pantalla completa
+
+### Descripción funcional
+
+- La ficha del juego deja de ser una caja centrada: pasa a ocupar **toda la
+  ventana** con un fondo **blur opaco translúcido** (cristal esmerilado) sobre
+  la escena que queda detrás.
+- La **carátula/cartucho 3D** queda **fija en la esquina superior izquierda**,
+  fuera del área de scroll. El visor 3D es más ancho que el modelo para que,
+  al rotarlo, **ninguna esquina se recorte**:
+  - arrastrar sobre el cartucho **rota** el modelo (sin desplazarlo),
+  - doble clic sigue lanzando el juego.
+- El **buscador se oculta en Estadísticas** (y `Ctrl+F` solo funciona en la
+  biblioteca). Al entrar en Stats tampoco se muestra el **dock inferior**
+  (ranura Ready, reloj y cartucho insertado) ni el aviso de actualización: es
+  una ventana dedicada solo a estadísticas.
+- El **carrusel de meses va del más reciente al más antiguo**: primero el mes
+  actual y al final enero.
+- Si el buscador tiene el foco y se pulsa en cualquier otro sitio de la
+  ventana, el campo **pierde el foco** y desaparece el cursor de escritura,
+  sin bloquear el clic que se estaba haciendo.
+
+### Decisión de arquitectura
+
+- `GameDetail.qml` recibe `backdropItem` (la escena a difuminar). Se captura
+  una sola vez por apertura con `ShaderEffectSource` (`live: false`) y se
+  procesa con `MultiEffect` de `QtQuick.Effects`; es barato y no requiere
+  refactorizar el render.
+- `Main.qml` agrupa la escena de biblioteca en un `Item` (`libraryScene`) para
+  poder pasarla como `backdropItem`. La ficha y el toast quedan fuera.
+- En Big Picture no se captura la escena (la ficha es hija del propio root):
+  `backdropItem` queda a `null` y la ficha usa `image://bg/1` difuminado como
+  respaldo. `GameDetail` funciona igual en ambos contextos.
+- El cartucho vive en `cartridgeHost`, fijado arriba a la izquierda
+  (`cartridgeMarginX/Y`), fuera del `Flickable` que recorta el contenido.
+- El visor 3D es mayor que la tarjeta (`cartridgeWidth/Height`) y el modelo se
+  reduce dentro con `DsCartridge3D.modelScale`, dejando margen en los cuatro
+  lados para rotaciones de hasta ±50° de inclinación y giro completo.
+- La ficha compacta (<940 px) mantiene la portada pequeña dentro del contenido
+  y oculta el cartucho fijo para no tapar la lectura.
+- El buscador se oculta con `visible` en `TopBar.qml`; el foco se limpia con una
+  capa `MouseArea` de guardia en `Main.qml` que deja pasar el pulso
+  (`mouse.accepted = false` + `propagateComposedEvents`).
+- El dock, la ranura y el `UpdateBanner` viven en `libraryDock` (dentro de
+  `libraryScene`) y solo son visibles en la biblioteca. `StatsView` usa todo el
+  alto disponible.
+- `StatsView.months` invierte `statsData.months` (que sigue en orden
+  cronológico en el backend) y `carouselIndexForMonth()` traduce el mes
+  calendario a su posición invertida; el `MonthCard` conserva el
+  `monthIndex` original para abrir el mes correcto.
+
+### Contrato de API (QML)
+
+| Elemento | Tipo | Descripción |
+| --- | --- | --- |
+| `GameDetail.backdropItem` | `Item` | Escena a desenfocar; `null` usa `image://bg/1`. |
+| `GameDetail.compact` | `bool` (readonly) | `width < 940`; layout de una columna. |
+| `GameDetail.cartridgeMarginX/Y` | `real` (readonly) | Posición fija del cartucho (24, 72). |
+| `GameDetail.cartridgeWidth/Height` | `real` (readonly) | Visor 3D ancho (hasta 400×480). |
+| `DsCartridge3D.modelScale` | `real` | Escala del modelo dentro del visor (0.82 en la ficha). |
+| `GameDetail.scrollBy(delta)` | función | Sin cambios (mando/teclado en Big Picture). |
+| `TopBar.searchFocused` | `bool` (readonly) | El `TextField` tiene el foco activo. |
+| `TopBar.clearSearchFocus()` | función | Quita el foco del buscador. |
+| `StatsView.months` | `list` (readonly) | Meses en orden inverso (actual → enero). |
+| `StatsView.carouselIndexForMonth(monthIndex)` | función | Índice del mes en el carrusel invertido. |
+| `DsCartridge3D.interactive` | `bool` | Desactiva su `MouseArea` para que la ficha gestione la rotación. |
+| `Cartridge.interactive` | `bool` | El 2D sigue interactivo (hover y doble clic) pero sin desplazarse. |
+
+### Checklist
+
+#### Backend
+- [x] Traducciones nuevas (ES/FR/DE/IT/PT) de las pistas de arrastre.
+
+#### Frontend
+- [x] `GameDetail.qml`: overlay a pantalla completa, sin caja, con blur + tinte.
+- [x] `GameDetail.qml`: carátula fija arriba a la izquierda, rotable y nunca recortada.
+- [x] `DsCartridge3D.qml`: visor ampliado (`modelScale`) para no cortar esquinas al rotar.
+- [x] `Main.qml`: escena envuelta para el blur, `backdropItem` y toast recolocado.
+- [x] `TopBar.qml`: buscador oculto en Estadísticas y API de foco.
+- [x] `Main.qml`: ocultar dock/ranura/aviso en Stats y usar todo el alto.
+- [x] `StatsView.qml`: meses del actual a enero conservando `monthIndex`.
+- [x] `Main.qml`: capa de guardia para limpiar el foco al pulsar fuera.
+- [x] `DsCartridge3D.qml`/`Cartridge.qml`: el 3D desactiva su `MouseArea` (rota la ficha); el 2D mantiene hover y doble clic.
+- [x] `BigPicture.qml`: pasa `backdropItem: null` explícito y conserva el scroll.
+- [x] Tests QML: buscador oculto en stats, foco del buscador y ficha abierta.
+- [x] Tests QML: dock oculto en stats y meses en orden inverso.
+- [x] README/CHANGELOG/WORKFLOW actualizados.
+- [x] Verificación visual (normal, compacta y Big Picture).
+
+### Verificación
+- [x] `python -m pytest -q` → **140 passed**.
+- [x] Capturas de la ficha a 1180×800 (clásico y DS 3D), 900×620 (compacta) y
+  dentro de Big Picture, incluida la rotación extrema (±50° de inclinación y
+  giro completo) para comprobar que no se corta ninguna esquina.
+- [x] Comprobado con `QTest`: el buscador se oculta en Stats, el clic fuera
+  quita el foco y el clic sigue abriendo la ficha del juego.
+- [x] Captura de Stats sin dock (todo el alto) con octubre primero y la
+  comprobación de que la lista termina en enero.
+
 ## Feature 0.16.0 — Perfil de juego, unificación y estado
 
 ### Descripción funcional

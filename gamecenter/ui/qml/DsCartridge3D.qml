@@ -7,6 +7,11 @@ Item {
     property string textureUrl: ""
     property real yaw: -16
     property real pitch: -10
+    // The game detail view manages the rotation itself, so the card must not
+    // swallow the pointer events there.
+    property bool interactive: true
+    // Shrinks the model inside its View3D so rotation never clips the corners.
+    property real modelScale: 1.0
 
     // Real DS game cards are almost square but slightly taller and thin, with
     // three pointed corners and a rounded bottom-left corner.
@@ -135,6 +140,9 @@ Item {
             id: cartridge
             eulerRotation.x: root.pitch
             eulerRotation.y: root.yaw
+            scale: Qt.vector3d(
+                root.modelScale, root.modelScale, root.modelScale
+            )
 
             // Front shell: main slab, bottom strip and the rounded corner.
             Model {
@@ -376,6 +384,7 @@ Item {
 
     MouseArea {
         anchors.fill: parent
+        enabled: root.interactive
         hoverEnabled: true
         cursorShape: dragging ? Qt.ClosedHandCursor : Qt.OpenHandCursor
 

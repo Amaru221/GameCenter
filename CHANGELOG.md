@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+- **Game detail is now a full-screen modal** with a frosted, opaque translucent
+  backdrop (the library behind it is blurred and captured once per opening), so
+  there is no centered box or border anymore.
+- The **cartridge is pinned to the top-left corner** in a free layer outside
+  the scrolling column: it is never clipped by a frame, including the 3D DS
+  model.
+  - dragging over the cartridge rotates the 3D model (it never moves),
+  - the 3D viewport is wider than the card (`modelScale`), so no corner is cut
+    at any rotation,
+  - double-click still plays, and the compact layout keeps the small cover.
+- The **search box is hidden in Stats** and `Ctrl+F` only focuses it from the
+  library.
+- **Stats is now a dedicated window**: the bottom dock (Ready slot, clock and
+  inserted cartridge) and the update banner are hidden there, and the view uses
+  the full window height.
+- The **Month by Month carousel runs newest first**: the current month (e.g.
+  October) leads and January closes the list. Each card keeps its real calendar
+  index, so *Open month* still selects the right month.
+- **Clicking outside the search box clears its focus**, so the text cursor
+  disappears while the click still reaches the item below.
+- New ES/FR/DE/IT/PT translation for the rotate hint.
+
 ## v0.16.0
 
 - Added a **game profile** to the detail view: a 0–100 score and a status

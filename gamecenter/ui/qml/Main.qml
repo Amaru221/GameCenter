@@ -27,9 +27,16 @@ Window {
 
     onBigPictureOpenChanged: {
         if (bigPictureOpen) {
+            topBar.clearSearchFocus();
             requestActivate();
         }
     }
+
+    onDetailOpenChanged: topBar.clearSearchFocus()
+    onSettingsOpenChanged: topBar.clearSearchFocus()
+    onArtOpenChanged: topBar.clearSearchFocus()
+    onAddOpenChanged: topBar.clearSearchFocus()
+    onUpdateOpenChanged: topBar.clearSearchFocus()
 
     function latestSession() {
         var list = Sessions.list;
@@ -93,100 +100,115 @@ Window {
         detailOpen = false;
     }
 
-    Image {
+    // The library scene is captured (once) by the game detail overlay to build
+    // its frosted-glass backdrop. The detail and the toast stay outside so the
+    // capture never includes the modal itself.
+    Item {
+        id: libraryScene
         anchors.fill: parent
-        visible: window.currentView === "library"
-        source: "image://bg/1"
-        fillMode: Image.PreserveAspectCrop
-        smooth: true
-    }
 
-    Rectangle {
-        anchors.fill: parent
-        visible: window.currentView === "library"
-        gradient: Gradient {
-            GradientStop { position: 0.0; color: "#00000000" }
-            GradientStop { position: 0.55; color: "#12070a0d" }
-            GradientStop { position: 1.0; color: "#4d05060a" }
+        Image {
+            anchors.fill: parent
+            source: "image://bg/1"
+            fillMode: Image.PreserveAspectCrop
+            smooth: true
         }
-    }
 
-    TopBar {
-        id: topBar
-        width: parent.width
-        anchors.top: parent.top
-        currentView: window.currentView
-        onToastRequested: (message) => toast.show(message)
-        onSettingsRequested: settingsOpen = true
-        onUpdateRequested: updateOpen = true
-        onScanRequested: (source) => Library.scanStore(source)
-        onRestoreHiddenRequested: Library.restoreHiddenGames()
-        onAddRequested: addOpen = true
-        onViewRequested: (view) => window.currentView = view
-        onBigPictureRequested: window.bigPictureOpen = true
-    }
-
-    Toolbar {
-        id: toolbar
-        width: parent.width
-        visible: window.currentView === "library"
-        anchors.top: topBar.bottom
-        onToastRequested: (message) => toast.show(message)
-        onAddRequested: addOpen = true
-    }
-
-    LibraryGrid {
-        anchors.top: toolbar.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        anchors.leftMargin: 24
-        anchors.rightMargin: 24
-        anchors.bottomMargin: 104
-        visible: window.currentView === "library"
-
-        onDetailRequested: (index) => {
-            detailOpen = true;
-            detailIndex = index;
-            detailGame = Library.gameAt(index);
-            Library.loadDetails(index);
+        Rectangle {
+            anchors.fill: parent
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: "#00000000" }
+                GradientStop { position: 0.55; color: "#12070a0d" }
+                GradientStop { position: 1.0; color: "#4d05060a" }
+            }
         }
-    }
 
-    StatsView {
-        id: statsView
-        anchors.top: topBar.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        visible: window.currentView === "stats"
-    }
+        TopBar {
+            id: topBar
+            width: parent.width
+            anchors.top: parent.top
+            currentView: window.currentView
+            onToastRequested: (message) => toast.show(message)
+            onSettingsRequested: settingsOpen = true
+            onUpdateRequested: updateOpen = true
+            onScanRequested: (source) => Library.scanStore(source)
+            onRestoreHiddenRequested: Library.restoreHiddenGames()
+            onAddRequested: addOpen = true
+            onViewRequested: (view) => window.currentView = view
+            onBigPictureRequested: window.bigPictureOpen = true
+        }
 
-    UpdateBanner {
-        id: updateBanner
-        z: 5
-        anchors.left: parent.left
-        anchors.bottom: dock.top
-        anchors.leftMargin: 24
-        anchors.bottomMargin: 12
-        onOpenRequested: updateOpen = true
-    }
+        Toolbar {
+            id: toolbar
+            width: parent.width
+            visible: window.currentView === "library"
+            anchors.top: topBar.bottom
+            onToastRequested: (message) => toast.show(message)
+            onAddRequested: addOpen = true
+        }
 
-    Dock {
-        id: dock
-        z: detailOpen ? 5 : 20
-        inserting: insertEffect.running
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 10
-    }
+        LibraryGrid {
+            anchors.top: toolbar.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.leftMargin: 24
+            anchors.rightMargin: 24
+            anchors.bottomMargin: 104
+            visible: window.currentView === "library"
 
-    SlotCartridge {
-        id: slotCard
-        z: detailOpen ? 5 : 19
-        x: dock.x + dock.width / 2 - width / 2
-        y: dock.y - height
-        game: window.slotGame
+            onDetailRequested: (index) => {
+                detailOpen = true;
+                detailIndex = index;
+                detailGame = Library.gameAt(index);
+                Library.loadDetails(index);
+            }
+        }
+
+        StatsView {
+            id: statsView
+            anchors.top: topBar.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            visible: window.currentView === "stats"
+        }
+
+        // Library dock: only exists in the library view. Stats is a clean,
+        // dedicated window with no cartridge slot, clock or update banner.
+        Item {
+            id: libraryDock
+            objectName: "libraryDock"
+            anchors.fill: parent
+            visible: window.currentView === "library"
+
+            UpdateBanner {
+                id: updateBanner
+                z: 5
+                anchors.left: parent.left
+                anchors.bottom: dock.top
+                anchors.leftMargin: 24
+                anchors.bottomMargin: 12
+                onOpenRequested: updateOpen = true
+            }
+
+            Dock {
+                id: dock
+                z: detailOpen ? 5 : 20
+                inserting: insertEffect.running
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 10
+            }
+
+            SlotCartridge {
+                id: slotCard
+                z: detailOpen ? 5 : 19
+                x: dock.x + dock.width / 2 - width / 2
+                y: dock.y - height
+                game: window.slotGame
+            }
+        }
     }
 
     Rectangle {
@@ -202,8 +224,7 @@ Window {
         opacity: 0
         visible: opacity > 0
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: dock.top
-        anchors.bottomMargin: 12
+        y: dock.y - height - 12
 
         Behavior on opacity { NumberAnimation { duration: 180 } }
 
@@ -235,6 +256,7 @@ Window {
         anchors.fill: parent
         game: detailGame
         opened: detailOpen
+        backdropItem: libraryScene
         onCloseRequested: detailOpen = false
         onPlayRequested: {
             var from = detail.cartridgeCenter();
@@ -327,6 +349,23 @@ Window {
         appActive: window.active
         opened: window.bigPictureOpen
         onCloseRequested: window.bigPictureOpen = false
+    }
+
+    // While the search box holds the focus, any click anywhere clears it. The
+    // press is not accepted, so the click still reaches the item below (game,
+    // button, modal...) as usual.
+    MouseArea {
+        id: searchFocusGuard
+        z: 100
+        anchors.fill: parent
+        visible: topBar.searchFocused
+        enabled: visible
+        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+        propagateComposedEvents: true
+        onPressed: (mouse) => {
+            topBar.clearSearchFocus();
+            mouse.accepted = false;
+        }
     }
 
     Connections {
@@ -445,6 +484,12 @@ Window {
     Shortcut {
         sequence: "Ctrl+F"
         enabled: !window.bigPictureOpen
+                 && window.currentView === "library"
+                 && !window.detailOpen
+                 && !window.settingsOpen
+                 && !window.updateOpen
+                 && !window.addOpen
+                 && !window.artOpen
         onActivated: topBar.focusSearch()
     }
 }

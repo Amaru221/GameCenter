@@ -14,8 +14,14 @@ la muestra como una estantería y lanza los juegos con un doble clic.
 - Lista los juegos como cartuchos con inclinación 3D al pasar el ratón.
 - Usa la carátula oficial de Steam (CDN público) y la cachea; sin conexión dibuja
   una portada generada.
-- **Vista de detalle** al hacer clic: cartucho grande, Play, tamaño, tiempo
-  jugado (Steam), última partida, ruta y botones.
+- **Vista de detalle** al hacer clic: modal **a pantalla completa** con un fondo
+  **blur opaco translúcido** sobre la biblioteca, carátula grande, Play, tamaño,
+  tiempo jugado (Steam), última partida, ruta y botones.
+- **Carátula fija**: el cartucho (incluido el modelo 3D) queda anclado en la
+  esquina **superior izquierda**, fuera del scroll y sin marcos que lo recorten.
+  Al arrastrar sobre él **gira en cualquier dirección** (sin desplazarse); el
+  visor 3D es más ancho que la tarjeta para que las esquinas no se corten en
+  ninguna rotación. Doble clic para jugar.
 - **Resumen del juego**: título, tienda, año, descripción, tamaño, estado de
   instalación, tiempo total, última partida, géneros y estudio. La descripción
   se obtiene de la API pública de Steam Store (AppID para Steam; búsqueda por
@@ -26,16 +32,22 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   tiempo total. Las sesiones se registran desde esta versión en
   `%APPDATA%\GameCenter\history.json` (también para Steam, sin tocar su
   `localconfig.vdf`).
-- **Panel responsive**: el detalle se adapta al ancho de la ventana (vista de
-  dos columnas con cartucho grande o vista compacta con miniatura) y el
-  contenido se desplaza cuando la altura es reducida.
+- **Panel responsive**: el detalle se adapta al ancho de la ventana (carátula
+  fija en dos columnas o vista compacta con miniatura) y el contenido se
+  desplaza cuando la altura es reducida.
 - **Favoritos con efecto**: la estrella del detalle tiene brillo, rebote y un
   destello animado al añadir el juego, con aviso de “Añadido a favoritos”.
 - **Estadísticas**: nueva pestaña **STATS** junto a Library y Store, con filtros
   **Week / Month / Year / All time**, selector de año, resumen de tiempo jugado,
-  comparación con el periodo anterior, días jugados, racha y sesiones.
+  comparación con el periodo anterior, días jugados, racha y sesiones. El
+  buscador se oculta al entrar en Stats (y `Ctrl+F` solo actúa en la
+  biblioteca); al pulsar fuera del buscador se quita el foco y el cursor de
+  escritura. Stats es una ventana dedicada: no muestra el dock inferior
+  (Ready, reloj ni cartucho insertado) ni el aviso de actualización, y usa todo
+  el alto de la ventana.
 - La sección **Month by Month** incluye un gráfico de áreas apiladas (“a river”)
-  con los juegos principales, tarjetas mensuales deslizables con horas, mejores
+  con los juegos principales y tarjetas mensuales deslizables, **del mes actual
+  al más antiguo** (octubre primero, enero al final), con horas, mejores
   juegos, barras de progreso y actividad diaria, y un botón **Open month** que
   enfoca ese mes en el resumen. El botón **Watch** recorre los meses
   automáticamente.
@@ -91,11 +103,12 @@ la muestra como una estantería y lanza los juegos con un doble clic.
 - **Ajustes** (engranaje o `Ctrl+,`): color de acento entre 24 opciones,
   **color de superficie** para la barra superior, el dock Ready y la estantería,
   **color de los cartuchos** y tres estilos: clásico, **Nintendo DS** y **PS2**.
-  - En la vista de detalle de un juego DS puedes **agarrar el cartucho con el
-    ratón y girarlo en cualquier dirección** manteniendo pulsado; también se
-    inclina arriba/abajo mientras arrastras. El reverso muestra los contactos
-    metálicos. En la biblioteca los cartuchos DS se muestran de frente y no
-    giran. Los cartuchos llevan la marca **GC**.
+  - En la vista de detalle de un juego DS puedes **arrastrar sobre el cartucho
+    para girarlo en cualquier dirección** manteniendo pulsado; el modelo no se
+    desplaza y el visor deja margen suficiente para que **no se corte ninguna
+    esquina** al inclinarlo. El reverso muestra los contactos metálicos. En la
+    biblioteca los cartuchos DS se muestran de frente y no giran. Los cartuchos
+    llevan la marca **GC**.
 - **Idioma de la interfaz**: en Ajustes se puede elegir entre **English,
   Español, Français, Deutsch, Italiano y Português**. El cambio es inmediato y se
   guarda en `%APPDATA%\GameCenter\settings.json`; los textos se traducen sin

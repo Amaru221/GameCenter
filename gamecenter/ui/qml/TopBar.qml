@@ -17,8 +17,23 @@ Item {
 
     property string currentView: "library"
 
+    readonly property bool searchFocused: search.activeFocus
+
     function focusSearch() {
+        if (currentView !== "library") {
+            return;
+        }
         search.forceActiveFocus();
+    }
+
+    function clearSearchFocus() {
+        search.focus = false;
+    }
+
+    onCurrentViewChanged: {
+        if (currentView !== "library") {
+            clearSearchFocus();
+        }
     }
 
     function openMenu() {
@@ -92,10 +107,12 @@ Item {
         Item { Layout.fillWidth: true }
 
         Rectangle {
+            objectName: "searchBox"
             Layout.preferredWidth: 380
             Layout.fillWidth: true
             Layout.minimumWidth: 140
             Layout.maximumWidth: 420
+            visible: root.currentView === "library"
             height: 40
             radius: 20
             color: "#0d0f14"

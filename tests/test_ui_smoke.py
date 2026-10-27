@@ -604,8 +604,20 @@ def test_qml_stats_view_loads_the_year_summary(app, model) -> None:
 
     engine = create_engine(model)
     root = engine.rootObjects()[0]
+    root.resize(1180, 800)
+    root.show()
+    app.processEvents()
+
+    # The library dock (Ready/clock/cartridge slot) is only for the library.
+    dock = root.findChild(QObject, "dock")
+    layer = root.findChild(QObject, "libraryDock")
+    assert dock is not None and layer is not None
+    assert layer.property("visible") is True
+
     root.setProperty("currentView", "stats")
     app.processEvents()
+
+    assert layer.property("visible") is False
 
     stats = root.findChild(QObject, "statsView")
     assert stats is not None
@@ -618,6 +630,107 @@ def test_qml_stats_view_loads_the_year_summary(app, model) -> None:
     assert data["sessionsCount"] == 1
     assert data["months"]
     assert data["river"]["layers"]
+
+    # The carousel lists the current month first and January last.
+    months = stats.property("months")
+    if hasattr(months, "toVariant"):
+        months = months.toVariant()
+    order = [month["monthIndex"] for month in months]
+    assert order == sorted(order, reverse=True)
+    assert order[0] == len(order) - 1
+
+
+def test_qml_detail_is_fullscreen_with_a_pinned_rotatable_cartridge(app, model) -> None:
+    from PySide6.QtCore import QObject, QPoint, Qt
+    from PySide6.QtTest import QTest
+
+    from gamecenter.ui.app import create_engine
+
+    model.setCartridgeStyle("ds")
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.resize(1180, 800)
+    root.show()
+    app.processEvents()
+    root.setProperty("detailIndex", 0)
+    root.setProperty("detailGame", model.gameAt(0))
+    root.setProperty("detailOpen", True)
+    app.processEvents()
+    QTest.qWait(260)
+
+    detail = root.findChild(QObject, "gameDetail")
+    assert detail is not None
+    assert detail.property("backdropItem") is not None
+    # The modal fills the window instead of the old centered panel.
+    assert detail.property("width") == root.property("width")
+    assert detail.property("height") == root.property("height")
+
+    card = root.findChild(QObject, "detailCartridge")
+    assert card is not None
+    assert card.property("visible") is True
+    # Pinned to the top-left corner and wide enough for the rotated model.
+    assert card.property("x") == 24
+    assert card.property("y") == 72
+    assert card.property("width") >= 300
+    assert card.property("height") >= 360
+    # The cartridge is not inside the clipped scroller, so the 3D model is never
+    # cut by a frame.
+    scroller = detail.findChild(QObject, "detailScroller")
+    assert scroller is not None
+    ancestor = card.parent()
+    while ancestor is not None:
+        assert ancestor is not scroller
+        ancestor = ancestor.parent()
+
+    # Dragging rotates the model but never moves it.
+    ds = root.findChild(QObject, "ds3d")
+    assert ds is not None
+    yaw = ds.property("yaw")
+    start = QPoint(
+        int(card.property("x") + card.property("width") / 2),
+        int(card.property("y") + card.property("height") / 2),
+    )
+    QTest.mousePress(root, Qt.LeftButton, Qt.NoModifier, start)
+    for i in range(1, 6):
+        QTest.mouseMove(root, QPoint(start.x() + i * 8, start.y() - i * 4))
+        QTest.qWait(20)
+    QTest.mouseRelease(
+        root, Qt.LeftButton, Qt.NoModifier, QPoint(start.x() + 40, start.y() - 20)
+    )
+    app.processEvents()
+    assert ds.property("yaw") != yaw
+    assert card.property("x") == 24
+    assert card.property("y") == 72
+
+
+def test_qml_search_hides_in_stats_and_clears_focus_outside(app, model) -> None:
+    from PySide6.QtCore import QMetaObject, QObject, QPoint, Qt
+    from PySide6.QtTest import QTest
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.show()
+    app.processEvents()
+
+    top = root.findChild(QObject, "topBar")
+    box = root.findChild(QObject, "searchBox")
+    assert top is not None and box is not None
+    assert box.property("visible") is True
+
+    QMetaObject.invokeMethod(top, "focusSearch")
+    app.processEvents()
+    assert top.property("searchFocused") is True
+
+    QTest.mouseClick(root, Qt.LeftButton, Qt.NoModifier, QPoint(640, 400))
+    app.processEvents()
+    assert top.property("searchFocused") is False
+
+    root.setProperty("currentView", "stats")
+    app.processEvents()
+    assert box.property("visible") is False
+    assert top.property("searchFocused") is False
 
 
 def test_qml_big_picture_navigation_and_exit_confirmation(app, model) -> None:

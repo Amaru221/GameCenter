@@ -14,8 +14,22 @@ Rectangle {
     property bool reviewing: false
 
     readonly property bool narrow: width < 1080
-    readonly property var months: statsData.months || []
+    // Newest month first: the current month (or December) leads the carousel
+    // and January closes it.
+    readonly property var months: {
+        var list = (statsData.months || []).slice();
+        list.reverse();
+        return list;
+    }
     readonly property var river: statsData.river || ({})
+
+    function carouselIndexForMonth(monthIndex) {
+        var count = root.months.length;
+        if (count === 0) {
+            return -1;
+        }
+        return Math.max(0, Math.min(count - 1, count - 1 - monthIndex));
+    }
 
     function refresh() {
         statsData = Library.stats(
@@ -26,7 +40,7 @@ Rectangle {
         if (period === "month" && selectedMonth >= 0) {
             Qt.callLater(function() {
                 if (carousel.count > 0) {
-                    var target = Math.min(selectedMonth, carousel.count - 1);
+                    var target = root.carouselIndexForMonth(selectedMonth);
                     carousel.currentIndex = target;
                     carousel.positionViewAtIndex(target, ListView.Beginning);
                 }
@@ -117,7 +131,7 @@ Rectangle {
         x: 24
         y: 18
         width: root.width - 48
-        height: root.height - 118
+        height: root.height - 36
         contentWidth: width - 14
         contentHeight: content.implicitHeight
         clip: true
@@ -568,7 +582,9 @@ Rectangle {
                     width: 360
                     height: carousel.height - 10
                     month: modelData
-                    monthIndex: index
+                    monthIndex: modelData.monthIndex !== undefined
+                               ? modelData.monthIndex
+                               : index
                     active: ListView.isCurrentItem
                 }
             }

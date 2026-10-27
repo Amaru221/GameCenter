@@ -1240,6 +1240,7 @@ Item {
         anchors.fill: parent
         opened: root.detailOpen
         game: root.detailGame
+        backdropItem: null
         showArt: false
         onCloseRequested: root.detailOpen = false
         onPlayRequested: {

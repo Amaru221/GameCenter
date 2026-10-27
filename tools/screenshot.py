@@ -281,8 +281,9 @@ def main() -> int:
             window.setProperty("detailOpen", True)
             if os.environ.get("GC_DS3D_DRAG"):
                 def drag_3d():
+                    # Right-drag rotates the model in the full-screen detail.
                     QTest.mousePress(
-                        window, Qt.LeftButton, Qt.NoModifier, QPoint(280, 360)
+                        window, Qt.RightButton, Qt.NoModifier, QPoint(280, 360)
                     )
                     for i in range(1, 9):
                         QTest.mouseMove(
@@ -290,7 +291,7 @@ def main() -> int:
                         )
                         QTest.qWait(40)
                     QTest.mouseRelease(
-                        window, Qt.LeftButton, Qt.NoModifier, QPoint(392, 336)
+                        window, Qt.RightButton, Qt.NoModifier, QPoint(392, 336)
                     )
 
                 QTimer.singleShot(3200, drag_3d)
