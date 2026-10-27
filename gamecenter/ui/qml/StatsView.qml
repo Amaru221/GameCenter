@@ -14,22 +14,16 @@ Rectangle {
     property bool reviewing: false
 
     readonly property bool narrow: width < 1080
-    // Newest month first: the current month (or December) leads the carousel
-    // and January closes it.
+    // Newest bucket first: months, weeks or days depending on the period.
     readonly property var months: {
-        var list = (statsData.months || []).slice();
+        var list = (statsData.buckets || statsData.months || []).slice();
         list.reverse();
         return list;
     }
+    readonly property string bucketsKind: statsData.bucketsKind || "month"
+    readonly property bool canOpenBucket: bucketsKind === "month"
     readonly property var river: statsData.river || ({})
-
-    function carouselIndexForMonth(monthIndex) {
-        var count = root.months.length;
-        if (count === 0) {
-            return -1;
-        }
-        return Math.max(0, Math.min(count - 1, count - 1 - monthIndex));
-    }
+    readonly property var topGame: statsData.topGame || ({})
 
     function refresh() {
         statsData = Library.stats(
@@ -37,15 +31,15 @@ Rectangle {
             selectedYear,
             period === "month" ? selectedMonth : -1
         );
-        if (period === "month" && selectedMonth >= 0) {
-            Qt.callLater(function() {
-                if (carousel.count > 0) {
-                    var target = root.carouselIndexForMonth(selectedMonth);
-                    carousel.currentIndex = target;
-                    carousel.positionViewAtIndex(target, ListView.Beginning);
-                }
-            });
-        }
+    }
+
+    function focusStart() {
+        Qt.callLater(function() {
+            if (carousel.count > 0) {
+                carousel.currentIndex = 0;
+                carousel.positionViewAtIndex(0, ListView.Beginning);
+            }
+        });
     }
 
     function setPeriod(value) {
@@ -57,6 +51,7 @@ Rectangle {
                             : 11;
         }
         refresh();
+        focusStart();
     }
 
     function changeYear(delta) {
@@ -71,6 +66,7 @@ Rectangle {
             selectedMonth = new Date().getMonth();
         }
         refresh();
+        focusStart();
     }
 
     function openMonth(index) {
@@ -78,6 +74,7 @@ Rectangle {
         selectedMonth = index;
         refresh();
         page.contentY = 0;
+        focusStart();
     }
 
     function toggleReview() {
@@ -99,9 +96,55 @@ Rectangle {
         return (text || "").indexOf("-") === 0 ? "#fb7185" : "#34d399";
     }
 
+    function bucketTitle() {
+        if (bucketsKind === "day") {
+            return Tr.strings["Day by Day"];
+        }
+        if (bucketsKind === "week") {
+            return Tr.strings["Week by Week"];
+        }
+        return Tr.strings["Month by Month"];
+    }
+
+    function tintColor(hex, alpha) {
+        var value = String(hex || "#facc15");
+        if (value.length !== 7) {
+            return Qt.rgba(0.98, 0.8, 0.08, alpha);
+        }
+        return Qt.rgba(
+            parseInt(value.substring(1, 3), 16) / 255,
+            parseInt(value.substring(3, 5), 16) / 255,
+            parseInt(value.substring(5, 7), 16) / 255,
+            alpha
+        );
+    }
+
+    function reviewText() {
+        var label = statsData.periodLabel || selectedYear;
+        if (period === "year") {
+            return Tr.strings["Your %1 so far, in review"].arg(label);
+        }
+        if (period === "month") {
+            return Tr.strings["%1 in review"].arg(label);
+        }
+        if (period === "week") {
+            return Tr.strings["This week in review"];
+        }
+        return Tr.strings["All time in review"];
+    }
+
+    function riverSubtitle() {
+        // All time keeps the annual month breakdown, so name the year here.
+        var label = period === "all"
+                    ? selectedYear
+                    : (statsData.periodLabel || selectedYear);
+        return Tr.strings["%1 as a river"].arg(label);
+    }
+
     onVisibleChanged: {
         if (visible) {
             refresh();
+            focusStart();
         } else {
             reviewing = false;
         }
@@ -254,9 +297,134 @@ Rectangle {
                     font.bold: true
                 }
 
+                // Game with the most hours in the selected period.
+                Rectangle {
+                    id: topGamePanel
+                    objectName: "topGamePanel"
+                    visible: !root.narrow && root.topGame
+                             && (root.topGame.name || "") !== ""
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.rightMargin: 26
+                    width: 286
+                    height: 142
+                    radius: 16
+                    color: "#0b111b"
+                    border.width: 1
+                    border.color: "#26374d"
+                    clip: true
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: 16
+                        gradient: Gradient {
+                            GradientStop {
+                                position: 0.0
+                                color: Qt.rgba(
+                                    Library.accent.r,
+                                    Library.accent.g,
+                                    Library.accent.b,
+                                    0.10
+                                )
+                            }
+                            GradientStop { position: 1.0; color: "#0b111b" }
+                        }
+                    }
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 12
+                        spacing: 12
+
+                        Item {
+                            Layout.preferredWidth: 64
+                            Layout.preferredHeight: 88
+
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: 8
+                                color: "#070a10"
+                                border.width: 1
+                                border.color: "#2b3b53"
+                            }
+
+                            Rectangle {
+                                anchors.fill: parent
+                                anchors.margins: 2
+                                radius: 6
+                                color: "#182234"
+                                clip: true
+
+                                Image {
+                                    anchors.fill: parent
+                                    source: root.topGame.cover || ""
+                                    fillMode: Image.PreserveAspectCrop
+                                    asynchronous: true
+                                    cache: true
+                                }
+                            }
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            spacing: 3
+
+                            Text {
+                                text: Tr.strings["Most played"]
+                                color: Library.accent
+                                font.family: "Chakra Petch"
+                                font.pixelSize: 9
+                                font.bold: true
+                                font.letterSpacing: 1.4
+                            }
+
+                            Text {
+                                Layout.fillWidth: true
+                                text: root.topGame.name || ""
+                                color: "#f2f5fa"
+                                font.family: "Sora"
+                                font.pixelSize: 15
+                                font.bold: true
+                                wrapMode: Text.WordWrap
+                                maximumLineCount: 2
+                                elide: Text.ElideRight
+                            }
+
+                            Item { Layout.fillHeight: true }
+
+                            Row {
+                                spacing: 8
+
+                                Text {
+                                    text: root.topGame.hoursText || ""
+                                    color: "#facc15"
+                                    font.family: "Sora"
+                                    font.pixelSize: 13
+                                    font.bold: true
+                                }
+
+                                Text {
+                                    text: root.statsData.periodLabel || ""
+                                    color: "#7d8798"
+                                    font.family: "Sora"
+                                    font.pixelSize: 9
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+                        }
+                    }
+                }
+
                 ColumnLayout {
-                    anchors.fill: parent
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    anchors.right: topGamePanel.visible
+                                  ? topGamePanel.left
+                                  : parent.right
                     anchors.margins: 24
+                    anchors.rightMargin: topGamePanel.visible ? 16 : 24
                     spacing: 6
 
                     Text {
@@ -279,15 +447,50 @@ Rectangle {
 
                     Text {
                         text: root.statsData.periodLabel || ""
-                        color: "#6f7887"
+                        color: "#8b95a5"
                         font.family: "Sora"
                         font.pixelSize: 11
+                        font.bold: true
+                        font.letterSpacing: 0.3
+                    }
+
+                    RowLayout {
+                        visible: root.narrow && (root.topGame.name || "") !== ""
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        Text {
+                            text: Tr.strings["Most played"]
+                            color: Library.accent
+                            font.family: "Chakra Petch"
+                            font.pixelSize: 9
+                            font.bold: true
+                            font.letterSpacing: 1.0
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: root.topGame.name || ""
+                            color: "#f2f5fa"
+                            font.family: "Sora"
+                            font.pixelSize: 11
+                            font.bold: true
+                            elide: Text.ElideRight
+                        }
+
+                        Text {
+                            text: root.topGame.hoursText || ""
+                            color: "#facc15"
+                            font.family: "Sora"
+                            font.pixelSize: 11
+                            font.bold: true
+                        }
                     }
 
                     Flow {
                         Layout.fillWidth: true
                         Layout.topMargin: 10
-                        spacing: 16
+                        spacing: 8
 
                         Repeater {
                             model: {
@@ -310,23 +513,9 @@ Rectangle {
                                 return stats;
                             }
 
-                            Row {
-                                spacing: 7
-
-                                Rectangle {
-                                    width: 5
-                                    height: 5
-                                    radius: 2.5
-                                    color: modelData.color
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-
-                                Text {
-                                    text: modelData.text
-                                    color: modelData.color
-                                    font.family: "Sora"
-                                    font.pixelSize: 11
-                                }
+                            StatChip {
+                                label: modelData.text
+                                tint: modelData.color
                             }
                         }
                     }
@@ -349,7 +538,7 @@ Rectangle {
                     spacing: 2
 
                     Text {
-                        text: Tr.strings["Month by Month"]
+                        text: root.bucketTitle()
                         color: "#f2f5fa"
                         font.family: "Chakra Petch"
                         font.pixelSize: 13
@@ -358,10 +547,11 @@ Rectangle {
                     }
 
                     Text {
-                        text: Tr.strings["%1 as a river"].arg(root.selectedYear)
-                        color: "#6f7887"
+                        text: root.riverSubtitle()
+                        color: "#7d8798"
                         font.family: "Sora"
                         font.pixelSize: 10
+                        font.letterSpacing: 0.2
                     }
                 }
 
@@ -412,8 +602,10 @@ Rectangle {
                     property var riverData: root.river
                     property var layers: (riverData && riverData.layers)
                                          ? riverData.layers : []
-                    property var labels: (riverData && riverData.months)
-                                         ? riverData.months : []
+                    property var labels: (riverData && riverData.labels)
+                                         ? riverData.labels
+                                         : ((riverData && riverData.months)
+                                            ? riverData.months : [])
 
                     onRiverDataChanged: requestPaint()
                     onLayersChanged: requestPaint()
@@ -559,7 +751,7 @@ Rectangle {
                 id: carousel
                 objectName: "monthCarousel"
                 Layout.fillWidth: true
-                Layout.preferredHeight: 448
+                Layout.preferredHeight: 480
                 orientation: ListView.Horizontal
                 spacing: 14
                 clip: true
@@ -773,7 +965,7 @@ Rectangle {
 
             Text {
                 Layout.fillWidth: true
-                text: Tr.strings["Your %1 so far, in review"].arg(root.selectedYear)
+                text: root.reviewText()
                 color: "#e8edf5"
                 font.family: "Sora"
                 font.pixelSize: 11
@@ -839,57 +1031,94 @@ Rectangle {
         }
     }
 
-    component HighlightBadge: Rectangle {
-        id: badge
-        objectName: "highlightBadge"
+    component StatChip: Rectangle {
+        id: chip
         property string label: ""
-        property color tint: "#facc15"
+        property color tint: "#c9d2e0"
 
-        height: 22
-        width: badgeContent.implicitWidth + 22
-        radius: 11
-        color: "#0e1622"
+        height: 24
+        width: chipRow.implicitWidth + 18
+        radius: 12
+        color: Qt.rgba(chip.tint.r, chip.tint.g, chip.tint.b, 0.10)
         border.width: 1
-        border.color: Qt.rgba(badge.tint.r, badge.tint.g, badge.tint.b, 0.52)
-
-        gradient: Gradient {
-            GradientStop {
-                position: 0.0
-                color: Qt.rgba(badge.tint.r, badge.tint.g, badge.tint.b, 0.20)
-            }
-            GradientStop { position: 1.0; color: "#0d131e" }
-        }
-
-        Rectangle {
-            anchors.fill: parent
-            anchors.margins: -2
-            radius: 13
-            color: "transparent"
-            border.width: 1
-            border.color: Qt.rgba(badge.tint.r, badge.tint.g, badge.tint.b, 0.14)
-        }
+        border.color: Qt.rgba(chip.tint.r, chip.tint.g, chip.tint.b, 0.28)
 
         Row {
-            id: badgeContent
+            id: chipRow
             anchors.centerIn: parent
             spacing: 6
 
             Rectangle {
                 width: 5
                 height: 5
-                radius: 1
-                rotation: 45
-                color: badge.tint
+                radius: 2.5
+                color: chip.tint
                 anchors.verticalCenter: parent.verticalCenter
             }
 
             Text {
-                text: badge.label
-                color: Qt.lighter(badge.tint, 1.18)
+                text: chip.label
+                color: Qt.lighter(chip.tint, 1.12)
                 font.family: "Sora"
-                font.pixelSize: 9
+                font.pixelSize: 10
                 font.bold: true
-                font.letterSpacing: 0.35
+                font.letterSpacing: 0.2
+            }
+        }
+    }
+
+    component HighlightPill: Rectangle {
+        id: pill
+        property string valueText: ""
+        property color tint: "#facc15"
+        property int valueSize: 12
+        property bool large: false
+
+        height: pill.large ? 42 : 22
+        width: pillRow.implicitWidth + (pill.large ? 28 : 18)
+        radius: height / 2
+        color: "#0f1622"
+        border.width: 1
+        border.color: Qt.rgba(pill.tint.r, pill.tint.g, pill.tint.b, 0.56)
+
+        gradient: Gradient {
+            GradientStop {
+                position: 0.0
+                color: Qt.rgba(pill.tint.r, pill.tint.g, pill.tint.b, 0.22)
+            }
+            GradientStop { position: 1.0; color: "#0d131e" }
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: -3
+            radius: parent.radius + 3
+            color: "transparent"
+            border.width: 1
+            border.color: Qt.rgba(pill.tint.r, pill.tint.g, pill.tint.b, 0.16)
+        }
+
+        Row {
+            id: pillRow
+            anchors.centerIn: parent
+            spacing: pill.large ? 8 : 5
+
+            Rectangle {
+                width: pill.large ? 7 : 5
+                height: pill.large ? 7 : 5
+                radius: 1
+                rotation: 45
+                color: pill.tint
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Text {
+                text: pill.valueText
+                color: Qt.lighter(pill.tint, 1.16)
+                font.family: "Sora"
+                font.pixelSize: pill.valueSize
+                font.bold: true
+                font.letterSpacing: pill.large ? -0.6 : 0
             }
         }
     }
@@ -900,6 +1129,11 @@ Rectangle {
         property var month: ({})
         property int monthIndex: 0
         property bool active: false
+
+        readonly property var topGames: month.topGames || []
+        readonly property var banner: month.banner || ({})
+        readonly property string kind: month.kind || "month"
+        readonly property bool hasData: (month.sessionsCount || 0) > 0
 
         radius: 20
         color: "#101827"
@@ -918,7 +1152,7 @@ Rectangle {
         ColumnLayout {
             anchors.fill: parent
             anchors.margins: 18
-            spacing: 12
+            spacing: 10
 
             RowLayout {
                 Layout.fillWidth: true
@@ -937,11 +1171,12 @@ Rectangle {
                     text: card.month.name || ""
                     color: "#f2f5fa"
                     font.family: "Sora"
-                    font.pixelSize: 18
+                    font.pixelSize: card.kind === "month" ? 18 : 16
                     font.bold: true
+                    elide: Text.ElideRight
                 }
 
-                // Cover of the most played game of the month, next to its name.
+                // Cover of the most played game of the bucket.
                 Item {
                     id: mostPlayedCover
                     objectName: "monthPlayedCover"
@@ -991,6 +1226,7 @@ Rectangle {
                 Item { Layout.fillWidth: true }
 
                 Rectangle {
+                    visible: root.canOpenBucket && card.kind === "month"
                     width: 100
                     height: 28
                     radius: 8
@@ -1020,38 +1256,88 @@ Rectangle {
                 }
             }
 
-            Flow {
+            // Diamond + number in the same container, in the value position.
+            Item {
                 Layout.fillWidth: true
-                spacing: 6
-                visible: card.month.topHours || card.month.topSessions
-                         || card.month.topDays
+                Layout.preferredHeight: 44
 
-                HighlightBadge {
+                HighlightPill {
+                    objectName: "topHoursPill"
                     visible: card.month.topHours === true
-                    label: Tr.strings["Most hours"]
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    large: true
+                    valueText: card.month.hoursText || "0m"
                     tint: "#facc15"
+                    valueSize: 28
                 }
 
-                HighlightBadge {
-                    visible: card.month.topSessions === true
-                    label: Tr.strings["Most sessions"]
-                    tint: "#a78bfa"
-                }
-
-                HighlightBadge {
-                    visible: card.month.topDays === true
-                    label: Tr.strings["Most days"]
-                    tint: "#34d399"
+                Text {
+                    visible: card.month.topHours !== true
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: card.month.hoursText || "0m"
+                    color: "#f8fafc"
+                    font.family: "Sora"
+                    font.pixelSize: 30
+                    font.bold: true
+                    font.letterSpacing: -0.8
                 }
             }
 
-            Text {
-                text: card.month.hoursText || "0m"
-                color: "#f8fafc"
-                font.family: "Sora"
-                font.pixelSize: 30
-                font.bold: true
-                font.letterSpacing: -0.8
+            // One unique highlight for this card.
+            Rectangle {
+                objectName: "cardBanner"
+                visible: (card.banner.label || "") !== "" && card.hasData
+                Layout.fillWidth: true
+                Layout.preferredHeight: visible ? 44 : 0
+                radius: 11
+                color: root.tintColor(card.banner.tint, 0.10)
+                border.width: 1
+                border.color: root.tintColor(card.banner.tint, 0.38)
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 10
+                    anchors.rightMargin: 12
+                    spacing: 9
+
+                    Rectangle {
+                        width: 3
+                        height: parent.height - 16
+                        radius: 1.5
+                        color: card.banner.tint || "#facc15"
+                    }
+
+                    Column {
+                        Layout.fillWidth: true
+                        spacing: 1
+
+                        Text {
+                            text: card.banner.label || ""
+                            color: card.banner.tint || "#facc15"
+                            font.family: "Chakra Petch"
+                            font.pixelSize: 9
+                            font.bold: true
+                            font.letterSpacing: 0.9
+                        }
+
+                        Text {
+                            text: card.banner.value || ""
+                            color: "#f2f5fa"
+                            font.family: "Sora"
+                            font.pixelSize: 14
+                            font.bold: true
+                        }
+                    }
+
+                    Text {
+                        text: card.banner.detail || ""
+                        color: "#8b95a5"
+                        font.family: "Sora"
+                        font.pixelSize: 9
+                    }
+                }
             }
 
             RowLayout {
@@ -1064,16 +1350,36 @@ Rectangle {
 
                     Text {
                         text: Tr.strings["Days played"]
-                        color: "#6f7887"
+                        color: "#7d8798"
                         font.family: "Sora"
-                        font.pixelSize: 8
+                        font.pixelSize: 9
+                        font.letterSpacing: 0.35
                     }
 
-                    Text {
-                        text: card.month.daysPlayed || 0
-                        color: "#dfe6f0"
-                        font.family: "Chakra Petch"
-                        font.pixelSize: 12
+                    Item {
+                        width: parent.width
+                        height: 22
+
+                        HighlightPill {
+                            objectName: "topDaysPill"
+                            visible: card.month.topDays === true
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            valueText: String(card.month.daysPlayed || 0)
+                            tint: "#34d399"
+                            valueSize: 12
+                        }
+
+                        Text {
+                            visible: card.month.topDays !== true
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: card.month.daysPlayed || 0
+                            color: "#dfe6f0"
+                            font.family: "Sora"
+                            font.pixelSize: 13
+                            font.bold: true
+                        }
                     }
                 }
 
@@ -1083,16 +1389,18 @@ Rectangle {
 
                     Text {
                         text: Tr.strings["Best day"]
-                        color: "#6f7887"
+                        color: "#7d8798"
                         font.family: "Sora"
-                        font.pixelSize: 8
+                        font.pixelSize: 9
+                        font.letterSpacing: 0.35
                     }
 
                     Text {
                         text: card.month.bestDayText || "—"
                         color: "#dfe6f0"
-                        font.family: "Chakra Petch"
-                        font.pixelSize: 12
+                        font.family: "Sora"
+                        font.pixelSize: 13
+                        font.bold: true
                     }
 
                     Text {
@@ -1109,26 +1417,46 @@ Rectangle {
 
                     Text {
                         text: Tr.strings["Sessions"]
-                        color: "#6f7887"
+                        color: "#7d8798"
                         font.family: "Sora"
-                        font.pixelSize: 8
+                        font.pixelSize: 9
+                        font.letterSpacing: 0.35
                     }
 
-                    Text {
-                        text: card.month.sessionsCount || 0
-                        color: "#dfe6f0"
-                        font.family: "Chakra Petch"
-                        font.pixelSize: 12
+                    Item {
+                        width: parent.width
+                        height: 22
+
+                        HighlightPill {
+                            objectName: "topSessionsPill"
+                            visible: card.month.topSessions === true
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            valueText: String(card.month.sessionsCount || 0)
+                            tint: "#a78bfa"
+                            valueSize: 12
+                        }
+
+                        Text {
+                            visible: card.month.topSessions !== true
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: card.month.sessionsCount || 0
+                            color: "#dfe6f0"
+                            font.family: "Sora"
+                            font.pixelSize: 13
+                            font.bold: true
+                        }
                     }
                 }
             }
 
             Column {
                 Layout.fillWidth: true
-                spacing: 8
+                spacing: 7
 
                 Repeater {
-                    model: card.month.topGames || []
+                    model: card.topGames
 
                     delegate: Column {
                         width: parent.width
@@ -1136,12 +1464,50 @@ Rectangle {
 
                         RowLayout {
                             width: parent.width
-                            spacing: 8
+                            spacing: 7
+
+                            Text {
+                                Layout.preferredWidth: 18
+                                text: (index + 1 < 10 ? "0" : "") + (index + 1)
+                                color: "#64748b"
+                                font.family: "Chakra Petch"
+                                font.pixelSize: 10
+                                font.bold: true
+                            }
+
+                            Item {
+                                Layout.preferredWidth: 20
+                                Layout.preferredHeight: 26
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 4
+                                    color: "#0a1019"
+                                    border.width: 1
+                                    border.color: "#2a3a52"
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    anchors.margins: 1.5
+                                    radius: 3
+                                    color: "#182234"
+                                    clip: true
+
+                                    Image {
+                                        anchors.fill: parent
+                                        source: modelData.cover || ""
+                                        fillMode: Image.PreserveAspectCrop
+                                        asynchronous: true
+                                        cache: true
+                                    }
+                                }
+                            }
 
                             Text {
                                 Layout.fillWidth: true
                                 text: modelData.name
-                                color: "#cfd6e2"
+                                color: "#dfe6f0"
                                 font.family: "Sora"
                                 font.pixelSize: 10
                                 elide: Text.ElideRight
@@ -1149,30 +1515,65 @@ Rectangle {
 
                             Text {
                                 text: modelData.hoursText
-                                color: "#8b95a5"
-                                font.family: "Chakra Petch"
-                                font.pixelSize: 9
+                                color: "#f2f5fa"
+                                font.family: "Sora"
+                                font.pixelSize: 10
+                                font.bold: true
                             }
                         }
 
                         Rectangle {
-                            width: parent.width
-                            height: 4
-                            radius: 2
+                            x: 25
+                            width: parent.width - 25
+                            height: 3
+                            radius: 1.5
                             color: "#1e293b"
 
                             Rectangle {
                                 width: parent.width * (modelData.percent / 100)
                                 height: parent.height
-                                radius: 2
+                                radius: 1.5
                                 color: modelData.color
                             }
                         }
                     }
                 }
 
+                RowLayout {
+                    visible: card.month.hasOtherGames === true
+                    width: parent.width
+                    spacing: 7
+
+                    Text {
+                        Layout.preferredWidth: 18
+                        text: "—"
+                        color: "#64748b"
+                        font.family: "Chakra Petch"
+                        font.pixelSize: 10
+                        font.bold: true
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: card.month.otherGamesText || Tr.strings["Other games"]
+                        color: "#8b95a5"
+                        font.family: "Sora"
+                        font.pixelSize: 10
+                        font.italic: true
+                        elide: Text.ElideRight
+                    }
+
+                    Text {
+                        text: card.month.otherHoursText || ""
+                        color: "#cfd6e2"
+                        font.family: "Sora"
+                        font.pixelSize: 10
+                        font.bold: true
+                    }
+                }
+
                 Text {
-                    visible: (card.month.topGames || []).length === 0
+                    visible: !card.hasData
                     text: Tr.strings["No playtime in this period."]
                     color: "#5f6a7b"
                     font.family: "Sora"
@@ -1183,38 +1584,53 @@ Rectangle {
             Item { Layout.fillHeight: true }
 
             ColumnLayout {
+                visible: card.kind !== "day"
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 5
 
                 Text {
                     text: Tr.strings["Day by day"]
-                    color: "#6f7887"
+                    color: "#7d8798"
                     font.family: "Sora"
-                    font.pixelSize: 8
+                    font.pixelSize: 9
+                    font.letterSpacing: 0.35
                 }
 
                 Row {
+                    id: dayChart
                     Layout.fillWidth: true
-                    height: 32
+                    height: 30
                     spacing: 2
+
+                    readonly property int barCount: (card.month.daily || []).length
+                    readonly property real barWidth: barCount > 0
+                                                     ? Math.min(
+                                                           10,
+                                                           Math.max(
+                                                               2,
+                                                               (width - (barCount - 1) * 2)
+                                                               / barCount
+                                                           )
+                                                       )
+                                                     : 4
 
                     Repeater {
                         model: card.month.daily || []
 
                         Item {
-                            width: 7
-                            height: 32
+                            width: dayChart.barWidth
+                            height: 30
 
                             Rectangle {
                                 anchors.bottom: parent.bottom
                                 width: parent.width
                                 height: Math.max(
                                     2,
-                                    28 * ((modelData || 0)
+                                    26 * ((modelData || 0)
                                           / (card.month.maxDaily || 1))
                                 )
                                 radius: 1.5
-                                color: index === 0
+                                color: index === dayChart.barCount - 1
                                        ? Library.accent
                                        : "#4cc9f0"
                                 opacity: 0.35 + 0.65 * (modelData

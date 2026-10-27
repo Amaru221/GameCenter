@@ -40,6 +40,15 @@ MONTH_KEYS = (
     "November",
     "December",
 )
+WEEKDAY_KEYS = (
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+)
 PERIODS = ("week", "month", "year", "all")
 
 
@@ -56,6 +65,15 @@ def _short_month(name: str) -> str:
     return name[:3].capitalize()
 
 
+def _weekday_name(catalog: dict[str, str], day: date) -> str:
+    key = WEEKDAY_KEYS[day.weekday()]
+    return catalog.get(key, key)
+
+
+def _short_weekday(name: str) -> str:
+    return name[:3].capitalize()
+
+
 def _duration(seconds: int) -> str:
     seconds = max(0, int(seconds))
     hours, rest = divmod(seconds, 3600)
@@ -63,6 +81,20 @@ def _duration(seconds: int) -> str:
     if hours:
         return f"{hours}h {minutes:02d}m"
     return f"{minutes}m"
+
+
+def _duration_detail(seconds: int) -> str:
+    """Like _duration, but keeps seconds for sub-hour values."""
+    seconds = max(0, int(seconds))
+    if seconds <= 0:
+        return "0m"
+    hours, rest = divmod(seconds, 3600)
+    minutes, secs = divmod(rest, 60)
+    if hours:
+        return f"{hours}h {minutes:02d}m"
+    if minutes:
+        return f"{minutes}m {secs:02d}s" if secs else f"{minutes}m"
+    return f"{secs}s"
 
 
 def _fill(template: str, *values) -> str:
@@ -211,7 +243,7 @@ def _top_games(
             "gameId": game_id,
             "name": titles.get(game_id, "Unknown game"),
             "seconds": seconds,
-            "hoursText": _duration(seconds),
+            "hoursText": _duration_detail(seconds),
             "percent": max(4, int(round(seconds / peak * 100))),
             "color": colors.get(game_id, _color_for(game_id)),
             "cover": covers.get(game_id, ""),
@@ -220,18 +252,152 @@ def _top_games(
     ]
 
 
+def _bucket_payload(
+    current: list[dict],
+    dates: list[date],
+    daily: list[int],
+    *,
+    number: str,
+    name: str,
+    short: str,
+    range_text: str,
+    river_label: str,
+    kind: str,
+    month_index: int,
+    catalog: dict[str, str],
+    titles: dict[str, str],
+    colors: dict[str, str],
+    covers: dict[str, str],
+) -> dict:
+    """Build one generic card: a month, a week or a day."""
+    total = sum(daily)
+    best_seconds = max(daily) if daily else 0
+    best_index = daily.index(best_seconds) if best_seconds else -1
+    best_date = (
+        dates[best_index]
+        if 0 <= best_index < len(dates) and best_seconds
+        else None
+    )
+    best_timestamp = (
+        int(datetime(best_date.year, best_date.month, best_date.day).timestamp())
+        if best_date is not None
+        else 0
+    )
+    played_days = len({item["date"] for item in current})
+    session_count = len(current)
+    top_games = _top_games(current, titles, colors, covers, limit=3)
+    shown_seconds = sum(item["seconds"] for item in top_games)
+    other_seconds = max(0, total - shown_seconds)
+    most_played = top_games[0] if top_games else {}
+    streak = _longest_streak({item["date"] for item in current})
+
+    if session_count == 1:
+        sessions_text = catalog.get("1 session", "1 session")
+    else:
+        sessions_text = _fill(
+            catalog.get("%1 sessions", "%1 sessions"), session_count
+        )
+
+    return {
+        "bucketIndex": month_index,
+        "monthIndex": month_index,
+        "kind": kind,
+        "number": number,
+        "name": name,
+        "short": short,
+        "rangeText": range_text,
+        "riverLabel": river_label,
+        "hoursText": _duration_detail(total),
+        "seconds": total,
+        "daysPlayed": played_days,
+        "daysInBucket": len(dates),
+        "bestDayText": _duration_detail(best_seconds) if best_seconds else "—",
+        "bestDayTimestamp": best_timestamp,
+        "bestDayDateText": (
+            f"{best_date.day:02d}/{best_date.month:02d}"
+            if best_date is not None
+            else ""
+        ),
+        "sessionsCount": session_count,
+        "sessionsText": sessions_text,
+        "streak": streak,
+        "topGames": top_games,
+        "mostPlayed": most_played,
+        "mostPlayedCover": most_played.get("cover", ""),
+        "mostPlayedName": most_played.get("name", ""),
+        "mostPlayedHours": most_played.get("hoursText", ""),
+        "otherGamesText": catalog.get("Other games", "Other games"),
+        "otherHoursText": _duration_detail(other_seconds) if other_seconds else "",
+        "hasOtherGames": other_seconds > 0,
+        "daily": daily,
+        "maxDaily": max(1, best_seconds),
+    }
+
+
+def _bucket_banner(
+    item: dict, catalog: dict[str, str], period_label: str
+) -> dict:
+    """One unique highlight per card, chosen by priority."""
+    if not item.get("sessionsCount"):
+        return {}
+    kind = item.get("kind", "month")
+    busiest_key = {
+        "day": "Busiest day",
+        "week": "Busiest week",
+        "month": "Busiest month",
+    }.get(kind, "Busiest month")
+
+    if item.get("topHours"):
+        return {
+            "label": catalog.get(busiest_key, busiest_key),
+            "value": item.get("hoursText", ""),
+            "detail": period_label,
+            "tint": "#facc15",
+        }
+    if item.get("streak", 0) >= 2:
+        value = _fill(catalog.get("%1 days", "%1 days"), item["streak"])
+        return {
+            "label": catalog.get("Longest streak", "Longest streak"),
+            "value": value,
+            "detail": "",
+            "tint": "#60a5fa",
+        }
+    if item.get("bestDayText") and item["bestDayText"] != "—":
+        return {
+            "label": catalog.get("Best day", "Best day"),
+            "value": item["bestDayText"],
+            "detail": item.get("bestDayDateText", ""),
+            "tint": "#fb7185",
+        }
+    return {}
+
+
+def _annotate_buckets(
+    buckets: list[dict], catalog: dict[str, str], period_label: str
+) -> list[dict]:
+    max_hours = max((item["seconds"] for item in buckets), default=0)
+    max_sessions = max((item["sessionsCount"] for item in buckets), default=0)
+    max_days = max((item["daysPlayed"] for item in buckets), default=0)
+    for item in buckets:
+        item["topHours"] = max_hours > 0 and item["seconds"] == max_hours
+        item["topSessions"] = max_sessions > 1 and item["sessionsCount"] == max_sessions
+        item["topDays"] = max_days > 1 and item["daysPlayed"] == max_days
+        item["banner"] = _bucket_banner(item, catalog, period_label)
+    return buckets
+
+
 def _months(
     year_sessions: list[dict],
     year: int,
     month_count: int,
-    today: date,
     titles: dict[str, str],
     colors: dict[str, str],
     catalog: dict[str, str],
     covers: dict[str, str] | None = None,
-) -> list[dict]:
+) -> tuple[list[dict], list[list[dict]]]:
     covers = covers or {}
     months: list[dict] = []
+    bucket_sessions: list[list[dict]] = []
     for month in range(1, month_count + 1):
         name = _month_name(catalog, month)
         days_in_month = calendar.monthrange(year, month)[1]
@@ -240,86 +406,175 @@ def _months(
             for item in year_sessions
             if item["date"].month == month
         ]
+        dates = [date(year, month, day) for day in range(1, days_in_month + 1)]
         daily = [0] * days_in_month
         for session in current:
             daily[session["date"].day - 1] += session["seconds"]
 
-        best_seconds = max(daily) if daily else 0
-        best_index = daily.index(best_seconds) if best_seconds else -1
-        best_date = date(year, month, best_index + 1) if best_index >= 0 else None
-        best_timestamp = (
-            int(datetime(best_date.year, best_date.month, best_date.day).timestamp())
-            if best_date is not None
-            else 0
-        )
-        total = sum(daily)
-        played_days = len({item["date"] for item in current})
-        session_count = len(current)
-        top_games = _top_games(current, titles, colors, covers)
-        most_played = top_games[0] if top_games else {}
-
         months.append(
-            {
-                "monthIndex": month - 1,
-                "number": f"{month:02d}",
-                "name": name,
-                "short": _short_month(name),
-                "hoursText": _duration(total),
-                "seconds": total,
-                "daysPlayed": played_days,
-                "bestDayText": _duration(best_seconds) if best_seconds else "—",
-                "bestDayTimestamp": best_timestamp,
-                "sessionsCount": session_count,
-                "sessionsText": catalog.get("1 session", "1 session")
-                if session_count == 1
-                else _fill(catalog.get("%1 sessions", "%1 sessions"), session_count),
-                "topGames": top_games,
-                "mostPlayed": most_played,
-                "mostPlayedCover": most_played.get("cover", ""),
-                "mostPlayedName": most_played.get("name", ""),
-                "mostPlayedHours": most_played.get("hoursText", ""),
-                "daily": daily,
-                "maxDaily": max(1, best_seconds),
-            }
+            _bucket_payload(
+                current,
+                dates,
+                daily,
+                number=f"{month:02d}",
+                name=name,
+                short=_short_month(name),
+                range_text="",
+                river_label=_short_month(name),
+                kind="month",
+                month_index=month - 1,
+                catalog=catalog,
+                titles=titles,
+                colors=colors,
+                covers=covers,
+            )
         )
+        bucket_sessions.append(current)
 
-    max_hours = max((item["seconds"] for item in months), default=0)
-    max_sessions = max((item["sessionsCount"] for item in months), default=0)
-    max_days = max((item["daysPlayed"] for item in months), default=0)
-    for item in months:
-        item["topHours"] = max_hours > 0 and item["seconds"] == max_hours
-        item["topSessions"] = (
-            max_sessions > 0 and item["sessionsCount"] == max_sessions
+    _annotate_buckets(months, catalog, str(year))
+    return months, bucket_sessions
+
+
+def _day_buckets(
+    period_sessions: list[dict],
+    start: date,
+    end: date,
+    catalog: dict[str, str],
+    titles: dict[str, str],
+    colors: dict[str, str],
+    covers: dict[str, str],
+    period_label: str,
+) -> tuple[list[dict], list[list[dict]]]:
+    buckets: list[dict] = []
+    bucket_sessions: list[list[dict]] = []
+    day = start
+    while day <= end:
+        current = [item for item in period_sessions if item["date"] == day]
+        total = sum(item["seconds"] for item in current)
+        weekday = _weekday_name(catalog, day)
+        short = _short_weekday(weekday)
+        buckets.append(
+            _bucket_payload(
+                current,
+                [day],
+                [total],
+                number=f"{day.day:02d}",
+                name=weekday,
+                short=short,
+                range_text=f"{day.day:02d}/{day.month:02d}",
+                river_label=f"{short} {day.day}",
+                kind="day",
+                month_index=day.month - 1,
+                catalog=catalog,
+                titles=titles,
+                colors=colors,
+                covers=covers,
+            )
         )
-        item["topDays"] = max_days > 0 and item["daysPlayed"] == max_days
-    return months
+        bucket_sessions.append(current)
+        day += timedelta(days=1)
+
+    _annotate_buckets(buckets, catalog, period_label)
+    return buckets, bucket_sessions
+
+
+def _week_buckets(
+    period_sessions: list[dict],
+    start: date,
+    end: date,
+    catalog: dict[str, str],
+    titles: dict[str, str],
+    colors: dict[str, str],
+    covers: dict[str, str],
+    period_label: str,
+) -> tuple[list[dict], list[list[dict]]]:
+    buckets: list[dict] = []
+    bucket_sessions: list[list[dict]] = []
+    month_short = _short_month(_month_name(catalog, start.month))
+    cursor = start
+    index = 1
+    while cursor <= end:
+        bucket_end = min(end, cursor + timedelta(days=6 - cursor.weekday()))
+        dates: list[date] = []
+        day = cursor
+        while day <= bucket_end:
+            dates.append(day)
+            day += timedelta(days=1)
+
+        current = [
+            item
+            for item in period_sessions
+            if cursor <= item["date"] <= bucket_end
+        ]
+        daily = [0] * len(dates)
+        for session in current:
+            daily[(session["date"] - cursor).days] += session["seconds"]
+
+        if len(dates) == 1:
+            label = f"{dates[0].day} {month_short}"
+        else:
+            label = f"{dates[0].day}–{dates[-1].day} {month_short}"
+        buckets.append(
+            _bucket_payload(
+                current,
+                dates,
+                daily,
+                number=f"W{index}",
+                name=label,
+                short=f"W{index}",
+                range_text=label,
+                river_label=f"W{index}",
+                kind="week",
+                month_index=start.month - 1,
+                catalog=catalog,
+                titles=titles,
+                colors=colors,
+                covers=covers,
+            )
+        )
+        bucket_sessions.append(current)
+        cursor = bucket_end + timedelta(days=1)
+        index += 1
+
+    _annotate_buckets(buckets, catalog, period_label)
+    return buckets, bucket_sessions
 
 
 def _river(
-    year_sessions: list[dict],
-    year_totals: dict[str, int],
+    bucket_sessions: list[list[dict]],
+    labels: list[str],
     titles: dict[str, str],
     colors: dict[str, str],
-    month_count: int,
     catalog: dict[str, str],
 ) -> dict:
-    months = [
-        _short_month(_month_name(catalog, month))
-        for month in range(1, month_count + 1)
-    ]
-    if not year_totals:
-        return {"months": months, "layers": []}
+    labels = list(labels)
+    if not any(bucket_sessions):
+        return {"labels": labels, "months": labels, "layers": []}
 
-    ordered = sorted(year_totals.items(), key=lambda item: (-item[1], item[0]))
+    totals: dict[str, int] = {}
+    for bucket in bucket_sessions:
+        for session in bucket:
+            totals[session["game_id"]] = (
+                totals.get(session["game_id"], 0) + session["seconds"]
+            )
+    if not totals:
+        return {"labels": labels, "months": labels, "layers": []}
+
+    ordered = sorted(totals.items(), key=lambda item: (-item[1], item[0]))
     top = ordered[:4]
     used = {game_id for game_id, _seconds in top}
     layers: list[dict] = []
 
     for game_id, total in top:
-        values = [0] * month_count
-        for session in year_sessions:
-            if session["game_id"] == game_id:
-                values[session["date"].month - 1] += session["seconds"]
+        values = []
+        for bucket in bucket_sessions:
+            values.append(
+                sum(
+                    session["seconds"]
+                    for session in bucket
+                    if session["game_id"] == game_id
+                )
+            )
         layers.append(
             {
                 "name": titles.get(game_id, "Unknown game"),
@@ -329,13 +584,15 @@ def _river(
             }
         )
 
-    other_values = [0] * month_count
+    other_values = []
     other_total = 0
-    for session in year_sessions:
-        if session["game_id"] in used:
-            continue
-        other_values[session["date"].month - 1] += session["seconds"]
-        other_total += session["seconds"]
+    for bucket in bucket_sessions:
+        value = 0
+        for session in bucket:
+            if session["game_id"] not in used:
+                value += session["seconds"]
+                other_total += session["seconds"]
+        other_values.append(value)
     if other_total:
         layers.append(
             {
@@ -346,7 +603,7 @@ def _river(
             }
         )
 
-    return {"months": months, "layers": layers}
+    return {"labels": labels, "months": labels, "layers": layers}
 
 
 def build(
@@ -452,12 +709,48 @@ def build(
     month_count = today.month if year == today.year else 12
     if year > today.year:
         month_count = 0
-    months = _months(
-        year_sessions, year, month_count, today, titles, colors, catalog, covers
+    months, month_sessions = _months(
+        year_sessions, year, month_count, titles, colors, catalog, covers
     )
+
+    if period == "week":
+        buckets, bucket_sessions = _day_buckets(
+            period_sessions,
+            start,
+            end,
+            catalog,
+            titles,
+            colors,
+            covers or {},
+            period_label,
+        )
+        buckets_kind = "day"
+    elif period == "month":
+        buckets, bucket_sessions = _week_buckets(
+            period_sessions,
+            start,
+            end,
+            catalog,
+            titles,
+            colors,
+            covers or {},
+            period_label,
+        )
+        buckets_kind = "week"
+    else:
+        buckets = months
+        bucket_sessions = month_sessions
+        buckets_kind = "month"
+
     river = _river(
-        year_sessions, year_totals, titles, colors, month_count, catalog
+        bucket_sessions,
+        [item.get("riverLabel") or item.get("short", "") for item in buckets],
+        titles,
+        colors,
+        catalog,
     )
+    period_top = _top_games(period_sessions, titles, colors, covers, limit=1)
+    top_game = period_top[0] if period_top else {}
 
     return {
         "period": period,
@@ -476,5 +769,8 @@ def build(
         "sessionsCount": session_count,
         "hasData": session_count > 0,
         "months": months,
+        "buckets": buckets,
+        "bucketsKind": buckets_kind,
+        "topGame": top_game,
         "river": river,
     }

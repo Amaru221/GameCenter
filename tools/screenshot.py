@@ -86,10 +86,11 @@ def main() -> int:
             (4, 6, 20, 1800),
             (5, 8, 14, 9000),
             (0, 9, 2, 12600),
-            # October: most hours (13h).
+            # October: most hours (15h) and an "Other games" row.
             (0, 10, 25, 21600),
             (1, 10, 25, 10800),
             (2, 10, 26, 14400),
+            (3, 10, 26, 7200),
         )
         for game_index, month, day, seconds in rows:
             stamp = int(datetime(year, month, day, 19, 0).timestamp())
@@ -185,7 +186,11 @@ def main() -> int:
     elif os.environ.get("GC_SESSION"):
         name = "screenshot-session.png"
     elif os.environ.get("GC_STATS"):
-        name = "screenshot-stats-highlights.png"
+        name = (
+            "screenshot-stats-"
+            + (os.environ.get("GC_STATS_PERIOD", "") or "highlights")
+            + ".png"
+        )
     elif os.environ.get("GC_UPDATE_PROGRESS"):
         name = "screenshot-update-progress.png"
     elif os.environ.get("GC_UPDATE_DIALOG"):
@@ -251,7 +256,44 @@ def main() -> int:
         QTimer.singleShot(1200, lambda: window.setProperty("settingsOpen", True))
 
     if os.environ.get("GC_STATS"):
-        QTimer.singleShot(1200, lambda: window.setProperty("currentView", "stats"))
+        def open_stats():
+            window.setProperty("currentView", "stats")
+            period = os.environ.get("GC_STATS_PERIOD", "")
+            if period:
+                from PySide6.QtCore import QMetaObject, QObject
+
+                def find(item, name):
+                    if item.objectName() == name:
+                        return item
+                    for child in item.childItems():
+                        hit = find(child, name)
+                        if hit is not None:
+                            return hit
+                    return None
+
+                stats = find(window.contentItem(), "statsView")
+                if stats is not None:
+                    stats.setProperty("period", period)
+                    QMetaObject.invokeMethod(stats, "refresh")
+            scroll = int(os.environ.get("GC_STATS_SCROLL", "0") or 0)
+            if scroll:
+                def scroll_page():
+                    def find(item, name):
+                        if item.objectName() == name:
+                            return item
+                        for child in item.childItems():
+                            hit = find(child, name)
+                            if hit is not None:
+                                return hit
+                        return None
+
+                    page = find(window.contentItem(), "statsPage")
+                    if page is not None:
+                        page.setProperty("contentY", scroll)
+
+                QTimer.singleShot(400, scroll_page)
+
+        QTimer.singleShot(1200, open_stats)
 
     if os.environ.get("GC_UPDATE_DIALOG"):
         QTimer.singleShot(1200, lambda: window.setProperty("updateOpen", True))

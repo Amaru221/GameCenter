@@ -612,6 +612,7 @@ def test_qml_stats_cards_show_cover_and_highlights(app, model) -> None:
 
     game = model._all[0]
     library_model.playtime.record_session(game, int(time.time()), 600)
+    library_model.playtime.record_session(game, int(time.time()) - 86400, 900)
 
     engine = create_engine(model)
     root = engine.rootObjects()[0]
@@ -619,6 +620,18 @@ def test_qml_stats_cards_show_cover_and_highlights(app, model) -> None:
     root.show()
     root.setProperty("currentView", "stats")
     app.processEvents()
+
+    stats = root.findChild(QObject, "statsView")
+    assert stats is not None
+    data = stats.property("statsData")
+    if hasattr(data, "toVariant"):
+        data = data.toVariant()
+    assert data["bucketsKind"] == "month"
+    assert data["topGame"]["name"] == "Alpha Quest"
+
+    hero = root.findChild(QObject, "topGamePanel")
+    assert hero is not None
+    assert hero.property("visible") is True
 
     carousel = root.findChild(QObject, "monthCarousel")
     assert carousel is not None
@@ -633,18 +646,57 @@ def test_qml_stats_cards_show_cover_and_highlights(app, model) -> None:
 
     content = carousel.property("contentItem")
     items = list(walk(content))
-    badges = [
-        item for item in items
-        if item.objectName() == "highlightBadge"
-        and item.property("visible") is True
-    ]
-    covers = [
-        item for item in items
-        if item.objectName() == "monthPlayedCover"
-        and item.property("visible") is True
-    ]
-    assert badges
-    assert covers
+    names = {
+        item.objectName()
+        for item in items
+        if item.property("visible") is True
+    }
+    assert "topHoursPill" in names
+    assert "topSessionsPill" in names
+    assert "topDaysPill" in names
+    assert "cardBanner" in names
+    assert "monthPlayedCover" in names
+
+
+def test_qml_stats_period_changes_bucket_granularity(app, model) -> None:
+    from PySide6.QtCore import QMetaObject, QObject
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.setProperty("currentView", "stats")
+    app.processEvents()
+
+    stats = root.findChild(QObject, "statsView")
+    assert stats is not None
+
+    stats.setProperty("period", "week")
+    QMetaObject.invokeMethod(stats, "refresh")
+    app.processEvents()
+    data = stats.property("statsData")
+    if hasattr(data, "toVariant"):
+        data = data.toVariant()
+    assert data["bucketsKind"] == "day"
+    assert len(data["buckets"]) == 7
+
+    stats.setProperty("period", "month")
+    stats.setProperty("selectedMonth", -1)
+    QMetaObject.invokeMethod(stats, "refresh")
+    app.processEvents()
+    data = stats.property("statsData")
+    if hasattr(data, "toVariant"):
+        data = data.toVariant()
+    assert data["bucketsKind"] == "week"
+    assert all(item["kind"] == "week" for item in data["buckets"])
+
+    stats.setProperty("period", "year")
+    QMetaObject.invokeMethod(stats, "refresh")
+    app.processEvents()
+    data = stats.property("statsData")
+    if hasattr(data, "toVariant"):
+        data = data.toVariant()
+    assert data["bucketsKind"] == "month"
 
 
 def test_qml_detail_updates_when_the_description_arrives(app, model, monkeypatch) -> None:

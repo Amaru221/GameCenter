@@ -45,17 +45,24 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   escritura. Stats es una ventana dedicada: no muestra el dock inferior
   (Ready, reloj ni cartucho insertado) ni el aviso de actualización, y usa todo
   el alto de la ventana.
-- La sección **Month by Month** incluye un gráfico de áreas apiladas (“a river”)
-  con los juegos principales y tarjetas mensuales deslizables, **del mes actual
-  al más antiguo** (octubre primero, enero al final), con horas, mejores
-  juegos, barras de progreso y actividad diaria, y un botón **Open month** que
-  enfoca ese mes en el resumen. El botón **Watch** recorre los meses
-  automáticamente.
-  - Cada tarjeta muestra la **carátula del juego más jugado del mes** junto a su
-    nombre (con tooltip de título y horas).
-  - Los meses líderes del año lucen **insignias** destacadas: **Most hours**
-    (más horas), **Most sessions** (más sesiones) y **Most days** (más días
-    jugados). Si hay empate, la insignia aparece en todos los meses empatados.
+- La sección de desglose adapta su granularidad al filtro: **Week → días**,
+  **Month → semanas** y **Year → meses** (All time conserva el desglose mensual
+  del año seleccionado). Incluye un gráfico de áreas apiladas (“a river”) con
+  los juegos principales y tarjetas deslizables, **del periodo actual al más
+  antiguo**. El botón **Watch** recorre las tarjetas automáticamente y **Open
+  month** salta de un mes del año a su vista semanal.
+  - El banner superior muestra el **juego con más horas del periodo** (con
+    carátula y horas) además del tiempo total.
+  - Cada tarjeta muestra la **carátula del juego más jugado** junto a su nombre
+    (con tooltip de título y horas).
+  - La lista de juegos es un **top 3** con numeración, carátula, horas
+    detalladas en negrita y barra de proporción; el resto se agrupa en
+    **Other games** con las horas resumidas y sin barra.
+  - Las métricas líderes del periodo muestran un **rombo con su número en el
+    mismo contenedor** (horas, días jugados y sesiones), sin insignias sueltas
+    en la parte superior.
+  - Cada tarjeta tiene un **banner único** con el dato más destacado:
+    *Busiest month/week/day*, *Longest streak* o *Best day*.
 - Las estadísticas se calculan con las sesiones registradas por GameCenter; el
   tiempo anterior sin fecha no se inventa y sigue disponible como total
   histórico en la ficha de cada juego.

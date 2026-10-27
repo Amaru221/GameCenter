@@ -1,5 +1,88 @@
 # WORKFLOW STATE — Capturas, inserción por capas y destacados de Stats
 
+## Refinamiento 0.17.0 — Estadísticas por periodo y tarjetas enriquecidas
+
+### Descripción funcional
+
+- La granularidad del desglose sigue al filtro:
+  - **Week** → una tarjeta por día (7 días).
+  - **Month** → una tarjeta por semana del mes.
+  - **Year** → una tarjeta por mes (comportamiento anterior).
+  - **All time** conserva el desglose mensual del año seleccionado y el total
+    histórico (decisión tomada para no introducir un cuarto tipo de tarjeta).
+- El banner superior de tiempo jugado muestra el **juego con más horas del
+  periodo** (carátula, nombre, horas y etiqueta del periodo).
+- Las tarjetas muestran:
+  - carátula del juego más jugado junto al nombre,
+  - **top 3** numerado con carátula, horas detalladas en negrita y barra,
+  - fila **Other games** con las horas del resto, sin barra,
+  - **rombo + número dentro del mismo contenedor** para las métricas líderes
+    (horas, días jugados y sesiones), sin insignias sueltas arriba,
+  - un **banner único** por tarjeta: *Busiest month/week/day*, *Longest streak*
+    o *Best day*,
+  - etiquetas de métricas y gráfico con mejor tipografía y contraste.
+- Los títulos del gráfico y del banner de repaso se adaptan al periodo.
+- `Other games`, `Most days played`, `Longest streak`, días de la semana y
+  títulos por periodo se traducen en ES/FR/DE/IT/PT.
+
+### Decisiones de arquitectura
+
+- `stats.build()` construye `buckets` genéricos (`kind` = `month`, `week` o
+  `day`) con el mismo payload que antes usaban los meses. `months` se conserva
+  como alias compatible con el desglose anual.
+- `_day_buckets()` recorre los 7 días del periodo semanal; `_week_buckets()`
+  parte el mes en semanas de lunes a domingo; `_months()` mantiene el desglose
+  mensual. Los tres usan `_bucket_payload()`.
+- `_annotate_buckets()` calcula los máximos del periodo y genera el `banner`
+  único. `topSessions`/`topDays` solo se marcan si el máximo es mayor que 1
+  para evitar destacados triviales en tarjetas diarias.
+- `_river()` ahora recibe los buckets del periodo, no solo los meses, y expone
+  `labels` además de `months`.
+- `LibraryModel.stats()` sigue pasando el mapa de carátulas.
+- `StatsView` usa `statsData.buckets`, `bucketsKind`, `topGame` y
+  `river.labels`; `months` queda como alias para el carrusel anual.
+
+### Contrato de API (adiciones)
+
+| Elemento | Tipo | Descripción |
+| --- | --- | --- |
+| `stats.buckets` | `list` | Tarjetas del periodo actual (mes, semana o día). |
+| `stats.bucketsKind` | `string` | `month`, `week` o `day`. |
+| `stats.buckets[].kind` | `string` | Tipo de la tarjeta. |
+| `stats.buckets[].rangeText` | `string` | Rango legible (`26–27 Oct`, `26/10`…). |
+| `stats.buckets[].topGames` | `list` | Como máximo 3 juegos, con carátula y horas detalladas. |
+| `stats.buckets[].otherHoursText` | `string` | Tiempo agrupado en Other games (sin barra). |
+| `stats.buckets[].hasOtherGames` | `bool` | Hay juegos fuera del top 3. |
+| `stats.buckets[].topHours/topSessions/topDays` | `bool` | Líder del periodo (sesiones/días solo si el máximo > 1). |
+| `stats.buckets[].banner` | `object` | `{label, value, detail, tint}` del destacado único. |
+| `stats.buckets[].streak` | `int` | Racha dentro de la tarjeta. |
+| `stats.topGame` | `object` | Juego con más horas del periodo (incluye `cover`). |
+| `stats.river.labels` | `list` | Etiquetas de los buckets del periodo. |
+| `StatsView.bucketsKind` | `string` | Tipo de tarjeta activo. |
+| `StatsView.topGame` | `object` | Atajo a `statsData.topGame`. |
+| `StatsView.reviewText()` | función | Texto del banner de repaso por periodo. |
+| `StatsView.riverSubtitle()` | función | Subtítulo del gráfico por periodo. |
+
+### Checklist
+
+- [x] Backend: buckets de días, semanas y meses; top 3 + Other games + banners.
+- [x] Backend: `topGame` del periodo y `river.labels`.
+- [x] Traducciones nuevas y tests de periodos, top 3, Other games y banners.
+- [x] QML: tarjetas con rombo+número, top 3 con carátula, Other games y banner.
+- [x] QML: hero con juego más jugado y chips/labels restilizados.
+- [x] QML: títulos y banner de repaso según periodo.
+- [x] Tests QML de buckets por periodo y tarjetas enriquecidas.
+- [x] README/CHANGELOG/WORKFLOW actualizados.
+- [x] Verificación visual Week/Month/Year con capturas 1180×1400.
+
+### Verificación
+
+- [x] `python -m pytest -q` → **155 passed**.
+- [x] Capturas offscreen de Week (días), Month (semanas) y Year (meses) con
+  tarjetas completas, top 3, Other games y banners.
+- [x] Comprobado que `topSessions`/`topDays` no destacan valores triviales de 1.
+- [x] Comprobado el hero con el top game del periodo.
+
 ## Feature 0.17.0 — Capturas de juego, cartucho tras el dock y meses destacados
 
 ### Descripción funcional

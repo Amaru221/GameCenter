@@ -164,3 +164,70 @@ def test_empty_year(library) -> None:
     assert data["hasData"] is False
     assert data["months"]
     assert data["river"]["layers"] == []
+
+
+def test_week_period_uses_day_buckets(library, sessions) -> None:
+    data = stats.build(library, period="week", year=2026, now=NOW)
+
+    assert data["bucketsKind"] == "day"
+    assert len(data["buckets"]) == 7
+    assert all(item["kind"] == "day" for item in data["buckets"])
+    assert data["buckets"][-1]["number"] == "26"
+    assert data["buckets"][-1]["sessionsCount"] == 2
+    assert data["buckets"][-1]["hoursText"] == "2h 30m"
+    assert data["buckets"][-1]["topDays"] is False
+    assert data["topGame"]["name"] == "Alpha"
+    assert len(data["river"]["labels"]) == 7
+    assert sum(item["seconds"] for item in data["buckets"]) == data["seconds"]
+
+
+def test_month_period_uses_week_buckets(library, sessions) -> None:
+    data = stats.build(
+        library, period="month", year=2026, month=9, now=NOW
+    )
+
+    assert data["bucketsKind"] == "week"
+    assert data["buckets"]
+    assert all(item["kind"] == "week" for item in data["buckets"])
+    assert data["buckets"][0]["number"] == "W1"
+    assert sum(item["seconds"] for item in data["buckets"]) == data["seconds"]
+    assert len(data["river"]["labels"]) == len(data["buckets"])
+
+
+def test_top_three_and_other_games(monkeypatch, tmp_path) -> None:
+    games = [
+        Game(id=f"steam:{index}", title=f"Game {index}", source="steam")
+        for index in range(5)
+    ]
+    stamp = _ts(2026, 10, 20)
+    for index, game in enumerate(games):
+        playtime.record_session(game, stamp, 3600 * (index + 1))
+
+    covers = {game.id: f"image://cover/{index}" for index, game in enumerate(games)}
+    data = stats.build(
+        games, period="year", year=2026, now=NOW, covers=covers
+    )
+    october = data["buckets"][9]
+
+    assert [item["name"] for item in october["topGames"]] == [
+        "Game 4",
+        "Game 3",
+        "Game 2",
+    ]
+    assert october["hasOtherGames"] is True
+    assert october["otherHoursText"] == "3h 00m"
+    assert october["topGames"][0]["cover"] == "image://cover/4"
+
+
+def test_card_banners_highlight_one_unique_stat(library, sessions) -> None:
+    data = stats.build(library, period="year", year=2026, now=NOW)
+    october = data["buckets"][9]
+    january = data["buckets"][0]
+    february = data["buckets"][1]
+
+    assert october["banner"]["label"] == "Busiest month"
+    assert october["banner"]["value"] == october["hoursText"]
+    assert october["banner"]["detail"] == "2026"
+    assert january["banner"]["label"] == "Longest streak"
+    assert january["banner"]["value"] == "2 days"
+    assert february["banner"]["label"] == "Best day"

@@ -15,11 +15,19 @@
   slides **behind the opaque front face of the dock** and **in front of a
   darker insertion plate**, instead of being painted on top of the banner. The
   cartridge already resting in the slot follows the same stacking order.
-- **Statistics month cards**:
-  - Show the **cover of each month's most played game** next to the month name,
-    with a tooltip for its title and hours.
-  - The year's leaders get polished highlight badges: **Most hours**, **Most
-    sessions** and **Most days**. Ties show the badge on every tied month.
+- **Statistics** now adapt their breakdown to the selected period:
+  **Week → days**, **Month → weeks**, **Year → months**. All time keeps the
+  monthly breakdown of the selected year.
+  - The hero panel also shows the **game with the most hours** in that period,
+    with cover, name and hours.
+  - Month/week/day cards show the **cover of their most played game**, a
+    **numbered top 3** (cover, detailed bold hours and progress bar) and an
+    **Other games** row with the remaining time and no bar.
+  - Metric leaders use a **diamond + number inside the value container**
+    (hours, days played, sessions) instead of loose badges at the top.
+  - Every card has one **unique highlight banner**: *Busiest month/week/day*,
+    *Longest streak* or *Best day*.
+  - Hero chips, metric labels and chart titles were restyled for readability.
 - New ES/FR/DE/IT/PT strings for the screenshot settings and month badges.
 - `tools/screenshot.py` can now render deterministic Stats and insertion
   previews (`GC_STATS`, configurable `GC_WIDTH`/`GC_HEIGHT`).
