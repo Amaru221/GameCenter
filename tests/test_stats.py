@@ -231,3 +231,51 @@ def test_card_banners_highlight_one_unique_stat(library, sessions) -> None:
     assert january["banner"]["label"] == "Longest streak"
     assert january["banner"]["value"] == "2 days"
     assert february["banner"]["label"] == "Best day"
+
+
+def test_year_review_payload(library, sessions) -> None:
+    data = stats.year_review(library, 2026, now=NOW)
+
+    assert data["year"] == 2026
+    assert data["hasData"] is True
+    assert data["sessionsCount"] == 5
+    assert data["totalGames"] == 2
+    assert data["activeMonthCount"] == 3
+    assert data["topGame"]["name"] == "Alpha"
+    assert data["topGame"]["sessionsCount"] == 4
+    assert data["topGame"]["percentOfYear"] == 83
+    assert data["bestDay"]["dateText"] == "26/10"
+    assert data["bestDay"]["dayNumber"] == 26
+    assert data["bestDay"]["topGame"]["name"] == "Alpha"
+    assert data["longestStreak"]["days"] == 2
+    assert data["longestStreak"]["rangeText"] == "05/01 - 06/01"
+    assert data["busiestMonth"]["name"] == "October"
+    assert data["mostSessionsMonth"]["name"] == "October"
+    assert data["mostDaysMonth"]["name"] == "January"
+    assert data["averageSessionText"] == "1h 12m"
+    assert len(data["monthLabels"]) == 10
+    assert len(data["monthSessions"]) == 10
+    assert [item["name"] for item in data["topGames"]] == ["Alpha", "Beta"]
+    assert [slide["type"] for slide in data["slides"]] == [
+        "intro",
+        "month",
+        "month",
+        "month",
+        "topGame",
+        "sessions",
+        "streak",
+        "bestDay",
+        "busiest",
+        "outro",
+    ]
+
+
+def test_year_review_without_data(library) -> None:
+    data = stats.year_review(library, 2026, now=NOW)
+
+    assert data["hasData"] is False
+    assert data["activeMonths"] == []
+    assert data["topGame"] == {}
+    assert data["bestDay"] == {}
+    assert data["longestStreak"] == {}
+    assert data["slides"] == []

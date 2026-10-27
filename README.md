@@ -3,7 +3,7 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.17.0** - Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
+> Estado: **v0.18.0** - Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 
@@ -63,6 +63,11 @@ la muestra como una estantería y lanza los juegos con un doble clic.
     en la parte superior.
   - Cada tarjeta tiene un **banner único** con el dato más destacado:
     *Busiest month/week/day*, *Longest streak* o *Best day*.
+  - El botón **Review year** abre una **presentación inmersiva estilo
+    Instagram Stories** a pantalla completa: barras de progreso segmentadas,
+    avance automático, pausa, navegación con teclado/mando/ratón y diapositivas
+    animadas para el resumen anual, cada mes activo, el juego con más horas,
+    las sesiones, la racha, el mejor día y el mes más ajetreado.
 - Las estadísticas se calculan con las sesiones registradas por GameCenter; el
   tiempo anterior sin fecha no se inventa y sigue disponible como total
   histórico en la ficha de cada juego.
@@ -257,7 +262,7 @@ gamecenter/
     library_model.py    modelo, filtros, favoritos, orden y acciones
     artwork.py          carátulas del CDN de Steam con caché
     covers.py           portadas, fondo y logo generados con QPainter
-    qml/                Main, TopBar, Toolbar, StatsView, BigPicture, Cartridge, GameDetail, Dock
+    qml/                Main, TopBar, Toolbar, StatsView, YearReview, BigPicture, Cartridge, GameDetail, Dock
     fonts/              Sora y Chakra Petch (SIL OFL 1.1)
 tools/screenshot.py     render de la ventana a PNG (desarrollo)
 packaging/              PyInstaller, Inno Setup, icono y build de Windows

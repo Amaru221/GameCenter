@@ -11,7 +11,7 @@ Rectangle {
     property string period: "year"
     property int selectedYear: new Date().getFullYear()
     property int selectedMonth: -1
-    property bool reviewing: false
+    signal reviewRequested(int year)
 
     readonly property bool narrow: width < 1080
     // Newest bucket first: months, weeks or days depending on the period.
@@ -77,14 +77,6 @@ Rectangle {
         focusStart();
     }
 
-    function toggleReview() {
-        reviewing = !reviewing;
-        if (reviewing && carousel.count > 0) {
-            carousel.currentIndex = 0;
-            carousel.positionViewAtIndex(0, ListView.Beginning);
-        }
-    }
-
     function formatDay(timestamp) {
         if (!timestamp) {
             return "";
@@ -120,17 +112,7 @@ Rectangle {
     }
 
     function reviewText() {
-        var label = statsData.periodLabel || selectedYear;
-        if (period === "year") {
-            return Tr.strings["Your %1 so far, in review"].arg(label);
-        }
-        if (period === "month") {
-            return Tr.strings["%1 in review"].arg(label);
-        }
-        if (period === "week") {
-            return Tr.strings["This week in review"];
-        }
-        return Tr.strings["All time in review"];
+        return Tr.strings["Your %1 in review"].arg(selectedYear);
     }
 
     function riverSubtitle() {
@@ -145,8 +127,6 @@ Rectangle {
         if (visible) {
             refresh();
             focusStart();
-        } else {
-            reviewing = false;
         }
     }
 
@@ -784,22 +764,6 @@ Rectangle {
         }
     }
 
-    Timer {
-        id: reviewTimer
-        interval: 2800
-        repeat: true
-        running: root.reviewing && root.months.length > 1
-        onTriggered: {
-            if (carousel.count > 0) {
-                carousel.currentIndex = (carousel.currentIndex + 1)
-                                        % carousel.count;
-                carousel.positionViewAtIndex(
-                    carousel.currentIndex, ListView.Center
-                );
-            }
-        }
-    }
-
     Connections {
         target: Library
         function onPlaytimeChanged() {
@@ -976,7 +940,7 @@ Rectangle {
             }
 
             Rectangle {
-                width: 92
+                width: 112
                 height: 30
                 radius: 15
                 color: watchArea.containsMouse ? Qt.lighter("#4cc9f0", 1.08) : "#4cc9f0"
@@ -989,30 +953,23 @@ Rectangle {
                         width: 12
                         height: 12
                         anchors.verticalCenter: parent.verticalCenter
-                        property bool playing: root.reviewing
-                        onPlayingChanged: requestPaint()
 
                         onPaint: {
                             var ctx = getContext("2d");
                             ctx.reset();
                             ctx.fillStyle = "#08131a";
-                            if (root.reviewing) {
-                                ctx.fillRect(1, 1, 3, 10);
-                                ctx.fillRect(8, 1, 3, 10);
-                            } else {
-                                ctx.beginPath();
-                                ctx.moveTo(1, 0);
-                                ctx.lineTo(12, 6);
-                                ctx.lineTo(1, 12);
-                                ctx.closePath();
-                                ctx.fill();
-                            }
+                            ctx.beginPath();
+                            ctx.moveTo(1, 0);
+                            ctx.lineTo(12, 6);
+                            ctx.lineTo(1, 12);
+                            ctx.closePath();
+                            ctx.fill();
                         }
                     }
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: Tr.strings["Watch"]
+                        text: Tr.strings["Review year"]
                         color: "#08131a"
                         font.family: "Sora"
                         font.pixelSize: 10
@@ -1025,7 +982,7 @@ Rectangle {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: root.toggleReview()
+                    onClicked: root.reviewRequested(root.selectedYear)
                 }
             }
         }

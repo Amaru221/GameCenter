@@ -59,7 +59,7 @@ def main() -> int:
             # Keep the insertion preview deterministic: no toast on launch.
             library_model.launch_game = lambda game: 4321
 
-    if demo and os.environ.get("GC_STATS"):
+    if demo and (os.environ.get("GC_STATS") or os.environ.get("GC_REVIEW")):
         # Deterministic history for the statistics preview.
         from datetime import datetime
 
@@ -191,6 +191,12 @@ def main() -> int:
             + (os.environ.get("GC_STATS_PERIOD", "") or "highlights")
             + ".png"
         )
+    elif os.environ.get("GC_REVIEW"):
+        name = (
+            "screenshot-review-"
+            + os.environ.get("GC_REVIEW_SLIDE", "0")
+            + ".png"
+        )
     elif os.environ.get("GC_UPDATE_PROGRESS"):
         name = "screenshot-update-progress.png"
     elif os.environ.get("GC_UPDATE_DIALOG"):
@@ -254,6 +260,40 @@ def main() -> int:
         )
     if os.environ.get("GC_SETTINGS"):
         QTimer.singleShot(1200, lambda: window.setProperty("settingsOpen", True))
+
+    if os.environ.get("GC_REVIEW"):
+        def open_review():
+            window.setProperty("currentView", "stats")
+
+            def show_review():
+                def find(item, name):
+                    if item.objectName() == name:
+                        return item
+                    for child in item.childItems():
+                        hit = find(child, name)
+                        if hit is not None:
+                            return hit
+                    return None
+
+                review = find(window.contentItem(), "yearReview")
+                year = int(os.environ.get("GC_REVIEW_YEAR", time.strftime("%Y")))
+                data = library.yearReview(year)
+                if review is None or not data.get("hasData"):
+                    return
+                review.setProperty("review", data)
+                review.setProperty("year", year)
+                review.setProperty("slides", data.get("slides", []))
+                review.setProperty(
+                    "currentIndex",
+                    int(os.environ.get("GC_REVIEW_SLIDE", "0")),
+                )
+                review.setProperty("opened", True)
+                review.setProperty("paused", True)
+                review.setProperty("progress", 0.35)
+
+            QTimer.singleShot(350, show_review)
+
+        QTimer.singleShot(1400, open_review)
 
     if os.environ.get("GC_STATS"):
         def open_stats():

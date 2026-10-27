@@ -177,6 +177,28 @@ def _longest_streak(days: set[date]) -> int:
     return best
 
 
+def _longest_streak_range(
+    days: set[date],
+) -> tuple[int, date | None, date | None]:
+    if not days:
+        return 0, None, None
+    ordered = sorted(days)
+    best = current = 1
+    best_start = best_end = ordered[0]
+    current_start = ordered[0]
+    for previous, current_day in zip(ordered, ordered[1:]):
+        if current_day - previous == timedelta(days=1):
+            current += 1
+        else:
+            current_start = current_day
+            current = 1
+        if current > best:
+            best = current
+            best_start = current_start
+            best_end = current_day
+    return best, best_start, best_end
+
+
 def _days_in_period(period: str, start: date, end: date, today: date) -> int:
     if period == "week":
         return 7
@@ -773,4 +795,192 @@ def build(
         "bucketsKind": buckets_kind,
         "topGame": top_game,
         "river": river,
+    }
+
+
+
+def year_review(
+    games: list[Game],
+    year: int,
+    language: str = "en",
+    covers: dict[str, str] | None = None,
+    now: float | None = None,
+) -> dict:
+    """A year recap ready for the story-style presentation."""
+    data = build(
+        games,
+        period="year",
+        year=year,
+        language=language,
+        now=now,
+        covers=covers,
+    )
+    catalog = _catalog(language)
+    covers = covers or {}
+    sessions = _all_sessions(games)
+    year_sessions = [item for item in sessions if item["date"].year == data["year"]]
+    titles = _game_titles(sessions, games)
+
+    totals: dict[str, int] = {}
+    for session in year_sessions:
+        totals[session["game_id"]] = (
+            totals.get(session["game_id"], 0) + session["seconds"]
+        )
+    ordered_ids = sorted(totals, key=lambda key: (-totals[key], key))
+    colors = {
+        game_id: PALETTE[index % len(PALETTE)]
+        for index, game_id in enumerate(ordered_ids)
+    }
+    for game in games:
+        colors.setdefault(game.id, _color_for(game.id))
+
+    top_game = dict(data.get("topGame") or {})
+    if top_game:
+        game_id = str(top_game.get("gameId") or "")
+        top_game["sessionsCount"] = sum(
+            1 for item in year_sessions if item["game_id"] == game_id
+        )
+        top_game["percentOfYear"] = (
+            int(round(top_game.get("seconds", 0) / data["seconds"] * 100))
+            if data["seconds"]
+            else 0
+        )
+
+    top_games = _top_games(year_sessions, titles, colors, covers, limit=3)
+
+    by_day: dict[date, int] = {}
+    for session in year_sessions:
+        by_day[session["date"]] = (
+            by_day.get(session["date"], 0) + session["seconds"]
+        )
+    best_day: dict = {}
+    if by_day:
+        best_date, best_seconds = max(
+            by_day.items(), key=lambda item: (item[1], item[0])
+        )
+        day_sessions = [
+            session for session in year_sessions if session["date"] == best_date
+        ]
+        day_top = _top_games(day_sessions, titles, colors, covers, limit=1)
+        best_day = {
+            "dateText": f"{best_date.day:02d}/{best_date.month:02d}",
+            "dayNumber": best_date.day,
+            "monthName": _month_name(catalog, best_date.month),
+            "monthShort": _short_month(_month_name(catalog, best_date.month)),
+            "hoursText": _duration_detail(best_seconds),
+            "seconds": best_seconds,
+            "sessionsCount": len(day_sessions),
+            "topGame": day_top[0] if day_top else {},
+        }
+
+    streak_days, streak_start, streak_end = _longest_streak_range(
+        {item["date"] for item in year_sessions}
+    )
+    longest_streak: dict = {}
+    if streak_days:
+        start_text = (
+            f"{streak_start.day:02d}/{streak_start.month:02d}"
+            if streak_start is not None
+            else ""
+        )
+        end_text = (
+            f"{streak_end.day:02d}/{streak_end.month:02d}"
+            if streak_end is not None
+            else ""
+        )
+        longest_streak = {
+            "days": streak_days,
+            "startText": start_text,
+            "endText": end_text,
+            "rangeText": (
+                f"{start_text} - {end_text}" if streak_days > 1 else start_text
+            ),
+        }
+
+    active_months = [
+        month for month in data["months"] if month["sessionsCount"] > 0
+    ]
+
+    def _pick(key: str) -> dict:
+        if not active_months:
+            return {}
+        return max(active_months, key=lambda month: (month[key], month["monthIndex"]))
+
+    busiest_month = _pick("seconds")
+    most_sessions_month = _pick("sessionsCount")
+    most_days_month = _pick("daysPlayed")
+
+    average_session = (
+        int(data["seconds"] / data["sessionsCount"])
+        if data["sessionsCount"]
+        else 0
+    )
+
+    top_accent = top_game.get("color") or PALETTE[0]
+    slides: list[dict] = []
+    if data["hasData"]:
+        slides.append({"type": "intro", "accent": top_accent})
+        for month in active_months:
+            most_played = month.get("mostPlayed") or {}
+            slides.append(
+                {
+                    "type": "month",
+                    "month": month,
+                    "accent": most_played.get("color") or top_accent,
+                }
+            )
+        if top_game:
+            slides.append(
+                {"type": "topGame", "game": top_game, "accent": top_accent}
+            )
+        if data["sessionsCount"]:
+            slides.append({"type": "sessions", "accent": "#a78bfa"})
+        if longest_streak.get("days", 0) > 1:
+            slides.append(
+                {
+                    "type": "streak",
+                    "streak": longest_streak,
+                    "accent": "#60a5fa",
+                }
+            )
+        if best_day:
+            slides.append(
+                {"type": "bestDay", "day": best_day, "accent": "#fb7185"}
+            )
+        if busiest_month:
+            slides.append(
+                {"type": "busiest", "month": busiest_month, "accent": "#facc15"}
+            )
+        slides.append({"type": "outro", "accent": top_accent})
+
+    return {
+        "year": data["year"],
+        "timeText": data["timeText"],
+        "seconds": data["seconds"],
+        "changeText": data["changeText"],
+        "daysText": data["daysText"],
+        "daysPlayed": data["daysPlayed"],
+        "daysTotal": data["daysTotal"],
+        "streak": data["streak"],
+        "streakText": data["streakText"],
+        "sessionsText": data["sessionsText"],
+        "sessionsCount": data["sessionsCount"],
+        "hasData": data["hasData"],
+        "months": data["months"],
+        "activeMonths": active_months,
+        "topGame": top_game,
+        "topGames": top_games,
+        "bestDay": best_day,
+        "longestStreak": longest_streak,
+        "busiestMonth": busiest_month,
+        "mostSessionsMonth": most_sessions_month,
+        "mostDaysMonth": most_days_month,
+        "totalGames": len(totals),
+        "activeMonthCount": len(active_months),
+        "averageSessionText": _duration_detail(average_session),
+        "monthLabels": [month["short"] for month in data["months"]],
+        "monthTotals": [month["seconds"] for month in data["months"]],
+        "monthSessions": [month["sessionsCount"] for month in data["months"]],
+        "monthDays": [month["daysPlayed"] for month in data["months"]],
+        "slides": slides,
     }

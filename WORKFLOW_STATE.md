@@ -1,5 +1,81 @@
 # WORKFLOW STATE — Capturas, inserción por capas y destacados de Stats
 
+## Feature 0.18.0 — Review anual estilo Instagram Stories
+
+### Descripción funcional
+
+- El botón **Review year** de Estadísticas abre una presentación **a pantalla
+  completa**, inmersiva y animada, en lugar de recorrer las tarjetas actuales.
+- La presentación incluye:
+  - apertura con el año, tiempo total, sesiones, días, juegos y juego más
+    jugado;
+  - una diapositiva por **mes activo** con horas, sesiones, días, mejor día,
+    racha, carátula del juego principal, top 3 y actividad diaria;
+  - diapositivas dedicadas a **most played game**, **sessions**,
+    **longest streak**, **best day** y **busiest month**;
+  - cierre con el resumen del año y “See you next year”.
+- Estilo stories: barras de progreso segmentadas, avance automático (7,2 s),
+  pausa/reanudación, cierre, navegación con ←/→/Espacio/Esc, mando
+  (D-pad/LB/RB/B/A) y tap en el tercio izquierdo/derecho.
+- Fondo con degradado por acento, orbes animados, watermark del año, tarjetas
+  de cristal, carátulas grandes, revelados escalonados y barras animadas.
+- El acento de cada diapositiva sale del color del juego/mes protagonista.
+
+### Decisiones de arquitectura
+
+- `stats.year_review()` reutiliza `build(period="year")` y añade:
+  `bestDay`, `longestStreak`, `busiestMonth`, `mostSessionsMonth`,
+  `mostDaysMonth`, `totalGames`, `activeMonths`, ritmo mensual y una lista
+  `slides` ya ordenada con su `type` y `accent`.
+- `Library.yearReview(year)` expone el payload por QML con las carátulas
+  actuales.
+- `YearReview.qml` gestiona la presentación, el temporizador, las barras y la
+  navegación; `YearReviewSlide.qml` renderiza cada tipo de diapositiva.
+- El overlay vive en `Main.qml` (z 32) para cubrir también la barra superior y
+  las tarjetas. Los atajos globales de `Main` se desactivan mientras está
+  abierto.
+- `StatsView` emite `reviewRequested(year)` y conserva `Review year` como
+  entrada; se elimina el antiguo `reviewTimer` que autoavanzaba el carrusel.
+
+### Contrato de API (adiciones)
+
+| Elemento | Tipo | Descripción |
+| --- | --- | --- |
+| `Library.yearReview(year)` | slot → `QVariantMap` | Payload completo del recap anual. |
+| `stats.year_review()` | función | Construye resumen, meses activos y slides. |
+| `review.slides` | `list` | Diapositivas ordenadas: `intro`, `month`, `topGame`, `sessions`, `streak`, `bestDay`, `busiest`, `outro`. |
+| `review.slides[].accent` | string | Color dominante de la diapositiva. |
+| `review.bestDay` | object | Fecha, horas, sesiones y juego principal del mejor día. |
+| `review.longestStreak` | object | Días, inicio, fin y rango de la mejor racha. |
+| `review.busiestMonth` | object | Mes con más horas. |
+| `review.averageSessionText` | string | Duración media por sesión. |
+| `review.monthSessions/monthTotals` | list | Ritmo mensual para las barras. |
+| `StatsView.reviewRequested(year)` | signal | Abre el recap desde el botón. |
+| `YearReview.open(data, year)` | función QML | Inicia la presentación. |
+| `YearReview.next/previous/close/togglePause` | funciones QML | Navegación. |
+| `YearReview.storyMs` | int | 7200 ms por diapositiva. |
+| `YearReview.currentSlide/currentIndex/progress/paused` | propiedades | Estado de la historia. |
+
+### Checklist
+
+- [x] Backend: `year_review`, slides, best day, streak, busiest month y ritmo.
+- [x] `LibraryModel.yearReview` y carátulas.
+- [x] `YearReview.qml`: progreso, timer, pausa, navegación, teclado y mando.
+- [x] `YearReviewSlide.qml`: intro, meses, top game, sesiones, racha, mejor día,
+      mes ajetreado y outro animados.
+- [x] `StatsView`: botón Review year, señal y eliminación del autoavance.
+- [x] `Main`: overlay a pantalla completa y atajos bloqueados.
+- [x] Traducciones ES/FR/DE/IT/PT.
+- [x] Tests backend y QML del payload, slides y navegación.
+- [x] README/CHANGELOG/WORKFLOW y verificación visual.
+
+### Verificación
+
+- [x] `python -m pytest -q` → **158 passed**.
+- [x] Capturas offscreen de intro, mes, top game, sesiones, racha, mejor día,
+      mes ajetreado y outro.
+- [x] Comprobado el progreso segmentado, la pausa y la navegación QML.
+
 ## Refinamiento 0.17.0 — Estadísticas por periodo y tarjetas enriquecidas
 
 ### Descripción funcional
