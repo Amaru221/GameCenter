@@ -71,6 +71,11 @@ Window {
         setSlotSession(session);
     }
 
+    function fileName(path) {
+        var parts = String(path || "").split(/[\\/]/);
+        return parts[parts.length - 1];
+    }
+
     function refreshSlot(force) {
         if (insertEffect.running) {
             return;
@@ -192,21 +197,81 @@ Window {
                 onOpenRequested: updateOpen = true
             }
 
-            Dock {
-                id: dock
-                z: detailOpen ? 5 : 20
-                inserting: insertEffect.running
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.bottom: parent.bottom
-                anchors.bottomMargin: 10
+            // Dark insertion plate ("pletina"): the cartridge slides in front
+            // of it but behind the opaque front face of the dock below. All
+            // four layers share this parent, so the stacking is stable.
+            Item {
+                id: insertPlate
+                objectName: "insertPlate"
+                z: 12
+                width: 174
+                height: 36
+                x: dock.x + (dock.width - width) / 2
+                y: dock.y - 12
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 11
+                    gradient: Gradient {
+                        GradientStop {
+                            position: 0.0
+                            color: Qt.darker(Library.surfaceColor, 1.55)
+                        }
+                        GradientStop {
+                            position: 1.0
+                            color: Qt.darker(Library.surfaceColor, 1.95)
+                        }
+                    }
+                    border.width: 1
+                    border.color: Qt.darker(Library.surfaceColor, 2.25)
+                }
+
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: 5
+                    radius: 7
+                    color: "#05070a"
+                    opacity: 0.92
+                }
+
+                Rectangle {
+                    x: 10
+                    y: parent.height - 7
+                    width: parent.width - 20
+                    height: 2
+                    radius: 1
+                    color: Library.accent
+                    opacity: dock.inserting ? 0.82 : 0.18
+                    Behavior on opacity { NumberAnimation { duration: 160 } }
+                }
             }
 
             SlotCartridge {
                 id: slotCard
-                z: detailOpen ? 5 : 19
+                objectName: "slotCartridge"
+                z: 13
                 x: dock.x + dock.width / 2 - width / 2
                 y: dock.y - height
                 game: window.slotGame
+            }
+
+            // The flying cartridge is a sibling of the dock, between the dark
+            // plate (12) and the dock front face (20). It is never painted on
+            // top of the banner again.
+            InsertEffect {
+                id: insertEffect
+                z: 15
+                anchors.fill: parent
+                onInserted: (sessionId) => window.commitSlot(sessionId)
+            }
+
+            Dock {
+                id: dock
+                z: 20
+                inserting: insertEffect.running
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 10
             }
         }
     }
@@ -288,13 +353,6 @@ Window {
                 }
             }
         }
-    }
-
-    InsertEffect {
-        id: insertEffect
-        z: 15
-        anchors.fill: parent
-        onInserted: (sessionId) => window.commitSlot(sessionId)
     }
 
     AddGameDialog {
@@ -433,6 +491,20 @@ Window {
                 detailGame = Library.gameDetailById(gameId);
             }
         }
+    }
+
+    Connections {
+        target: Screenshots
+        function onSaved(path) {
+            toast.show(Tr.strings["Screenshot saved: %1"].arg(window.fileName(path)));
+        }
+        function onFailed(message) { toast.show(message) }
+    }
+
+    Shortcut {
+        sequence: Screenshots.shortcutSequence
+        enabled: Screenshots.localShortcutEnabled
+        onActivated: Screenshots.captureIfPlaying()
     }
 
     Shortcut {

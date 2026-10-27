@@ -1,3 +1,3 @@
 """GameCenter — a local-first game library launcher."""
 
-__version__ = "0.16.5"
+__version__ = "0.17.0"

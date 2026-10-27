@@ -1809,6 +1809,252 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     },
 }
 
+# 0.17.0 — screenshots and month highlights. Kept in one block so the large
+# catalogs above stay untouched.
+TRANSLATIONS["es"].update(
+    {
+        "SCREENSHOTS": "CAPTURAS",
+        "Screenshot shortcut": "Atajo de capturas",
+        "Captures a screenshot of the game you're playing.": (
+            "Hace una captura del juego que estás jugando."
+        ),
+        "Keyboard shortcut": "Atajo de teclado",
+        "Gamepad: hold Select for %1 seconds.": (
+            "Mando: mantén Select %1 segundos."
+        ),
+        "Ctrl + Page Down": "Ctrl + Av Pág",
+        "Print Screen": "Impr Pant",
+        "None": "Ninguno",
+        "This shortcut is already in use.": "Este atajo ya está en uso.",
+        "Screenshot saved: %1": "Captura guardada: %1",
+        "Couldn't capture the screen.": "No se pudo capturar la pantalla.",
+        "Screenshots are saved in %1.": "Las capturas se guardan en %1.",
+        "Open screenshots folder": "Abrir carpeta de capturas",
+        "Most hours": "Más horas",
+        "Most sessions": "Más sesiones",
+        "Most days": "Más días",
+        "Most played game": "Juego más jugado",
+        "Most days played": "Más días jugados",
+        "Longest streak": "Racha más larga",
+        "Busiest day": "Día más ajetreado",
+        "Busiest week": "Semana más ajetreada",
+        "Busiest month": "Mes más ajetreado",
+        "1 day": "1 día",
+        "%1 days": "%1 días",
+        "Other games": "Otros juegos",
+        "Day by Day": "Día a día",
+        "Week by Week": "Semana a semana",
+        "Monday": "Lunes",
+        "Tuesday": "Martes",
+        "Wednesday": "Miércoles",
+        "Thursday": "Jueves",
+        "Friday": "Viernes",
+        "Saturday": "Sábado",
+        "Sunday": "Domingo",
+        "%1 in review": "%1 en resumen",
+        "This week in review": "Esta semana en resumen",
+        "All time in review": "Todo el tiempo en resumen",
+    }
+)
+
+TRANSLATIONS["fr"].update(
+    {
+        "SCREENSHOTS": "CAPTURES D'ÉCRAN",
+        "Screenshot shortcut": "Raccourci de capture",
+        "Captures a screenshot of the game you're playing.": (
+            "Capture l'écran du jeu en cours."
+        ),
+        "Keyboard shortcut": "Raccourci clavier",
+        "Gamepad: hold Select for %1 seconds.": (
+            "Manette : maintenez Select %1 secondes."
+        ),
+        "Ctrl + Page Down": "Ctrl + Page suivante",
+        "Print Screen": "Impr. écran",
+        "None": "Aucun",
+        "This shortcut is already in use.": "Ce raccourci est déjà utilisé.",
+        "Screenshot saved: %1": "Capture enregistrée : %1",
+        "Couldn't capture the screen.": "Impossible de capturer l'écran.",
+        "Screenshots are saved in %1.": (
+            "Les captures sont enregistrées dans %1."
+        ),
+        "Open screenshots folder": "Ouvrir le dossier des captures",
+        "Most hours": "Plus d'heures",
+        "Most sessions": "Plus de sessions",
+        "Most days": "Plus de jours",
+        "Most played game": "Jeu le plus joué",
+        "Most days played": "Plus de jours joués",
+        "Longest streak": "Plus longue série",
+        "Busiest day": "Jour le plus actif",
+        "Busiest week": "Semaine la plus active",
+        "Busiest month": "Mois le plus actif",
+        "1 day": "1 jour",
+        "%1 days": "%1 jours",
+        "Other games": "Autres jeux",
+        "Day by Day": "Jour par jour",
+        "Week by Week": "Semaine par semaine",
+        "Monday": "Lundi",
+        "Tuesday": "Mardi",
+        "Wednesday": "Mercredi",
+        "Thursday": "Jeudi",
+        "Friday": "Vendredi",
+        "Saturday": "Samedi",
+        "Sunday": "Dimanche",
+        "%1 in review": "%1 en revue",
+        "This week in review": "Cette semaine en revue",
+        "All time in review": "Tout l'historique en revue",
+    }
+)
+
+TRANSLATIONS["de"].update(
+    {
+        "SCREENSHOTS": "SCREENSHOTS",
+        "Screenshot shortcut": "Screenshot-Tastenkürzel",
+        "Captures a screenshot of the game you're playing.": (
+            "Macht einen Screenshot des laufenden Spiels."
+        ),
+        "Keyboard shortcut": "Tastenkürzel",
+        "Gamepad: hold Select for %1 seconds.": (
+            "Controller: Select %1 Sekunden halten."
+        ),
+        "Ctrl + Page Down": "Strg + Bild ab",
+        "Print Screen": "Druck",
+        "None": "Keine",
+        "This shortcut is already in use.": (
+            "Dieses Tastenkürzel wird bereits verwendet."
+        ),
+        "Screenshot saved: %1": "Screenshot gespeichert: %1",
+        "Couldn't capture the screen.": (
+            "Der Bildschirm konnte nicht aufgenommen werden."
+        ),
+        "Screenshots are saved in %1.": (
+            "Screenshots werden in %1 gespeichert."
+        ),
+        "Open screenshots folder": "Screenshot-Ordner öffnen",
+        "Most hours": "Meiste Stunden",
+        "Most sessions": "Meiste Sitzungen",
+        "Most days": "Meiste Tage",
+        "Most played game": "Meistgespieltes Spiel",
+        "Most days played": "Meiste Spieltage",
+        "Longest streak": "Längste Serie",
+        "Busiest day": "Aktivster Tag",
+        "Busiest week": "Aktivste Woche",
+        "Busiest month": "Aktivster Monat",
+        "1 day": "1 Tag",
+        "%1 days": "%1 Tage",
+        "Other games": "Andere Spiele",
+        "Day by Day": "Tag für Tag",
+        "Week by Week": "Woche für Woche",
+        "Monday": "Montag",
+        "Tuesday": "Dienstag",
+        "Wednesday": "Mittwoch",
+        "Thursday": "Donnerstag",
+        "Friday": "Freitag",
+        "Saturday": "Samstag",
+        "Sunday": "Sonntag",
+        "%1 in review": "%1 im Rückblick",
+        "This week in review": "Diese Woche im Rückblick",
+        "All time in review": "Gesamter Zeitraum im Rückblick",
+    }
+)
+
+TRANSLATIONS["it"].update(
+    {
+        "SCREENSHOTS": "SCHERMATE",
+        "Screenshot shortcut": "Scorciatoia schermata",
+        "Captures a screenshot of the game you're playing.": (
+            "Cattura una schermata del gioco in corso."
+        ),
+        "Keyboard shortcut": "Scorciatoia da tastiera",
+        "Gamepad: hold Select for %1 seconds.": (
+            "Controller: tieni premuto Select per %1 secondi."
+        ),
+        "Ctrl + Page Down": "Ctrl + Pag giù",
+        "Print Screen": "Stamp",
+        "None": "Nessuno",
+        "This shortcut is already in use.": (
+            "Questa scorciatoia è già in uso."
+        ),
+        "Screenshot saved: %1": "Schermata salvata: %1",
+        "Couldn't capture the screen.": "Impossibile catturare lo schermo.",
+        "Screenshots are saved in %1.": (
+            "Le schermate vengono salvate in %1."
+        ),
+        "Open screenshots folder": "Apri cartella schermate",
+        "Most hours": "Più ore",
+        "Most sessions": "Più sessioni",
+        "Most days": "Più giorni",
+        "Most played game": "Gioco più giocato",
+        "Most days played": "Più giorni giocati",
+        "Longest streak": "Serie più lunga",
+        "Busiest day": "Giorno più attivo",
+        "Busiest week": "Settimana più attiva",
+        "Busiest month": "Mese più attivo",
+        "1 day": "1 giorno",
+        "%1 days": "%1 giorni",
+        "Other games": "Altri giochi",
+        "Day by Day": "Giorno per giorno",
+        "Week by Week": "Settimana per settimana",
+        "Monday": "Lunedì",
+        "Tuesday": "Martedì",
+        "Wednesday": "Mercoledì",
+        "Thursday": "Giovedì",
+        "Friday": "Venerdì",
+        "Saturday": "Sabato",
+        "Sunday": "Domenica",
+        "%1 in review": "%1 in sintesi",
+        "This week in review": "Questa settimana in sintesi",
+        "All time in review": "Tutto il tempo in sintesi",
+    }
+)
+
+TRANSLATIONS["pt"].update(
+    {
+        "SCREENSHOTS": "CAPTURAS",
+        "Screenshot shortcut": "Atalho de captura",
+        "Captures a screenshot of the game you're playing.": (
+            "Captura uma imagem do jogo em execução."
+        ),
+        "Keyboard shortcut": "Atalho de teclado",
+        "Gamepad: hold Select for %1 seconds.": (
+            "Controle: mantenha Select por %1 segundos."
+        ),
+        "Ctrl + Page Down": "Ctrl + Page Down",
+        "Print Screen": "Print Screen",
+        "None": "Nenhum",
+        "This shortcut is already in use.": "Este atalho já está em uso.",
+        "Screenshot saved: %1": "Captura salva: %1",
+        "Couldn't capture the screen.": "Não foi possível capturar a tela.",
+        "Screenshots are saved in %1.": (
+            "As capturas são salvas em %1."
+        ),
+        "Open screenshots folder": "Abrir pasta de capturas",
+        "Most hours": "Mais horas",
+        "Most sessions": "Mais sessões",
+        "Most days": "Mais dias",
+        "Most played game": "Jogo mais jogado",
+        "Most days played": "Mais dias jogados",
+        "Longest streak": "Maior sequência",
+        "Busiest day": "Dia mais movimentado",
+        "Busiest week": "Semana mais movimentada",
+        "Busiest month": "Mês mais movimentado",
+        "1 day": "1 dia",
+        "%1 days": "%1 dias",
+        "Other games": "Outros jogos",
+        "Day by Day": "Dia a dia",
+        "Week by Week": "Semana a semana",
+        "Monday": "Segunda-feira",
+        "Tuesday": "Terça-feira",
+        "Wednesday": "Quarta-feira",
+        "Thursday": "Quinta-feira",
+        "Friday": "Sexta-feira",
+        "Saturday": "Sábado",
+        "Sunday": "Domingo",
+        "%1 in review": "%1 em resumo",
+        "This week in review": "Esta semana em resumo",
+        "All time in review": "Todo o período em resumo",
+    }
+)
+
 _EXTRA_KEYS = ("Nintendo DS", "PS2", "STEAMGRIDDB")
 _KEYS = frozenset(_EXTRA_KEYS).union(
     *(catalog.keys() for catalog in TRANSLATIONS.values())

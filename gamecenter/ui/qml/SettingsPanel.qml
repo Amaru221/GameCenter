@@ -256,6 +256,121 @@ Item {
                 }
 
                 Text {
+                    text: Tr.strings["SCREENSHOTS"]
+                    color: "#8b95a5"
+                    font.family: "Chakra Petch"
+                    font.pixelSize: 11
+                    font.bold: true
+                    font.letterSpacing: 2.4
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: Tr.strings["Captures a screenshot of the game you're playing."]
+                    color: "#98a3b4"
+                    font.family: "Sora"
+                    font.pixelSize: 11
+                    wrapMode: Text.WordWrap
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: Tr.strings["Keyboard shortcut"]
+                        color: "#dfe6f0"
+                        font.family: "Sora"
+                        font.pixelSize: 13
+                    }
+
+                    PillCombo {
+                        objectName: "screenshotShortcutCombo"
+                        Layout.preferredWidth: 220
+                        entries: [
+                            { text: Tr.strings["Ctrl + Page Down"], value: "ctrl+pagedown" },
+                            { text: Tr.strings["Ctrl + F12"], value: "ctrl+f12" },
+                            { text: Tr.strings["F12"], value: "f12" },
+                            { text: Tr.strings["Print Screen"], value: "printscreen" },
+                            { text: Tr.strings["Ctrl + Shift + S"], value: "ctrl+shift+s" },
+                            { text: Tr.strings["None"], value: "none" }
+                        ]
+                        value: Screenshots.shortcut
+                        onSelected: (chosen) => Screenshots.setShortcut(chosen)
+                    }
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    visible: Screenshots.error !== ""
+                    text: Screenshots.error
+                    color: "#ff8a8a"
+                    font.family: "Sora"
+                    font.pixelSize: 11
+                    wrapMode: Text.WordWrap
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: Tr.strings["Gamepad: hold Select for %1 seconds."]
+                              .arg(Gamepad.screenshotHoldSeconds)
+                    color: "#98a3b4"
+                    font.family: "Sora"
+                    font.pixelSize: 11
+                    wrapMode: Text.WordWrap
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: Tr.strings["Screenshots are saved in %1."]
+                                  .arg(Screenshots.directory)
+                        color: "#6f7887"
+                        font.family: "Sora"
+                        font.pixelSize: 10
+                        wrapMode: Text.WordWrap
+                    }
+
+                    Rectangle {
+                        width: 172
+                        height: 34
+                        radius: 9
+                        color: openShotsArea.containsMouse ? "#1e2c42" : "#171b23"
+                        border.width: 1
+                        border.color: openShotsArea.containsMouse
+                                      ? Library.accent
+                                      : "#2a3140"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: Tr.strings["Open screenshots folder"]
+                            color: "#cfd6e2"
+                            font.family: "Sora"
+                            font.pixelSize: 11
+                        }
+
+                        MouseArea {
+                            id: openShotsArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Screenshots.openFolder()
+                        }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+                    height: 1
+                    color: "#232936"
+                }
+
+                Text {
                     text: Tr.strings["STEAMGRIDDB"]
                     color: "#8b95a5"
                     font.family: "Chakra Petch"

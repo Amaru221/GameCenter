@@ -1,4 +1,196 @@
-# WORKFLOW STATE — Big Picture con mando
+# WORKFLOW STATE — Capturas, inserción por capas y destacados de Stats
+
+## Refinamiento 0.17.0 — Estadísticas por periodo y tarjetas enriquecidas
+
+### Descripción funcional
+
+- La granularidad del desglose sigue al filtro:
+  - **Week** → una tarjeta por día (7 días).
+  - **Month** → una tarjeta por semana del mes.
+  - **Year** → una tarjeta por mes (comportamiento anterior).
+  - **All time** conserva el desglose mensual del año seleccionado y el total
+    histórico (decisión tomada para no introducir un cuarto tipo de tarjeta).
+- El banner superior de tiempo jugado muestra el **juego con más horas del
+  periodo** (carátula, nombre, horas y etiqueta del periodo).
+- Las tarjetas muestran:
+  - carátula del juego más jugado junto al nombre,
+  - **top 3** numerado con carátula, horas detalladas en negrita y barra,
+  - fila **Other games** con las horas del resto, sin barra,
+  - **rombo + número dentro del mismo contenedor** para las métricas líderes
+    (horas, días jugados y sesiones), sin insignias sueltas arriba,
+  - un **banner único** por tarjeta: *Busiest month/week/day*, *Longest streak*
+    o *Best day*,
+  - etiquetas de métricas y gráfico con mejor tipografía y contraste.
+- Los títulos del gráfico y del banner de repaso se adaptan al periodo.
+- `Other games`, `Most days played`, `Longest streak`, días de la semana y
+  títulos por periodo se traducen en ES/FR/DE/IT/PT.
+
+### Decisiones de arquitectura
+
+- `stats.build()` construye `buckets` genéricos (`kind` = `month`, `week` o
+  `day`) con el mismo payload que antes usaban los meses. `months` se conserva
+  como alias compatible con el desglose anual.
+- `_day_buckets()` recorre los 7 días del periodo semanal; `_week_buckets()`
+  parte el mes en semanas de lunes a domingo; `_months()` mantiene el desglose
+  mensual. Los tres usan `_bucket_payload()`.
+- `_annotate_buckets()` calcula los máximos del periodo y genera el `banner`
+  único. `topSessions`/`topDays` solo se marcan si el máximo es mayor que 1
+  para evitar destacados triviales en tarjetas diarias.
+- `_river()` ahora recibe los buckets del periodo, no solo los meses, y expone
+  `labels` además de `months`.
+- `LibraryModel.stats()` sigue pasando el mapa de carátulas.
+- `StatsView` usa `statsData.buckets`, `bucketsKind`, `topGame` y
+  `river.labels`; `months` queda como alias para el carrusel anual.
+
+### Contrato de API (adiciones)
+
+| Elemento | Tipo | Descripción |
+| --- | --- | --- |
+| `stats.buckets` | `list` | Tarjetas del periodo actual (mes, semana o día). |
+| `stats.bucketsKind` | `string` | `month`, `week` o `day`. |
+| `stats.buckets[].kind` | `string` | Tipo de la tarjeta. |
+| `stats.buckets[].rangeText` | `string` | Rango legible (`26–27 Oct`, `26/10`…). |
+| `stats.buckets[].topGames` | `list` | Como máximo 3 juegos, con carátula y horas detalladas. |
+| `stats.buckets[].otherHoursText` | `string` | Tiempo agrupado en Other games (sin barra). |
+| `stats.buckets[].hasOtherGames` | `bool` | Hay juegos fuera del top 3. |
+| `stats.buckets[].topHours/topSessions/topDays` | `bool` | Líder del periodo (sesiones/días solo si el máximo > 1). |
+| `stats.buckets[].banner` | `object` | `{label, value, detail, tint}` del destacado único. |
+| `stats.buckets[].streak` | `int` | Racha dentro de la tarjeta. |
+| `stats.topGame` | `object` | Juego con más horas del periodo (incluye `cover`). |
+| `stats.river.labels` | `list` | Etiquetas de los buckets del periodo. |
+| `StatsView.bucketsKind` | `string` | Tipo de tarjeta activo. |
+| `StatsView.topGame` | `object` | Atajo a `statsData.topGame`. |
+| `StatsView.reviewText()` | función | Texto del banner de repaso por periodo. |
+| `StatsView.riverSubtitle()` | función | Subtítulo del gráfico por periodo. |
+
+### Checklist
+
+- [x] Backend: buckets de días, semanas y meses; top 3 + Other games + banners.
+- [x] Backend: `topGame` del periodo y `river.labels`.
+- [x] Traducciones nuevas y tests de periodos, top 3, Other games y banners.
+- [x] QML: tarjetas con rombo+número, top 3 con carátula, Other games y banner.
+- [x] QML: hero con juego más jugado y chips/labels restilizados.
+- [x] QML: títulos y banner de repaso según periodo.
+- [x] Tests QML de buckets por periodo y tarjetas enriquecidas.
+- [x] README/CHANGELOG/WORKFLOW actualizados.
+- [x] Verificación visual Week/Month/Year con capturas 1180×1400.
+
+### Verificación
+
+- [x] `python -m pytest -q` → **155 passed**.
+- [x] Capturas offscreen de Week (días), Month (semanas) y Year (meses) con
+  tarjetas completas, top 3, Other games y banners.
+- [x] Comprobado que `topSessions`/`topDays` no destacan valores triviales de 1.
+- [x] Comprobado el hero con el top game del periodo.
+
+## Feature 0.17.0 — Capturas de juego, cartucho tras el dock y meses destacados
+
+### Descripción funcional
+
+- **Capturas de pantalla del juego**:
+  - Se configura el atajo de teclado desde **Ajustes → SCREENSHOTS**.
+  - Por defecto el teclado usa **Ctrl + Av Pág** (`Ctrl+PageDown`).
+  - En mando, el atajo por defecto es **mantener Select/View 5 segundos**.
+  - Solo se captura cuando hay una sesión de juego activa lanzada desde
+    GameCenter; el PNG se guarda en `%APPDATA%/GameCenter/screenshots/`.
+  - El atajo de teclado es **global en Windows** (funciona con el juego en
+    primer plano) y local en el resto de plataformas.
+  - Se muestra un aviso con el nombre del archivo guardado.
+- **Inserción del cartucho**:
+  - El cartucho que vuela al dock pasa **por detrás de la cara frontal del
+    dock** (banner) y **por delante de la pletina oscura** de inserción.
+  - La pletina es una pieza más oscura que el banner, situada detrás del
+    cartucho, para que la animación se lea como una inserción real.
+  - El cartucho que ya estaba en la ranura queda también detrás del banner.
+- **Estadísticas**:
+  - Cada tarjeta mensual muestra la **carátula del juego más jugado** junto al
+    nombre del mes (con tooltip de título y horas).
+  - Se añaden **tres insignias estéticas** en el mes del año con:
+    - **más horas** jugadas,
+    - **más sesiones**,
+    - **más días** jugados.
+  - En caso de empate, la insignia se muestra en todos los meses empatados.
+
+### Decisiones de arquitectura
+
+- `ScreenshotManager` (`core/screenshots.py`) centraliza la captura, el guardado
+  y el registro del atajo global. Usa `QScreen.grabWindow(0)` sobre la pantalla
+  del cursor y escribe en `config_dir()/screenshots/`.
+- En Windows el atajo se registra con `RegisterHotKey` y un
+  `QAbstractNativeEventFilter` (sin dependencias nuevas). Solo permanece
+  registrado **mientras hay una sesión de juego activa**, para no apropiarse de
+  la combinación cuando no hay partida. Si el sistema rechaza la combinación, el
+  error se muestra en Ajustes y se mantiene el `Shortcut` local de QML como
+  respaldo.
+- `GamepadManager` incorpora la señal `screenshot` y un temporizador de flanco
+  sobre `BUTTON_BACK` (Select/View): 5 s mantenidos. El resto del mapeo no
+  cambia.
+- `Preferences` valida el atajo contra una lista curada y lo persiste como
+  `screenshotShortcut`.
+- El `InsertEffect` deja de ser hijo de la ventana y pasa a vivir dentro de
+  `libraryDock`, entre la pletina (`z: 12`) y el dock (`z: 20`). Así comparte
+  el mismo contexto de apilado: pletina < cartucho en ranura < cartucho volando
+  < cara frontal del dock.
+- `stats.build()` recibe un mapa de carátulas desde `LibraryModel` para no
+  acoplar el agregador a los proveedores de imágenes. Tras construir los meses,
+  calcula los máximos anuales y añade `topHours`, `topSessions`, `topDays` y
+  `mostPlayed` a cada mes.
+- `StatsView.MonthCard` pinta la carátula y un componente `HighlightBadge` con
+  degradado, borde y punto de color; las etiquetas se traducen vía `Tr`.
+
+### Contrato de API
+
+| Elemento | Tipo | Descripción |
+| --- | --- | --- |
+| `settings.json → screenshotShortcut` | string | `ctrl+pagedown` (defecto), `ctrl+f12`, `f12`, `printscreen`, `ctrl+shift+s`, `none`. |
+| `Screenshots.shortcut` | `string` (notify `changed`) | Atajo persistido actual. |
+| `Screenshots.setShortcut(value)` | slot | Valida, persiste y vuelve a registrar el atajo. |
+| `Screenshots.shortcutSequence` | `string` | Secuencia Qt para el `Shortcut` local (`Ctrl+PageDown`…). |
+| `Screenshots.localShortcutEnabled` | `bool` | `true` si el hotkey global no está activo (Linux o conflicto). |
+| `Screenshots.registered` | `bool` | El atajo global está registrado en el sistema. |
+| `Screenshots.error` | `string` | Mensaje si el sistema rechaza el atajo. |
+| `Screenshots.directory` | `string` | Carpeta de capturas. |
+| `Screenshots.captureIfPlaying()` | slot → `string` | Captura solo si hay sesión activa; devuelve la ruta. |
+| `Screenshots.capture()` | slot → `string` | Captura siempre la pantalla actual. |
+| `Screenshots.openFolder()` | slot | Abre la carpeta de capturas. |
+| `Screenshots.saved(path)` / `failed(message)` | signals | Resultado de la captura para el toast. |
+| `Gamepad.screenshot` | signal | Select/View mantenido 5 s. |
+| `Gamepad.screenshotHoldSeconds` | `real` (constant) | 5.0. |
+| `InsertEffect` | QML Item | Ahora hijo de `libraryDock`; `z: 15`. |
+| `insertPlate` | QML Item | Pletina oscura detrás del cartucho; `z: 12`. |
+| `slotCartridge` | QML Item | Cartucho en ranura; `z: 13`. |
+| `dock` | QML Item | Cara frontal del banner; `z: 20`. |
+| `stats.build(..., covers=...)` | parámetro opcional | `{game_id: cover_url}`. |
+| `stats.months[].mostPlayed` | `object` | `{gameId, name, hoursText, cover, …}` del juego con más horas del mes. |
+| `stats.months[].topHours/topSessions/topDays` | `bool` | El mes es el máximo del año en esa métrica. |
+| `Library.stats()` | slot | Pasa las carátulas actuales de la biblioteca. |
+
+### Checklist
+
+#### Backend
+- [x] `core/screenshots.py`: captura, guardado, hotkey global Windows y API QML.
+- [x] `preferences.py`: `screenshotShortcut` validado y persistido.
+- [x] `gamepad.py`: señal `screenshot` al mantener Select 5 s.
+- [x] `app.py`: exponer `Screenshots` y conectar mando + hotkey.
+- [x] `stats.py`: carátulas en `topGames`, `mostPlayed` y flags de máximos.
+- [x] `library_model.py`: `stats()` pasa el mapa de carátulas.
+- [x] Traducciones ES/FR/DE/IT/PT y tests de backend.
+
+#### Frontend
+- [x] `SettingsPanel.qml`: sección SCREENSHOTS con atajo, ayuda de mando y carpeta.
+- [x] `Main.qml`: mover `InsertEffect` a `libraryDock`, pletina, z-order y toast de captura.
+- [x] `StatsView.qml`: carátula junto al nombre y tres insignias de destacado.
+- [x] `Dock.qml`: boca de ranura coherente con la pletina (si hace falta).
+- [x] Tests QML de capas, ajuste de captura y estadísticas.
+- [x] README/CHANGELOG y verificación visual.
+
+### Verificación
+- [x] `python -m pytest -q` → **150 passed**.
+- [x] Capturas de ajustes, inserción (fotograma intermedio) y Stats con insignias.
+- [x] Comprobación del atajo global con `WM_HOTKEY` simulado y captura PNG real.
+- [x] Captura real de pantalla guardada en `screenshots/` (405 KB).
+- [x] Comprobación visual del apilado: pletina (12) < ranura (13) < cartucho
+  volando (15) < dock (20).
 
 ## Feature 0.16.5 — Modal de juego a pantalla completa
 

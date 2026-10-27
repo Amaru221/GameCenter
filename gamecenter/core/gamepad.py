@@ -34,6 +34,7 @@ DEADZONE = 0.55
 REPEAT_FIRST = 0.35
 REPEAT_NEXT = 0.13
 POLL_MS = 33
+SCREENSHOT_HOLD_SECONDS = 5.0
 
 
 class XINPUT_GAMEPAD(ctypes.Structure):
@@ -106,6 +107,7 @@ class GamepadManager(QObject):
     pageRight = Signal()
     favorite = Signal()
     details = Signal()
+    screenshot = Signal()
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -116,6 +118,8 @@ class GamepadManager(QObject):
         self._nav_dx = 0
         self._nav_dy = 0
         self._nav_next = 0.0
+        self._back_down_at = 0.0
+        self._back_screenshot = False
         self._cursor_hidden = False
         self._cursor_pos = QCursor.pos()
         self._timer = QTimer(self)
@@ -130,6 +134,10 @@ class GamepadManager(QObject):
     @Property(bool, notify=connectedChanged)
     def connected(self) -> bool:
         return self._connected
+
+    @Property(float, constant=True)
+    def screenshotHoldSeconds(self) -> float:
+        return SCREENSHOT_HOLD_SECONDS
 
     def _hide_cursor(self) -> None:
         if self._cursor_hidden:
@@ -185,6 +193,8 @@ class GamepadManager(QObject):
             self._last_buttons = 0
             self._nav_dx = 0
             self._nav_dy = 0
+            self._back_down_at = 0.0
+            self._back_screenshot = False
             return
 
         if not self._connected:
@@ -194,6 +204,7 @@ class GamepadManager(QObject):
         pad = state.Gamepad
         buttons = int(pad.wButtons)
         fresh = buttons & ~self._last_buttons
+        self._update_back_hold(buttons, time.monotonic())
         self._last_buttons = buttons
         if fresh:
             self._hide_cursor()
@@ -216,6 +227,23 @@ class GamepadManager(QObject):
             self.pageRight.emit()
 
         self._update_navigation(pad)
+
+    def _update_back_hold(self, buttons: int, now: float) -> None:
+        """Select/View held for five seconds asks for a screenshot."""
+        if buttons & BUTTON_BACK:
+            if not self._last_buttons & BUTTON_BACK:
+                self._back_down_at = now
+                self._back_screenshot = False
+            elif (
+                not self._back_screenshot
+                and self._back_down_at > 0.0
+                and now - self._back_down_at >= SCREENSHOT_HOLD_SECONDS
+            ):
+                self._back_screenshot = True
+                self.screenshot.emit()
+            return
+        self._back_down_at = 0.0
+        self._back_screenshot = False
 
     def _update_navigation(self, pad) -> None:
         now = time.monotonic()

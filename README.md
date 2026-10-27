@@ -3,7 +3,7 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.16.5** - Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
+> Estado: **v0.17.0** - Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 
@@ -45,12 +45,24 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   escritura. Stats es una ventana dedicada: no muestra el dock inferior
   (Ready, reloj ni cartucho insertado) ni el aviso de actualización, y usa todo
   el alto de la ventana.
-- La sección **Month by Month** incluye un gráfico de áreas apiladas (“a river”)
-  con los juegos principales y tarjetas mensuales deslizables, **del mes actual
-  al más antiguo** (octubre primero, enero al final), con horas, mejores
-  juegos, barras de progreso y actividad diaria, y un botón **Open month** que
-  enfoca ese mes en el resumen. El botón **Watch** recorre los meses
-  automáticamente.
+- La sección de desglose adapta su granularidad al filtro: **Week → días**,
+  **Month → semanas** y **Year → meses** (All time conserva el desglose mensual
+  del año seleccionado). Incluye un gráfico de áreas apiladas (“a river”) con
+  los juegos principales y tarjetas deslizables, **del periodo actual al más
+  antiguo**. El botón **Watch** recorre las tarjetas automáticamente y **Open
+  month** salta de un mes del año a su vista semanal.
+  - El banner superior muestra el **juego con más horas del periodo** (con
+    carátula y horas) además del tiempo total.
+  - Cada tarjeta muestra la **carátula del juego más jugado** junto a su nombre
+    (con tooltip de título y horas).
+  - La lista de juegos es un **top 3** con numeración, carátula, horas
+    detalladas en negrita y barra de proporción; el resto se agrupa en
+    **Other games** con las horas resumidas y sin barra.
+  - Las métricas líderes del periodo muestran un **rombo con su número en el
+    mismo contenedor** (horas, días jugados y sesiones), sin insignias sueltas
+    en la parte superior.
+  - Cada tarjeta tiene un **banner único** con el dato más destacado:
+    *Busiest month/week/day*, *Longest streak* o *Best day*.
 - Las estadísticas se calculan con las sesiones registradas por GameCenter; el
   tiempo anterior sin fecha no se inventa y sigue disponible como total
   histórico en la ficha de cada juego.
@@ -63,7 +75,8 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   - Mando Xbox compatible (XInput): D-pad/stick para moverse, **A** jugar,
     **B** volver, **Y/Triángulo** abrir la ficha del juego (descripción y
     timeline), **LB/RB** cambiar el modo del carrusel, **X** favorito y
-    **Start** para **salir**.
+    **Start** para **salir**. Mantén **Select/View** 5 segundos para capturar
+    una pantalla del juego.
   - También funciona con teclado (flechas, Enter, Esc, `I`, `C`/`Tab` para el
     modo, `[`/`]` para filtros, `F` favorito) y ratón; la ficha del juego se
     abre con el botón **Details**.
@@ -103,6 +116,11 @@ la muestra como una estantería y lanza los juegos con un doble clic.
 - **Ajustes** (engranaje o `Ctrl+,`): color de acento entre 24 opciones,
   **color de superficie** para la barra superior, el dock Ready y la estantería,
   **color de los cartuchos** y tres estilos: clásico, **Nintendo DS** y **PS2**.
+  - **Capturas de pantalla del juego**: elige el atajo de teclado (por defecto
+    **Ctrl + Av Pág**) y consulta la carpeta donde se guardan. Con mando, el
+    atajo por defecto es **mantener Select/View 5 segundos**. En Windows el
+    atajo de teclado es global, así que funciona con el juego en primer plano;
+    si el sistema ya lo usa, se muestra el aviso y queda el atajo local.
   - En la vista de detalle de un juego DS puedes **arrastrar sobre el cartucho
     para girarlo en cualquier dirección** manteniendo pulsado; el modelo no se
     desplaza y el visor deja margen suficiente para que **no se corte ninguna
@@ -115,7 +133,9 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   reiniciar la aplicación.
 - **Animación de inserción**: al pulsar Play, el cartucho vuela desde el detalle
   y se inserta en la ranura central del dock “Ready”, que se ilumina mientras
-  muestra “Inserting…”. Al terminar la animación, el cartucho **se queda
+  muestra “Inserting…”. El cartucho pasa **por detrás de la cara frontal del
+  dock** y **por delante de una pletina más oscura**, de modo que se ve entrar
+  de verdad en la ranura. Al terminar la animación, el cartucho **se queda
   sobresaliendo de la ranura mientras el juego está en ejecución**. Si hay
   varios juegos abiertos, la ranura muestra el último lanzado; al cerrar uno,
   pasa al siguiente y, si no queda ninguno, se oculta con un fundido.
@@ -223,6 +243,7 @@ gamecenter/
     vdf.py              lector de VDF (formato de Valve)
     favorites.py        favoritos persistentes (JSON)
     sessions.py         seguimiento de juegos en ejecución
+    screenshots.py      capturas de pantalla y atajo global
     launch.py           lanzar juegos y abrir carpetas
     sources/
       __init__.py       scan_all() aísla los fallos de cada tienda

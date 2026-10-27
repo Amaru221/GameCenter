@@ -22,19 +22,21 @@ Rectangle {
 
     Rectangle {
         x: (dock.width - width) / 2
-        y: 0
-        width: 90
-        height: 8
-        radius: 4
+        y: -1
+        width: 150
+        height: 11
+        radius: 5.5
         color: "#10141b"
+        border.width: 1
+        border.color: Qt.darker(Library.surfaceColor, 2.1)
     }
 
     Rectangle {
         x: (dock.width - width) / 2
         y: 0
-        width: 90
-        height: 8
-        radius: 4
+        width: 150
+        height: 7
+        radius: 3.5
         color: Library.accent
         opacity: dock.inserting ? 0.9 : 0
         Behavior on opacity { NumberAnimation { duration: 140 } }
