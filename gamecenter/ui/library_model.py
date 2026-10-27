@@ -1761,3 +1761,14 @@ class LibraryModel(QAbstractListModel):
             month=month,
             covers=covers,
         )
+
+    @Slot(int, result="QVariantMap")
+    def yearReview(self, year: int) -> dict:
+        """The story-style recap for one year of playtime."""
+        covers = {game.id: self._cover_url(game) for game in self._all}
+        return stats_module.year_review(
+            self._all,
+            year,
+            language=self._i18n.language,
+            covers=covers,
+        )

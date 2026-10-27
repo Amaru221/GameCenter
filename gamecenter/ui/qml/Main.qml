@@ -177,6 +177,15 @@ Window {
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             visible: window.currentView === "stats"
+            onReviewRequested: (year) => {
+                topBar.clearSearchFocus();
+                var data = Library.yearReview(year);
+                if (data && data.hasData) {
+                    yearReview.open(data, year);
+                } else {
+                    toast.show(Tr.strings["No playtime in this period."]);
+                }
+            }
         }
 
         // Library dock: only exists in the library view. Stats is a clean,
@@ -401,6 +410,12 @@ Window {
         onDownloadRequested: Library.downloadUpdate()
     }
 
+    YearReview {
+        id: yearReview
+        z: 32
+        anchors.fill: parent
+    }
+
     BigPicture {
         id: bigPicture
         anchors.fill: parent
@@ -448,6 +463,7 @@ Window {
         target: Gamepad
         function onMenu() {
             if (!window.bigPictureOpen
+                    && !yearReview.opened
                     && window.active
                     && !window.detailOpen
                     && !window.settingsOpen
@@ -509,7 +525,7 @@ Window {
 
     Shortcut {
         sequence: "F5"
-        enabled: !window.bigPictureOpen
+        enabled: !window.bigPictureOpen && !yearReview.opened
         onActivated: {
             Library.refresh();
             if (window.currentView === "stats") {
@@ -520,7 +536,7 @@ Window {
 
     Shortcut {
         sequence: "Escape"
-        enabled: !window.bigPictureOpen
+        enabled: !window.bigPictureOpen && !yearReview.opened
         onActivated: {
             if (updateOpen) {
                 updateOpen = false;
@@ -538,7 +554,7 @@ Window {
 
     Shortcut {
         sequence: "Ctrl+B"
-        enabled: !window.bigPictureOpen
+        enabled: !window.bigPictureOpen && !yearReview.opened
         onActivated: {
             if (!bigPictureOpen && !detailOpen && !settingsOpen
                     && !updateOpen && !addOpen && !artOpen) {
@@ -549,13 +565,14 @@ Window {
 
     Shortcut {
         sequence: "Ctrl+,"
-        enabled: !window.bigPictureOpen
+        enabled: !window.bigPictureOpen && !yearReview.opened
         onActivated: settingsOpen = true
     }
 
     Shortcut {
         sequence: "Ctrl+F"
         enabled: !window.bigPictureOpen
+                 && !yearReview.opened
                  && window.currentView === "library"
                  && !window.detailOpen
                  && !window.settingsOpen

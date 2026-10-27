@@ -699,6 +699,61 @@ def test_qml_stats_period_changes_bucket_granularity(app, model) -> None:
     assert data["bucketsKind"] == "month"
 
 
+def test_qml_year_review_stories(app, model) -> None:
+    from PySide6.QtCore import Q_ARG, QMetaObject, QObject
+
+    from gamecenter.ui.app import create_engine
+
+    game = model._all[0]
+    now = int(time.time())
+    library_model.playtime.record_session(game, now, 600)
+    library_model.playtime.record_session(game, now - 86400, 900)
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.setProperty("currentView", "stats")
+    app.processEvents()
+
+    review = root.findChild(QObject, "yearReview")
+    assert review is not None
+    stats = root.findChild(QObject, "statsView")
+    assert stats is not None
+
+    year = date.today().year
+    data = model.yearReview(year)
+    assert data["hasData"] is True
+    assert data["slides"]
+
+    opened = QMetaObject.invokeMethod(stats, "reviewRequested", Q_ARG(int, year))
+    assert opened is True
+    app.processEvents()
+
+    assert review.property("opened") is True
+    assert review.property("paused") is False
+    slides = review.property("slides")
+    if hasattr(slides, "toVariant"):
+        slides = slides.toVariant()
+    assert len(slides) >= 5
+    assert review.property("currentIndex") == 0
+    assert review.findChild(QObject, "yearReviewSlide") is not None
+
+    from PySide6.QtTest import QTest
+    QTest.qWait(150)
+    assert review.property("progress") > 0
+
+    QMetaObject.invokeMethod(review, "next")
+    app.processEvents()
+    assert review.property("currentIndex") == 1
+
+    QMetaObject.invokeMethod(review, "previous")
+    app.processEvents()
+    assert review.property("currentIndex") == 0
+
+    QMetaObject.invokeMethod(review, "close")
+    app.processEvents()
+    assert review.property("opened") is False
+
+
 def test_qml_detail_updates_when_the_description_arrives(app, model, monkeypatch) -> None:
     from PySide6.QtCore import QObject
 

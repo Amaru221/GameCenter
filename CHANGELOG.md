@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.18.0
+
+- **Year in Review**: the **Review year** button in Stats opens a full-screen
+  Instagram-Stories-style presentation instead of auto-scrolling the cards.
+  - Segmented story progress, auto-advance, pause/resume, close, keyboard
+    (←/→/Space/Esc), controller (D-pad/LB/RB/B/A) and tap-left/right navigation.
+  - Animated slides for the year summary, every active month, the most played
+    game, total sessions, longest streak, best day, busiest month and a closing
+    recap.
+  - Each slide uses the month/game accent, large covers, staggered reveals,
+    animated bar charts and glass cards.
+- `Library.yearReview(year)` builds the story payload (`slides`, top game,
+  best day, longest streak, busiest month, monthly rhythm) with localized
+  labels and covers.
+- Added ES/FR/DE/IT/PT strings for the review UI.
+- `tools/screenshot.py` can render any review slide with `GC_REVIEW` and
+  `GC_REVIEW_SLIDE` for design review.
+
 ## v0.17.0
 
 - **Game screenshots**:
