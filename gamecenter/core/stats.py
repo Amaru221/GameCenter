@@ -194,6 +194,7 @@ def _top_games(
     sessions: list[dict],
     titles: dict[str, str],
     colors: dict[str, str],
+    covers: dict[str, str] | None = None,
     limit: int = 5,
 ) -> list[dict]:
     totals: dict[str, int] = {}
@@ -202,6 +203,7 @@ def _top_games(
     if not totals:
         return []
 
+    covers = covers or {}
     peak = max(totals.values()) or 1
     ordered = sorted(totals.items(), key=lambda item: (-item[1], item[0]))[:limit]
     return [
@@ -212,6 +214,7 @@ def _top_games(
             "hoursText": _duration(seconds),
             "percent": max(4, int(round(seconds / peak * 100))),
             "color": colors.get(game_id, _color_for(game_id)),
+            "cover": covers.get(game_id, ""),
         }
         for game_id, seconds in ordered
     ]
@@ -225,7 +228,9 @@ def _months(
     titles: dict[str, str],
     colors: dict[str, str],
     catalog: dict[str, str],
+    covers: dict[str, str] | None = None,
 ) -> list[dict]:
+    covers = covers or {}
     months: list[dict] = []
     for month in range(1, month_count + 1):
         name = _month_name(catalog, month)
@@ -250,6 +255,8 @@ def _months(
         total = sum(daily)
         played_days = len({item["date"] for item in current})
         session_count = len(current)
+        top_games = _top_games(current, titles, colors, covers)
+        most_played = top_games[0] if top_games else {}
 
         months.append(
             {
@@ -266,11 +273,25 @@ def _months(
                 "sessionsText": catalog.get("1 session", "1 session")
                 if session_count == 1
                 else _fill(catalog.get("%1 sessions", "%1 sessions"), session_count),
-                "topGames": _top_games(current, titles, colors),
+                "topGames": top_games,
+                "mostPlayed": most_played,
+                "mostPlayedCover": most_played.get("cover", ""),
+                "mostPlayedName": most_played.get("name", ""),
+                "mostPlayedHours": most_played.get("hoursText", ""),
                 "daily": daily,
                 "maxDaily": max(1, best_seconds),
             }
         )
+
+    max_hours = max((item["seconds"] for item in months), default=0)
+    max_sessions = max((item["sessionsCount"] for item in months), default=0)
+    max_days = max((item["daysPlayed"] for item in months), default=0)
+    for item in months:
+        item["topHours"] = max_hours > 0 and item["seconds"] == max_hours
+        item["topSessions"] = (
+            max_sessions > 0 and item["sessionsCount"] == max_sessions
+        )
+        item["topDays"] = max_days > 0 and item["daysPlayed"] == max_days
     return months
 
 
@@ -335,6 +356,7 @@ def build(
     language: str = "en",
     month: int = -1,
     now: float | None = None,
+    covers: dict[str, str] | None = None,
 ) -> dict:
     timestamp = time.time() if now is None else now
     today = datetime.fromtimestamp(timestamp).date()
@@ -431,7 +453,7 @@ def build(
     if year > today.year:
         month_count = 0
     months = _months(
-        year_sessions, year, month_count, today, titles, colors, catalog
+        year_sessions, year, month_count, today, titles, colors, catalog, covers
     )
     river = _river(
         year_sessions, year_totals, titles, colors, month_count, catalog

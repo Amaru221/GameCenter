@@ -76,6 +76,46 @@ def test_month_cards(library, sessions) -> None:
     assert [item["name"] for item in october["topGames"]] == ["Alpha", "Beta"]
 
 
+def test_month_covers_and_year_highlights(library, sessions) -> None:
+    covers = {
+        "steam:a": "image://cover/alpha",
+        "epic:b": "image://cover/beta",
+    }
+    data = stats.build(
+        library, period="year", year=2026, now=NOW, covers=covers
+    )
+    months = data["months"]
+    january = months[0]
+    february = months[1]
+    october = months[9]
+
+    # January leads sessions (tied with October) and days played.
+    assert january["topSessions"] is True
+    assert january["topDays"] is True
+    assert january["topHours"] is False
+    # February is a shorter month.
+    assert february["topHours"] is False
+    # October leads hours and ties January on sessions.
+    assert october["topHours"] is True
+    assert october["topSessions"] is True
+    assert october["topDays"] is False
+
+    assert january["mostPlayed"]["name"] == "Alpha"
+    assert january["mostPlayedCover"] == "image://cover/alpha"
+    assert january["topGames"][0]["cover"] == "image://cover/alpha"
+
+
+def test_months_without_data_have_no_highlights(library) -> None:
+    data = stats.build(library, period="year", year=2026, now=NOW)
+    assert all(
+        not month["topHours"]
+        and not month["topSessions"]
+        and not month["topDays"]
+        for month in data["months"]
+    )
+    assert data["months"][0]["mostPlayed"] == {}
+
+
 def test_month_period_uses_the_selected_month(library, sessions) -> None:
     data = stats.build(
         library, period="month", year=2026, month=0, now=NOW

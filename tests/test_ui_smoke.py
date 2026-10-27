@@ -13,6 +13,7 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("QT_QUICK_BACKEND", "software")
 os.environ.setdefault("GC_NO_GAMEPAD", "1")
+os.environ.setdefault("GC_NO_HOTKEYS", "1")
 
 from gamecenter.core.models import Game  # noqa: E402
 from gamecenter.ui import covers, library_model  # noqa: E402
@@ -560,6 +561,90 @@ def test_qml_slot_waits_for_the_insertion_animation(app, model) -> None:
     app.processEvents()
     assert slot.property("game")["title"] == "Alpha Quest"
     model._sessions.eject(first.id)
+
+
+def test_qml_insertion_layers_put_the_cartridge_behind_the_dock(app, model) -> None:
+    from PySide6.QtCore import QObject
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    plate = root.findChild(QObject, "insertPlate")
+    slot = root.findChild(QObject, "slotCartridge")
+    effect = root.findChild(QObject, "insertEffect")
+    dock = root.findChild(QObject, "dock")
+
+    assert plate is not None
+    assert slot is not None
+    assert effect is not None
+    assert dock is not None
+    # Dark plate < inserted cartridge < flying cartridge < dock front face.
+    assert plate.property("z") < slot.property("z")
+    assert slot.property("z") < effect.property("z")
+    assert effect.property("z") < dock.property("z")
+
+
+def test_qml_screenshot_shortcut_setting(app, model) -> None:
+    from PySide6.QtCore import QObject
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    combo = root.findChild(QObject, "screenshotShortcutCombo")
+    assert combo is not None
+    assert combo.property("value") == "ctrl+pagedown"
+
+    screenshots = engine.rootContext().contextProperty("Screenshots")
+    assert screenshots is not None
+    screenshots.setShortcut("f12")
+    app.processEvents()
+
+    assert screenshots.property("shortcut") == "f12"
+    assert combo.property("value") == "f12"
+
+
+def test_qml_stats_cards_show_cover_and_highlights(app, model) -> None:
+    from PySide6.QtCore import QObject
+
+    from gamecenter.ui.app import create_engine
+
+    game = model._all[0]
+    library_model.playtime.record_session(game, int(time.time()), 600)
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.resize(1180, 800)
+    root.show()
+    root.setProperty("currentView", "stats")
+    app.processEvents()
+
+    carousel = root.findChild(QObject, "monthCarousel")
+    assert carousel is not None
+    app.processEvents()
+
+    # Delegate items live in the visual tree (contentItem), not in the QObject
+    # child list of the ListView.
+    def walk(item):
+        yield item
+        for child in item.childItems():
+            yield from walk(child)
+
+    content = carousel.property("contentItem")
+    items = list(walk(content))
+    badges = [
+        item for item in items
+        if item.objectName() == "highlightBadge"
+        and item.property("visible") is True
+    ]
+    covers = [
+        item for item in items
+        if item.objectName() == "monthPlayedCover"
+        and item.property("visible") is True
+    ]
+    assert badges
+    assert covers
 
 
 def test_qml_detail_updates_when_the_description_arrives(app, model, monkeypatch) -> None:

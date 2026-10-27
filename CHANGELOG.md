@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.17.0
+
+- **Game screenshots**:
+  - Configurable keyboard shortcut in **Settings → Screenshots**; the default is
+    **Ctrl + Page Down**.
+  - With a controller, **hold Select/View for 5 seconds**.
+  - Only captures while a GameCenter-launched game is running and saves a PNG
+    under `%APPDATA%/GameCenter/screenshots/` with a toast naming the file.
+  - On Windows the keyboard shortcut is a real **global hotkey**, so it works
+    while the game owns the foreground. If the combination is taken, Settings
+    explains the conflict and the in-app shortcut is kept as a fallback.
+- **Cartridge insertion now reads like real hardware**: the flying cartridge
+  slides **behind the opaque front face of the dock** and **in front of a
+  darker insertion plate**, instead of being painted on top of the banner. The
+  cartridge already resting in the slot follows the same stacking order.
+- **Statistics month cards**:
+  - Show the **cover of each month's most played game** next to the month name,
+    with a tooltip for its title and hours.
+  - The year's leaders get polished highlight badges: **Most hours**, **Most
+    sessions** and **Most days**. Ties show the badge on every tied month.
+- New ES/FR/DE/IT/PT strings for the screenshot settings and month badges.
+- `tools/screenshot.py` can now render deterministic Stats and insertion
+  previews (`GC_STATS`, configurable `GC_WIDTH`/`GC_HEIGHT`).
+
 ## v0.16.5
 
 - **Game detail is now a full-screen modal** with a frosted, opaque translucent

@@ -55,6 +55,45 @@ def main() -> int:
         from gamecenter.ui import library_model
 
         library_model.scan_all = _demo_games
+        if os.environ.get("GC_INSERT"):
+            # Keep the insertion preview deterministic: no toast on launch.
+            library_model.launch_game = lambda game: 4321
+
+    if demo and os.environ.get("GC_STATS"):
+        # Deterministic history for the statistics preview.
+        from datetime import datetime
+
+        from gamecenter.core import playtime
+
+        history = Path(os.environ.get("TEMP", ".")) / "gamecenter-preview-history.json"
+        history.write_text("{}", encoding="utf-8")
+        playtime.history_path = lambda: history
+        samples = _demo_games()
+        year = datetime.now().year
+        rows = (
+            # January: most sessions (5) over 3 days.
+            (0, 1, 5, 1800),
+            (1, 1, 5, 1200),
+            (0, 1, 7, 2400),
+            (1, 1, 9, 1800),
+            (2, 1, 9, 1200),
+            (3, 2, 11, 4200),
+            (0, 4, 3, 10800),
+            # June: most days played (4).
+            (4, 6, 2, 1800),
+            (4, 6, 8, 1800),
+            (4, 6, 14, 1800),
+            (4, 6, 20, 1800),
+            (5, 8, 14, 9000),
+            (0, 9, 2, 12600),
+            # October: most hours (13h).
+            (0, 10, 25, 21600),
+            (1, 10, 25, 10800),
+            (2, 10, 26, 14400),
+        )
+        for game_index, month, day, seconds in rows:
+            stamp = int(datetime(year, month, day, 19, 0).timestamp())
+            playtime.record_session(samples[game_index], stamp, seconds)
 
     library = LibraryModel(
         download_art=not demo,
@@ -132,7 +171,10 @@ def main() -> int:
         return 1
 
     window = roots[0]
-    window.resize(1180, 800)
+    window.resize(
+        int(os.environ.get("GC_WIDTH", "1180")),
+        int(os.environ.get("GC_HEIGHT", "800")),
+    )
     window.show()
 
     name = "screenshot.png"
@@ -142,6 +184,8 @@ def main() -> int:
         name = "screenshot-detail.png"
     elif os.environ.get("GC_SESSION"):
         name = "screenshot-session.png"
+    elif os.environ.get("GC_STATS"):
+        name = "screenshot-stats-highlights.png"
     elif os.environ.get("GC_UPDATE_PROGRESS"):
         name = "screenshot-update-progress.png"
     elif os.environ.get("GC_UPDATE_DIALOG"):
@@ -205,6 +249,9 @@ def main() -> int:
         )
     if os.environ.get("GC_SETTINGS"):
         QTimer.singleShot(1200, lambda: window.setProperty("settingsOpen", True))
+
+    if os.environ.get("GC_STATS"):
+        QTimer.singleShot(1200, lambda: window.setProperty("currentView", "stats"))
 
     if os.environ.get("GC_UPDATE_DIALOG"):
         QTimer.singleShot(1200, lambda: window.setProperty("updateOpen", True))

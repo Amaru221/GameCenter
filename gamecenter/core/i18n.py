@@ -1809,6 +1809,152 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
     },
 }
 
+# 0.17.0 — screenshots and month highlights. Kept in one block so the large
+# catalogs above stay untouched.
+TRANSLATIONS["es"].update(
+    {
+        "SCREENSHOTS": "CAPTURAS",
+        "Screenshot shortcut": "Atajo de capturas",
+        "Captures a screenshot of the game you're playing.": (
+            "Hace una captura del juego que estás jugando."
+        ),
+        "Keyboard shortcut": "Atajo de teclado",
+        "Gamepad: hold Select for %1 seconds.": (
+            "Mando: mantén Select %1 segundos."
+        ),
+        "Ctrl + Page Down": "Ctrl + Av Pág",
+        "Print Screen": "Impr Pant",
+        "None": "Ninguno",
+        "This shortcut is already in use.": "Este atajo ya está en uso.",
+        "Screenshot saved: %1": "Captura guardada: %1",
+        "Couldn't capture the screen.": "No se pudo capturar la pantalla.",
+        "Screenshots are saved in %1.": "Las capturas se guardan en %1.",
+        "Open screenshots folder": "Abrir carpeta de capturas",
+        "Most hours": "Más horas",
+        "Most sessions": "Más sesiones",
+        "Most days": "Más días",
+        "Most played game": "Juego más jugado",
+    }
+)
+
+TRANSLATIONS["fr"].update(
+    {
+        "SCREENSHOTS": "CAPTURES D'ÉCRAN",
+        "Screenshot shortcut": "Raccourci de capture",
+        "Captures a screenshot of the game you're playing.": (
+            "Capture l'écran du jeu en cours."
+        ),
+        "Keyboard shortcut": "Raccourci clavier",
+        "Gamepad: hold Select for %1 seconds.": (
+            "Manette : maintenez Select %1 secondes."
+        ),
+        "Ctrl + Page Down": "Ctrl + Page suivante",
+        "Print Screen": "Impr. écran",
+        "None": "Aucun",
+        "This shortcut is already in use.": "Ce raccourci est déjà utilisé.",
+        "Screenshot saved: %1": "Capture enregistrée : %1",
+        "Couldn't capture the screen.": "Impossible de capturer l'écran.",
+        "Screenshots are saved in %1.": (
+            "Les captures sont enregistrées dans %1."
+        ),
+        "Open screenshots folder": "Ouvrir le dossier des captures",
+        "Most hours": "Plus d'heures",
+        "Most sessions": "Plus de sessions",
+        "Most days": "Plus de jours",
+        "Most played game": "Jeu le plus joué",
+    }
+)
+
+TRANSLATIONS["de"].update(
+    {
+        "SCREENSHOTS": "SCREENSHOTS",
+        "Screenshot shortcut": "Screenshot-Tastenkürzel",
+        "Captures a screenshot of the game you're playing.": (
+            "Macht einen Screenshot des laufenden Spiels."
+        ),
+        "Keyboard shortcut": "Tastenkürzel",
+        "Gamepad: hold Select for %1 seconds.": (
+            "Controller: Select %1 Sekunden halten."
+        ),
+        "Ctrl + Page Down": "Strg + Bild ab",
+        "Print Screen": "Druck",
+        "None": "Keine",
+        "This shortcut is already in use.": (
+            "Dieses Tastenkürzel wird bereits verwendet."
+        ),
+        "Screenshot saved: %1": "Screenshot gespeichert: %1",
+        "Couldn't capture the screen.": (
+            "Der Bildschirm konnte nicht aufgenommen werden."
+        ),
+        "Screenshots are saved in %1.": (
+            "Screenshots werden in %1 gespeichert."
+        ),
+        "Open screenshots folder": "Screenshot-Ordner öffnen",
+        "Most hours": "Meiste Stunden",
+        "Most sessions": "Meiste Sitzungen",
+        "Most days": "Meiste Tage",
+        "Most played game": "Meistgespieltes Spiel",
+    }
+)
+
+TRANSLATIONS["it"].update(
+    {
+        "SCREENSHOTS": "SCHERMATE",
+        "Screenshot shortcut": "Scorciatoia schermata",
+        "Captures a screenshot of the game you're playing.": (
+            "Cattura una schermata del gioco in corso."
+        ),
+        "Keyboard shortcut": "Scorciatoia da tastiera",
+        "Gamepad: hold Select for %1 seconds.": (
+            "Controller: tieni premuto Select per %1 secondi."
+        ),
+        "Ctrl + Page Down": "Ctrl + Pag giù",
+        "Print Screen": "Stamp",
+        "None": "Nessuno",
+        "This shortcut is already in use.": (
+            "Questa scorciatoia è già in uso."
+        ),
+        "Screenshot saved: %1": "Schermata salvata: %1",
+        "Couldn't capture the screen.": "Impossibile catturare lo schermo.",
+        "Screenshots are saved in %1.": (
+            "Le schermate vengono salvate in %1."
+        ),
+        "Open screenshots folder": "Apri cartella schermate",
+        "Most hours": "Più ore",
+        "Most sessions": "Più sessioni",
+        "Most days": "Più giorni",
+        "Most played game": "Gioco più giocato",
+    }
+)
+
+TRANSLATIONS["pt"].update(
+    {
+        "SCREENSHOTS": "CAPTURAS",
+        "Screenshot shortcut": "Atalho de captura",
+        "Captures a screenshot of the game you're playing.": (
+            "Captura uma imagem do jogo em execução."
+        ),
+        "Keyboard shortcut": "Atalho de teclado",
+        "Gamepad: hold Select for %1 seconds.": (
+            "Controle: mantenha Select por %1 segundos."
+        ),
+        "Ctrl + Page Down": "Ctrl + Page Down",
+        "Print Screen": "Print Screen",
+        "None": "Nenhum",
+        "This shortcut is already in use.": "Este atalho já está em uso.",
+        "Screenshot saved: %1": "Captura salva: %1",
+        "Couldn't capture the screen.": "Não foi possível capturar a tela.",
+        "Screenshots are saved in %1.": (
+            "As capturas são salvas em %1."
+        ),
+        "Open screenshots folder": "Abrir pasta de capturas",
+        "Most hours": "Mais horas",
+        "Most sessions": "Mais sessões",
+        "Most days": "Mais dias",
+        "Most played game": "Jogo mais jogado",
+    }
+)
+
 _EXTRA_KEYS = ("Nintendo DS", "PS2", "STEAMGRIDDB")
 _KEYS = frozenset(_EXTRA_KEYS).union(
     *(catalog.keys() for catalog in TRANSLATIONS.values())

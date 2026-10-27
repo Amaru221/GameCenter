@@ -18,6 +18,15 @@ DEFAULT_ACCENT = "#4cc9f0"
 DEFAULT_SURFACE = "#12151b"
 DEFAULT_CARTRIDGE = "#3c414a"
 CARTRIDGE_STYLES = ("classic", "ds", "ps2")
+DEFAULT_SCREENSHOT_SHORTCUT = "ctrl+pagedown"
+SCREENSHOT_SHORTCUTS = (
+    "ctrl+pagedown",
+    "ctrl+f12",
+    "f12",
+    "printscreen",
+    "ctrl+shift+s",
+    "none",
+)
 
 # A wide but curated set; all have enough contrast on the dark background.
 PALETTE = (
@@ -103,6 +112,15 @@ class Preferences:
         data["checkUpdates"] = bool(data.get("checkUpdates", True))
         language = str(data.get("language") or "en")
         data["language"] = language if language in CODES else "en"
+
+        shortcut = str(
+            data.get("screenshotShortcut") or DEFAULT_SCREENSHOT_SHORTCUT
+        ).lower()
+        data["screenshotShortcut"] = (
+            shortcut
+            if shortcut in SCREENSHOT_SHORTCUTS
+            else DEFAULT_SCREENSHOT_SHORTCUT
+        )
         try:
             data["lastUpdateCheck"] = float(data.get("lastUpdateCheck") or 0)
         except (TypeError, ValueError):
@@ -207,6 +225,19 @@ class Preferences:
     def last_update_check(self, value: float) -> None:
         self._data["lastUpdateCheck"] = float(value)
         self._save()
+
+    # -- screenshots ------------------------------------------------------
+
+    @property
+    def screenshot_shortcut(self) -> str:
+        return str(self._data["screenshotShortcut"])
+
+    @screenshot_shortcut.setter
+    def screenshot_shortcut(self, value: str) -> None:
+        value = str(value or "").lower()
+        if value in SCREENSHOT_SHORTCUTS and value != self._data["screenshotShortcut"]:
+            self._data["screenshotShortcut"] = value
+            self._save()
 
     # -- per-game cover ---------------------------------------------------
 

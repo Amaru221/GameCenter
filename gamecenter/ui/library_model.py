@@ -1752,10 +1752,12 @@ class LibraryModel(QAbstractListModel):
     @Slot(str, int, int, result="QVariantMap")
     def stats(self, period: str, year: int, month: int = -1) -> dict:
         """Aggregated playtime data for the Statistics view."""
+        covers = {game.id: self._cover_url(game) for game in self._all}
         return stats_module.build(
             self._all,
             period=period,
             year=year,
             language=self._i18n.language,
             month=month,
+            covers=covers,
         )

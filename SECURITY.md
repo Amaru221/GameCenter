@@ -13,6 +13,7 @@ Riot) from files and the Windows registry. It never writes to those locations.
 | Data | Location | Contents |
 |---|---|---|
 | Favorites | `%APPDATA%\GameCenter\settings.json` (Linux: `~/.config/GameCenter/settings.json`) | game IDs only |
+| Screenshots | `%APPDATA%\GameCenter\screenshots` | PNG captures you take from a running game |
 | Cover cache | `~/.cache/gamecenter/art` | JPEG capsules downloaded from Steam's public CDN |
 
 No library contents, paths, account names or play history are uploaded.

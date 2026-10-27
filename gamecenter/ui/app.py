@@ -14,6 +14,7 @@ from PySide6.QtWidgets import QApplication
 
 from .. import __version__
 from ..core.gamepad import GamepadManager
+from ..core.screenshots import ScreenshotManager
 from . import covers
 from .library_model import LibraryModel
 
@@ -86,6 +87,12 @@ def create_engine(library: LibraryModel) -> QQmlApplicationEngine:
     gamepad = GamepadManager()
     gamepad.setParent(engine)
     engine.rootContext().setContextProperty("Gamepad", gamepad)
+
+    screenshots = ScreenshotManager(library._prefs, library.sessions)
+    screenshots.setParent(engine)
+    engine.rootContext().setContextProperty("Screenshots", screenshots)
+    gamepad.screenshot.connect(screenshots.captureIfPlaying)
+
     engine.load(QUrl.fromLocalFile(str(QML_DIR / "Main.qml")))
     return engine
 

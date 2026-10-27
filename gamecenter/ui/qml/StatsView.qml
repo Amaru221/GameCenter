@@ -557,6 +557,7 @@ Rectangle {
 
             ListView {
                 id: carousel
+                objectName: "monthCarousel"
                 Layout.fillWidth: true
                 Layout.preferredHeight: 448
                 orientation: ListView.Horizontal
@@ -838,8 +839,64 @@ Rectangle {
         }
     }
 
+    component HighlightBadge: Rectangle {
+        id: badge
+        objectName: "highlightBadge"
+        property string label: ""
+        property color tint: "#facc15"
+
+        height: 22
+        width: badgeContent.implicitWidth + 22
+        radius: 11
+        color: "#0e1622"
+        border.width: 1
+        border.color: Qt.rgba(badge.tint.r, badge.tint.g, badge.tint.b, 0.52)
+
+        gradient: Gradient {
+            GradientStop {
+                position: 0.0
+                color: Qt.rgba(badge.tint.r, badge.tint.g, badge.tint.b, 0.20)
+            }
+            GradientStop { position: 1.0; color: "#0d131e" }
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: -2
+            radius: 13
+            color: "transparent"
+            border.width: 1
+            border.color: Qt.rgba(badge.tint.r, badge.tint.g, badge.tint.b, 0.14)
+        }
+
+        Row {
+            id: badgeContent
+            anchors.centerIn: parent
+            spacing: 6
+
+            Rectangle {
+                width: 5
+                height: 5
+                radius: 1
+                rotation: 45
+                color: badge.tint
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Text {
+                text: badge.label
+                color: Qt.lighter(badge.tint, 1.18)
+                font.family: "Sora"
+                font.pixelSize: 9
+                font.bold: true
+                font.letterSpacing: 0.35
+            }
+        }
+    }
+
     component MonthCard: Rectangle {
         id: card
+        objectName: "monthCard"
         property var month: ({})
         property int monthIndex: 0
         property bool active: false
@@ -884,6 +941,53 @@ Rectangle {
                     font.bold: true
                 }
 
+                // Cover of the most played game of the month, next to its name.
+                Item {
+                    id: mostPlayedCover
+                    objectName: "monthPlayedCover"
+                    visible: !!(card.month.mostPlayed
+                                && card.month.mostPlayed.cover)
+                    Layout.preferredWidth: 26
+                    Layout.preferredHeight: 34
+                    Layout.leftMargin: 2
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: 6
+                        color: "#0a1019"
+                        border.width: 1
+                        border.color: "#2c3b52"
+                    }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 2
+                        radius: 4
+                        color: "#182234"
+                        clip: true
+
+                        Image {
+                            anchors.fill: parent
+                            source: card.month.mostPlayed
+                                    ? (card.month.mostPlayed.cover || "")
+                                    : ""
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                            cache: true
+                        }
+                    }
+
+                    HoverHandler { id: coverHover }
+
+                    ToolTip.visible: coverHover.hovered
+                    ToolTip.delay: 250
+                    ToolTip.text: Tr.strings["Most played game"] + ": "
+                                  + (card.month.mostPlayedName || "")
+                                  + (card.month.mostPlayedHours
+                                     ? " · " + card.month.mostPlayedHours
+                                     : "")
+                }
+
                 Item { Layout.fillWidth: true }
 
                 Rectangle {
@@ -913,6 +1017,31 @@ Rectangle {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.openMonth(card.monthIndex)
                     }
+                }
+            }
+
+            Flow {
+                Layout.fillWidth: true
+                spacing: 6
+                visible: card.month.topHours || card.month.topSessions
+                         || card.month.topDays
+
+                HighlightBadge {
+                    visible: card.month.topHours === true
+                    label: Tr.strings["Most hours"]
+                    tint: "#facc15"
+                }
+
+                HighlightBadge {
+                    visible: card.month.topSessions === true
+                    label: Tr.strings["Most sessions"]
+                    tint: "#a78bfa"
+                }
+
+                HighlightBadge {
+                    visible: card.month.topDays === true
+                    label: Tr.strings["Most days"]
+                    tint: "#34d399"
                 }
             }
 
