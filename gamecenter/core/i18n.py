@@ -104,6 +104,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "Importa las horas, sesiones y carátula de otra entrada a este juego."
         ),
         "Source game": "Juego de origen",
+        "Choose a game": "Elige un juego",
         "Hide the source after unifying": "Ocultar el origen tras unificar",
         "Avoids duplicate stats. You can restore it from Settings.": (
             "Evita estadísticas duplicadas. Puedes restaurarlo desde Ajustes."
@@ -448,6 +449,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "dans ce jeu."
         ),
         "Source game": "Jeu source",
+        "Choose a game": "Choisir un jeu",
         "Hide the source after unifying": "Masquer la source après l'unification",
         "Avoids duplicate stats. You can restore it from Settings.": (
             "Évite les statistiques en double. Vous pouvez la restaurer dans "
@@ -799,6 +801,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "in dieses Spiel."
         ),
         "Source game": "Quellspiel",
+        "Choose a game": "Spiel auswählen",
         "Hide the source after unifying": (
             "Quelle nach dem Zusammenführen ausblenden"
         ),
@@ -1164,6 +1167,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "Importa ore, sessioni e copertina di un'altra voce in questo gioco."
         ),
         "Source game": "Gioco di origine",
+        "Choose a game": "Scegli un gioco",
         "Hide the source after unifying": (
             "Nascondi l'origine dopo l'unificazione"
         ),
@@ -1521,6 +1525,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
             "Importa as horas, sessões e capa de outra entrada para este jogo."
         ),
         "Source game": "Jogo de origem",
+        "Choose a game": "Escolhe um jogo",
         "Hide the source after unifying": "Ocultar a origem após unificar",
         "Avoids duplicate stats. You can restore it from Settings.": (
             "Evita estatísticas duplicadas. Podes restaurá-la nas Configurações."

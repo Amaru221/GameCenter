@@ -11,6 +11,7 @@
   moderno y se edita desde los **ajustes del juego** (engranaje / Edit profile).
 - Permitir **unificar manualmente** los datos de otra entrada conocida, aunque
   ya no aparezca en la biblioteca, sobre el juego abierto (destino):
+  - el selector de origen empieza **vacío**: no se preselecciona ninguna entrada,
   - suma horas y contador de sesiones,
   - mueve el timeline de sesiones al ID destino,
   - guarda una **captura de la carátula del origen** en disco para recaps,
@@ -49,7 +50,7 @@
 - [x] Tests de perfiles, merge, rating/status, entradas eliminadas y aislamiento de rutas.
 
 #### Frontend
-- [x] `GameProfilePanel.qml`: estados, slider 0–100, unificación, registros importados.
+- [x] `GameProfilePanel.qml`: estados, slider 0–100, selector de origen vacío, unificación, registros importados.
 - [x] `GameDetail.qml`: tira de perfil visible, botón de ajustes y panel expandible.
 - [x] `Main.qml`/`BigPicture.qml`: recargar ficha con `profileChanged`.
 - [x] Traducciones ES/FR/DE/IT/PT.

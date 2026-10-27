@@ -76,9 +76,10 @@ la muestra como una estantería y lanza los juegos con un doble clic.
     Not Played y Abandoned*; se guarda por ID en `profiles.json`.
   - Botón **Edit profile** en la ficha para abrir el editor; la tira de estado y
     puntuación queda siempre visible.
-  - **Unificación manual entre plataformas**: elige otra entrada de la
-    biblioteca —aunque ya no aparezca en la tienda pero conserve datos en
-    GameCenter— y trae sus horas, sesiones y timeline al juego actual.
+  - **Unificación manual entre plataformas**: el campo de origen empieza
+    **vacío** y tú eliges la entrada; nada se preselecciona. Puedes elegir otra
+    entrada de la biblioteca —aunque ya no aparezca en la tienda pero conserve
+    datos en GameCenter— y traer sus horas, sesiones y timeline al juego actual.
   - El timeline importado se marca como **Imported**; la carátula del origen se
     guarda en `recap_covers/` para recaps y, si el destino no tiene carátula
     real, se adopta automáticamente.

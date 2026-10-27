@@ -793,6 +793,10 @@ def test_qml_game_profile_panel_loads(app, model) -> None:
     panel = root.findChild(QObject, "gameProfilePanel")
     assert panel is not None
     assert panel.property("expanded") is True
+    assert panel.property("sourceId") == ""
+    combo = panel.findChild(QObject, "profileSourceCombo")
+    assert combo is not None
+    assert combo.property("currentIndex") == -1
     candidates = panel.property("candidateModel")
     if hasattr(candidates, "toVariant"):
         candidates = candidates.toVariant()

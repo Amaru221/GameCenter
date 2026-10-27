@@ -6,6 +6,8 @@ ComboBox {
 
     property var entries: []
     property string value: ""
+    property bool allowEmpty: false
+    property string emptyText: ""
 
     implicitHeight: 34
     implicitWidth: 160
@@ -22,6 +24,8 @@ ComboBox {
         var i = control.indexOfValue(control.value);
         if (i >= 0) {
             control.currentIndex = i;
+        } else if (control.allowEmpty) {
+            control.currentIndex = -1;
         }
     }
 
@@ -30,8 +34,8 @@ ComboBox {
         control.selected(control.currentValue);
     }
     onValueChanged: syncIndex()
-    onEntriesChanged: syncIndex()
-    Component.onCompleted: syncIndex()
+    onEntriesChanged: Qt.callLater(syncIndex)
+    Component.onCompleted: Qt.callLater(syncIndex)
 
     background: Rectangle {
         radius: 17
@@ -43,8 +47,10 @@ ComboBox {
     contentItem: Text {
         leftPadding: 14
         rightPadding: 30
-        text: control.displayText
-        color: "#cfd6e2"
+        text: control.displayText.length
+              ? control.displayText
+              : control.emptyText
+        color: control.displayText.length ? "#cfd6e2" : "#6f7887"
         font: control.font
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight

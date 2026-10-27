@@ -71,16 +71,8 @@ Rectangle {
         }
         loadedGameId = game.id;
         candidateModel = Library.mergeCandidates(game.id);
-        var found = false;
-        for (var i = 0; i < candidateModel.length; ++i) {
-            if (candidateModel[i].id === sourceId) {
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            sourceId = candidateModel.length ? candidateModel[0].id : "";
-        }
+        // The source is an explicit choice: never pre-select an entry.
+        sourceId = "";
         if (game.rating !== undefined && game.rating !== null && game.rating >= 0) {
             ratingDraft = game.rating;
         } else {
@@ -381,6 +373,7 @@ Rectangle {
 
         PillCombo {
             id: sourceCombo
+            objectName: "profileSourceCombo"
             Layout.fillWidth: true
             Layout.preferredHeight: 34
             entries: {
@@ -401,6 +394,8 @@ Rectangle {
                 return out;
             }
             value: root.sourceId
+            allowEmpty: true
+            emptyText: Tr.strings["Choose a game"]
             onSelected: (chosen) => root.sourceId = chosen
         }
 

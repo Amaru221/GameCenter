@@ -6,6 +6,8 @@
   (Playing, On Going, Beaten, Completed, Played, Plan to Play, On Hold,
   Not Played, Abandoned), persisted per game id in `profiles.json`.
 - Added **manual cross-platform unification** from the game settings:
+  - the source field starts empty and the user explicitly picks the entry to
+    import (nothing is pre-selected),
   - pick another library entry — including an entry that no longer appears in
     the store but still has GameCenter data — and import its playtime and
     session timeline,
