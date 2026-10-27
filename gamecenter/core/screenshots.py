@@ -12,6 +12,7 @@ import ctypes
 import os
 import re
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -28,6 +29,7 @@ from PySide6.QtGui import QCursor, QDesktopServices, QGuiApplication
 
 from .i18n import tr
 from .preferences import SCREENSHOT_SHORTCUTS, config_dir
+from . import screenshot_store
 
 # Qt key sequences for the local Shortcut fallback.
 QT_SEQUENCES = {
@@ -134,6 +136,7 @@ class ScreenshotManager(QObject):
             Path(directory) if directory is not None else config_dir() / "screenshots"
         )
         self._last_path = ""
+        self._last_capture: dict = {}
         self._registered = False
         self._error = ""
         self._user32 = None
@@ -193,16 +196,22 @@ class ScreenshotManager(QObject):
     def lastPath(self) -> str:
         return self._last_path
 
+    @Property("QVariantMap", notify=changed)
+    def lastCapture(self) -> dict:
+        return dict(self._last_capture)
+
     @Slot(result=str)
     def captureIfPlaying(self) -> str:
-        title = self._active_title()
+        session = self._active_session()
+        title = str(session.get("title") or "")
         if not title:
             return ""
-        return self._capture(title)
+        return self._capture(title, session)
 
     @Slot(result=str)
     def capture(self) -> str:
-        return self._capture(self._active_title() or "GameCenter")
+        session = self._active_session()
+        return self._capture(str(session.get("title") or "GameCenter"), session)
 
     @Slot()
     def openFolder(self) -> None:
@@ -214,14 +223,14 @@ class ScreenshotManager(QObject):
 
     # -- capture ----------------------------------------------------------
 
-    def _active_title(self) -> str:
+    def _active_session(self) -> dict:
         try:
             entries = list(self._sessions.list)
         except (AttributeError, TypeError):
-            return ""
+            return {}
         if not entries:
-            return ""
-        return str(entries[-1].get("title") or "")
+            return {}
+        return dict(entries[-1])
 
     def _has_session(self) -> bool:
         try:
@@ -229,18 +238,23 @@ class ScreenshotManager(QObject):
         except (AttributeError, TypeError):
             return False
 
-    def _grab(self):
+    def _screen(self):
         app = QGuiApplication.instance()
         if app is None:
             return None
         screen = QGuiApplication.screenAt(QCursor.pos())
         if screen is None:
             screen = QGuiApplication.primaryScreen()
+        return screen
+
+    def _grab(self):
+        screen = self._screen()
         if screen is None:
             return None
         return screen.grabWindow(0)
 
-    def _capture(self, title: str) -> str:
+    def _capture(self, title: str, session: dict | None = None) -> str:
+        session = session or {}
         pixmap = self._grab()
         if pixmap is None or pixmap.isNull():
             self.failed.emit(tr("Couldn't capture the screen."))
@@ -252,7 +266,35 @@ class ScreenshotManager(QObject):
         except OSError:
             self.failed.emit(tr("Couldn't capture the screen."))
             return ""
+        taken_at = int(time.time())
+        try:
+            screenshot_store.record(
+                path,
+                game_id=str(session.get("gameId") or ""),
+                session_id=str(session.get("id") or ""),
+                session_started_at=session.get("startedAt") or 0,
+                title=title,
+                taken_at=taken_at,
+            )
+        except Exception:  # noqa: BLE001 - the PNG is already safe on disk
+            pass
+
+        screen = self._screen()
+        geometry = screen.geometry() if screen is not None else None
         self._last_path = str(path)
+        self._last_capture = {
+            "path": str(path),
+            "url": path.as_uri(),
+            "gameId": str(session.get("gameId") or ""),
+            "sessionId": str(session.get("id") or ""),
+            "title": title,
+            "takenAt": taken_at,
+            "screenX": geometry.x() if geometry is not None else 0,
+            "screenY": geometry.y() if geometry is not None else 0,
+            "screenWidth": geometry.width() if geometry is not None else 0,
+            "screenHeight": geometry.height() if geometry is not None else 0,
+        }
+        self.changed.emit()
         self.saved.emit(str(path))
         return str(path)
 

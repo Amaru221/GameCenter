@@ -14,6 +14,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("QT_QUICK_BACKEND", "software")
 os.environ.setdefault("GC_NO_GAMEPAD", "1")
 os.environ.setdefault("GC_NO_HOTKEYS", "1")
+os.environ.setdefault("GC_NO_OVERLAY", "1")
 
 from gamecenter.core.models import Game  # noqa: E402
 from gamecenter.ui import covers, library_model  # noqa: E402
@@ -303,6 +304,81 @@ def test_game_at_returns_detail_data(model) -> None:
     assert detail["description"] == ""
     assert detail["detailsLoaded"] is False
     assert detail["history"] == []
+
+
+def test_game_detail_links_screenshots_to_sessions(model, monkeypatch) -> None:
+    history = [
+        {"start": 2000, "seconds": 300, "title": "Alpha Quest", "source": "steam"},
+        {"start": 1000, "seconds": 600, "title": "Alpha Quest", "source": "steam"},
+    ]
+    shots = [
+        {
+            "path": "C:/shots/a.png",
+            "url": "file:///C:/shots/a.png",
+            "gameId": "steam:1",
+            "sessionId": "s1",
+            "sessionStartedAt": 1000,
+            "takenAt": 1100,
+            "title": "Alpha Quest",
+        },
+        {
+            "path": "C:/shots/b.png",
+            "url": "file:///C:/shots/b.png",
+            "gameId": "steam:1",
+            "sessionId": "s1",
+            "sessionStartedAt": 1000,
+            "takenAt": 1200,
+            "title": "Alpha Quest",
+        },
+        {
+            "path": "C:/shots/c.png",
+            "url": "file:///C:/shots/c.png",
+            "gameId": "steam:1",
+            "sessionId": "s1",
+            "sessionStartedAt": 1000,
+            "takenAt": 1300,
+            "title": "Alpha Quest",
+        },
+        {
+            "path": "C:/shots/d.png",
+            "url": "file:///C:/shots/d.png",
+            "gameId": "steam:1",
+            "sessionId": "s2",
+            "sessionStartedAt": 2000,
+            "takenAt": 2100,
+            "title": "Alpha Quest",
+        },
+    ]
+    monkeypatch.setattr(
+        library_model.playtime, "history_for", lambda game: history
+    )
+    monkeypatch.setattr(
+        library_model.screenshot_store,
+        "for_game",
+        lambda game_id, title="": shots,
+    )
+
+    detail = model.gameDetailById("steam:1")
+
+    assert [shot["path"] for shot in detail["screenshots"]] == [
+        "C:/shots/d.png",
+        "C:/shots/c.png",
+        "C:/shots/b.png",
+        "C:/shots/a.png",
+    ]
+    assert detail["screenshotCount"] == 4
+    assert [shot["path"] for shot in detail["history"][0]["screenshots"]] == [
+        "C:/shots/d.png"
+    ]
+    second = detail["history"][1]
+    assert [shot["path"] for shot in second["screenshots"]] == [
+        "C:/shots/a.png",
+        "C:/shots/b.png",
+        "C:/shots/c.png",
+    ]
+    assert len(second["previewScreenshots"]) == 2
+    assert second["overflowScreenshot"]["path"] == "C:/shots/c.png"
+    assert second["overflowCount"] == 1
 
 
 def test_game_detail_loads_cached_description(model, monkeypatch) -> None:

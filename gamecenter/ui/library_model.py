@@ -7,6 +7,7 @@ import re
 import threading
 import time
 from dataclasses import replace
+from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import (
@@ -32,6 +33,7 @@ from ..core import (
     metadata,
     playtime,
     profiles,
+    screenshot_store,
     stats as stats_module,
     steamgriddb,
     updater,
@@ -1654,15 +1656,58 @@ class LibraryModel(QAbstractListModel):
         language = self._i18n.language
         key = (game.id, language)
         details = self._details.get(key, {})
-        history = [
-            {
-                "timestamp": int(item["start"]),
-                "seconds": int(item["seconds"]),
-                "duration": _duration_text(int(item["seconds"])),
-                "imported": bool(item.get("imported")),
+
+        def shot_payload(item: dict) -> dict:
+            taken = int(item.get("takenAt") or 0)
+            return {
+                **item,
+                "timeText": (
+                    datetime.fromtimestamp(taken).strftime("%H:%M") if taken else ""
+                ),
+                "dateText": (
+                    datetime.fromtimestamp(taken).strftime("%d/%m %H:%M")
+                    if taken
+                    else ""
+                ),
             }
-            for item in playtime.history_for(game)
+
+        gallery = [
+            shot_payload(item)
+            for item in screenshot_store.for_game(game.id, title=game.title)
         ]
+        gallery.reverse()  # newest first
+        used_shots: set[str] = set()
+        history = []
+        for item in playtime.history_for(game):
+            start = int(item["start"])
+            seconds = int(item["seconds"])
+            end = start + seconds
+            session_shots = []
+            for shot in gallery:
+                if shot["path"] in used_shots:
+                    continue
+                started = int(shot.get("sessionStartedAt") or 0)
+                matched = abs(started - start) <= 2
+                if not matched:
+                    matched = start - 2 <= int(shot["takenAt"]) <= end + 2
+                if matched:
+                    session_shots.append(shot)
+                    used_shots.add(shot["path"])
+            session_shots.sort(key=lambda shot: (shot["takenAt"], shot["path"]))
+            history.append(
+                {
+                    "timestamp": start,
+                    "seconds": seconds,
+                    "duration": _duration_text(seconds),
+                    "imported": bool(item.get("imported")),
+                    "screenshots": session_shots,
+                    "previewScreenshots": session_shots[:2],
+                    "overflowScreenshot": (
+                        session_shots[2] if len(session_shots) > 2 else {}
+                    ),
+                    "overflowCount": max(0, len(session_shots) - 2),
+                }
+            )
         history_seconds = sum(item["seconds"] for item in history)
 
         profile = profiles.get(game.id)
@@ -1731,6 +1776,8 @@ class LibraryModel(QAbstractListModel):
             "history": history,
             "sessionCount": len(history),
             "historyTotalText": _duration_text(history_seconds) if history_seconds else "",
+            "screenshots": gallery,
+            "screenshotCount": len(gallery),
         }
 
     @Slot(str, result="QVariantMap")

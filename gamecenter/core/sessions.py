@@ -115,6 +115,7 @@ class SessionTracker(QObject):
                 "source": SOURCE_LABELS.get(session.source, session.source),
                 "cover": session.cover,
                 "elapsed": _format_elapsed(int(now - session.started_at)),
+                "startedAt": int(session.started_at),
             }
             for session in self._sessions
         ]

@@ -59,7 +59,11 @@ def main() -> int:
             # Keep the insertion preview deterministic: no toast on launch.
             library_model.launch_game = lambda game: 4321
 
-    if demo and (os.environ.get("GC_STATS") or os.environ.get("GC_REVIEW")):
+    if demo and (
+        os.environ.get("GC_STATS")
+        or os.environ.get("GC_REVIEW")
+        or os.environ.get("GC_SHOTS")
+    ):
         # Deterministic history for the statistics preview.
         from datetime import datetime
 
@@ -100,6 +104,35 @@ def main() -> int:
         download_art=not demo,
         settings_path=Path(os.environ.get("TEMP", ".")) / "gamecenter-preview.json",
     )
+
+    if demo and os.environ.get("GC_SHOTS"):
+        from PySide6.QtGui import QColor, QImage, QPainter
+
+        from gamecenter.core import screenshot_store
+
+        shots_dir = Path(os.environ.get("TEMP", ".")) / "gamecenter-preview-shots"
+        shots_dir.mkdir(parents=True, exist_ok=True)
+        screenshot_store.index_path = lambda: shots_dir / "index.json"
+        year = datetime.now().year
+        session_start = int(datetime(year, 10, 25, 19, 0).timestamp())
+        colors = ("#1f6f8b", "#7a3e9d", "#b4532a", "#2a7d5f")
+        for index, color in enumerate(colors):
+            image = QImage(640, 360, QImage.Format_RGB32)
+            image.fill(QColor(color))
+            painter = QPainter(image)
+            painter.setPen(QColor("#f8fafc"))
+            painter.drawText(image.rect(), Qt.AlignCenter, f"GAMEPLAY {index + 1}")
+            painter.end()
+            path = shots_dir / f"neon-drifter-{index + 1}.png"
+            image.save(str(path))
+            screenshot_store.record(
+                path,
+                game_id="steam:900001",
+                session_id="demo",
+                session_started_at=session_start,
+                title="Neon Drifter",
+                taken_at=session_start + 300 + index * 240,
+            )
 
     if os.environ.get("GC_STYLE"):
         library.setCartridgeStyle(os.environ["GC_STYLE"])
@@ -185,6 +218,12 @@ def main() -> int:
         name = "screenshot-detail.png"
     elif os.environ.get("GC_SESSION"):
         name = "screenshot-session.png"
+    elif os.environ.get("GC_SHOTS"):
+        name = (
+            "screenshot-detail-viewer.png"
+            if os.environ.get("GC_SHOTS_VIEWER")
+            else "screenshot-detail-shots.png"
+        )
     elif os.environ.get("GC_STATS"):
         name = (
             "screenshot-stats-"
@@ -294,6 +333,41 @@ def main() -> int:
             QTimer.singleShot(350, show_review)
 
         QTimer.singleShot(1400, open_review)
+
+    if os.environ.get("GC_SHOTS"):
+        def open_shots_detail():
+            window.setProperty("detailIndex", 0)
+            window.setProperty("detailGame", library.gameAt(0))
+            window.setProperty("detailOpen", True)
+
+            def scroll_detail():
+                def find(item, name):
+                    if item.objectName() == name:
+                        return item
+                    for child in item.childItems():
+                        hit = find(child, name)
+                        if hit is not None:
+                            return hit
+                    return None
+
+                scroller = find(window.contentItem(), "detailScroller")
+                if scroller is not None:
+                    scroller.setProperty(
+                        "contentY",
+                        int(os.environ.get("GC_SHOTS_SCROLL", "900")),
+                    )
+
+                if os.environ.get("GC_SHOTS_VIEWER"):
+                    detail = find(window.contentItem(), "gameDetail")
+                    if detail is not None:
+                        shots = library.gameAt(0).get("screenshots", [])
+                        detail.setProperty("viewerShots", shots)
+                        detail.setProperty("viewerIndex", 0)
+                        detail.setProperty("viewerOpen", True)
+
+            QTimer.singleShot(500, scroll_detail)
+
+        QTimer.singleShot(1200, open_shots_detail)
 
     if os.environ.get("GC_STATS"):
         def open_stats():

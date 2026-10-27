@@ -3,7 +3,7 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.18.0** - Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
+> Estado: **v0.19.0** - Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 
@@ -32,6 +32,16 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   tiempo total. Las sesiones se registran desde esta versión en
   `%APPDATA%\GameCenter\history.json` (también para Steam, sin tocar su
   `localconfig.vdf`).
+  - Las capturas hechas durante una sesión aparecen **a la derecha de esa
+    sesión**: las dos primeras como miniaturas y, si hay más, la siguiente con
+    un contador **+N**.
+  - La ficha incluye una sección **SCREENSHOTS** con todas las capturas del
+    juego. Al pulsar cualquier miniatura se abre un visor a pantalla completa
+    con navegación anterior/siguiente, contador y fecha.
+- **Capturas superpuestas al juego**: al guardar una captura se muestra un
+  flash breve y una tarjeta con la miniatura en la esquina inferior derecha,
+  por encima del juego en ventana o borderless, sin robarle el foco ni bloquear
+  el ratón.
 - **Panel responsive**: el detalle se adapta al ancho de la ventana (carátula
   fija en dos columnas o vista compacta con miniatura) y el contenido se
   desplaza cuando la altura es reducida.
@@ -125,7 +135,9 @@ la muestra como una estantería y lanza los juegos con un doble clic.
     **Ctrl + Av Pág**) y consulta la carpeta donde se guardan. Con mando, el
     atajo por defecto es **mantener Select/View 5 segundos**. En Windows el
     atajo de teclado es global, así que funciona con el juego en primer plano;
-    si el sistema ya lo usa, se muestra el aviso y queda el atajo local.
+    si el sistema ya lo usa, se muestra el aviso y queda el atajo local. Las
+    imágenes se guardan en `%APPDATA%\GameCenter\screenshots` y su vínculo con
+    juego/sesión en `screenshots.json`.
   - En la vista de detalle de un juego DS puedes **arrastrar sobre el cartucho
     para girarlo en cualquier dirección** manteniendo pulsado; el modelo no se
     desplaza y el visor deja margen suficiente para que **no se corte ninguna
@@ -249,6 +261,7 @@ gamecenter/
     favorites.py        favoritos persistentes (JSON)
     sessions.py         seguimiento de juegos en ejecución
     screenshots.py      capturas de pantalla y atajo global
+    screenshot_store.py índice de capturas por juego y sesión
     launch.py           lanzar juegos y abrir carpetas
     sources/
       __init__.py       scan_all() aísla los fallos de cada tienda
@@ -262,7 +275,7 @@ gamecenter/
     library_model.py    modelo, filtros, favoritos, orden y acciones
     artwork.py          carátulas del CDN de Steam con caché
     covers.py           portadas, fondo y logo generados con QPainter
-    qml/                Main, TopBar, Toolbar, StatsView, YearReview, BigPicture, Cartridge, GameDetail, Dock
+    qml/                Main, TopBar, Toolbar, StatsView, YearReview, ScreenshotOverlay, BigPicture, Cartridge, GameDetail, Dock
     fonts/              Sora y Chakra Petch (SIL OFL 1.1)
 tools/screenshot.py     render de la ventana a PNG (desarrollo)
 packaging/              PyInstaller, Inno Setup, icono y build de Windows

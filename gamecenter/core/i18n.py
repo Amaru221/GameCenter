@@ -1870,6 +1870,11 @@ TRANSLATIONS["es"].update(
         "Monthly rhythm": "Ritmo mensual",
         "Days in a row": "Días seguidos",
         "See you next year": "Nos vemos el año que viene",
+        "SCREENSHOT": "CAPTURA",
+        "Screenshot saved": "Captura guardada",
+        "1 screenshot": "1 captura",
+        "%1 screenshots": "%1 capturas",
+        "View screenshots": "Ver capturas",
     }
 )
 
@@ -1934,6 +1939,11 @@ TRANSLATIONS["fr"].update(
         "Monthly rhythm": "Rythme mensuel",
         "Days in a row": "Jours d'affilée",
         "See you next year": "À l'année prochaine",
+        "SCREENSHOT": "CAPTURE",
+        "Screenshot saved": "Capture enregistrée",
+        "1 screenshot": "1 capture",
+        "%1 screenshots": "%1 captures",
+        "View screenshots": "Voir les captures",
     }
 )
 
@@ -2002,6 +2012,11 @@ TRANSLATIONS["de"].update(
         "Monthly rhythm": "Monatsrhythmus",
         "Days in a row": "Tage in Folge",
         "See you next year": "Bis nächstes Jahr",
+        "SCREENSHOT": "SCREENSHOT",
+        "Screenshot saved": "Screenshot gespeichert",
+        "1 screenshot": "1 Screenshot",
+        "%1 screenshots": "%1 Screenshots",
+        "View screenshots": "Screenshots ansehen",
     }
 )
 
@@ -2068,6 +2083,11 @@ TRANSLATIONS["it"].update(
         "Monthly rhythm": "Ritmo mensile",
         "Days in a row": "Giorni di fila",
         "See you next year": "Ci vediamo il prossimo anno",
+        "SCREENSHOT": "SCHERMATA",
+        "Screenshot saved": "Schermata salvata",
+        "1 screenshot": "1 schermata",
+        "%1 screenshots": "%1 schermate",
+        "View screenshots": "Vedi schermate",
     }
 )
 
@@ -2132,6 +2152,11 @@ TRANSLATIONS["pt"].update(
         "Monthly rhythm": "Ritmo mensal",
         "Days in a row": "Dias seguidos",
         "See you next year": "Até para o ano",
+        "SCREENSHOT": "CAPTURA",
+        "Screenshot saved": "Captura guardada",
+        "1 screenshot": "1 captura",
+        "%1 screenshots": "%1 capturas",
+        "View screenshots": "Ver capturas",
     }
 )
 

@@ -1,5 +1,94 @@
 # WORKFLOW STATE — Capturas, inserción por capas y destacados de Stats
 
+## Feature 0.19.0 — Overlay de captura y capturas en el timeline
+
+### Descripción funcional
+
+- **Ubicación actual de las capturas**: `%APPDATA%/GameCenter/screenshots/`
+  (Linux: la carpeta `GameCenter/screenshots` dentro de `XDG_CONFIG_HOME` o
+  `~/.config`). El índice nuevo vive en `%APPDATA%/GameCenter/screenshots.json`.
+- Al guardar una captura:
+  - aparece un **flash breve** sobre la pantalla del juego,
+  - se muestra una **tarjeta con la miniatura** en la esquina inferior derecha,
+    siempre encima, sin foco y con ratón atravesable,
+  - desaparece sola a los ~2,7 s.
+- El índice vincula cada PNG con:
+  - `gameId`,
+  - `sessionId`,
+  - inicio de la sesión,
+  - instante de la captura.
+- En la ficha del juego:
+  - el **timeline de sesiones** muestra las **2 primeras capturas** a la derecha
+    de cada sesión,
+  - si hay más, aparece la **tercera miniatura con un contador +N**,
+  - una sección **SCREENSHOTS** reúne todas las capturas del juego,
+  - al pulsar cualquier miniatura se abre un **visor a pantalla completa** con
+    anterior/siguiente, contador y fecha.
+- Las capturas sin sesión identificable siguen apareciendo en la galería del
+  juego; las que ya no existen en disco se ignoran. Las capturas antiguas sin
+  índice se recuperan por el prefijo del título y la marca `YYYYMMDD-HHMMSS`
+  del nombre de archivo.
+
+### Decisiones de arquitectura
+
+- `core/screenshot_store.py`: índice JSON atómico, filtrado de archivos
+  inexistentes y URL `file://` lista para QML.
+- `SessionTracker.list` expone `startedAt` para que el manager pueda guardar el
+  inicio exacto de la sesión.
+- `ScreenshotManager` guarda el índice al capturar y expone `lastCapture`
+  (`path`, `url`, `gameId`, `title`, `takenAt` y geometría de la pantalla).
+- `ScreenshotOverlay.qml` es una **ventana top-level independiente** con flags
+  `Frameless | StaysOnTop | TransparentForInput | DoesNotAcceptFocus | Tool`.
+  Se crea una sola vez desde `app.py` (no anidada en `Main`) para evitar
+  problemas de ciclo de vida y poder superponerse al juego.
+- `LibraryModel._detail_payload` cruza el índice con `history_for(game)` por
+  `sessionStartedAt` (tolerancia 2 s) y, como respaldo, por el intervalo
+  `[start, start + seconds]`.
+- `GameDetail.qml` incorpora `ShotThumb`, la galería, el visor y los atajos
+  Escape/←/→ cuando el visor está abierto.
+- Los tests de UI definen `GC_NO_OVERLAY=1` para no crear ventanas top-level en
+  cada engine; el overlay se valida aparte.
+
+### Contrato de API (adiciones)
+
+| Elemento | Tipo | Descripción |
+| --- | --- | --- |
+| `screenshot_store.index_path()` | función | `config_dir()/screenshots.json`. |
+| `screenshot_store.record(...)` | función | Indexa un PNG con juego/sesión/tiempos. |
+| `screenshot_store.for_game(game_id)` | función | Capturas existentes con `url`. |
+| `SessionTracker.list[].startedAt` | int | Inicio de la sesión activa. |
+| `Screenshots.lastCapture` | `QVariantMap` | Datos de la última captura y geometría de pantalla. |
+| `ScreenshotOverlay.play(capture)` | función QML | Muestra flash + tarjeta. |
+| `gameDetail.screenshots` | list | Todas las capturas del juego, recientes primero. |
+| `gameDetail.screenshotCount` | int | Total de capturas. |
+| `history[].screenshots` | list | Capturas asociadas a esa sesión. |
+| `history[].previewScreenshots` | list | Primeras 2 capturas. |
+| `history[].overflowScreenshot` | object | Tercera captura para el contador. |
+| `history[].overflowCount` | int | `total - 2`. |
+| `GameDetail.openViewer(shots,index)` | función | Abre el visor. |
+| `GameDetail.viewerOpen` | bool | Visor visible. |
+
+### Checklist
+
+- [x] `screenshot_store.py` e índice atómico.
+- [x] `SessionTracker.startedAt` y `ScreenshotManager` con `lastCapture`.
+- [x] Overlay top-level con flash y tarjeta click-through.
+- [x] Timeline con 2 miniaturas + contador `+N`.
+- [x] Galería SCREENSHOTS en la ficha.
+- [x] Visor a pantalla completa con anterior/siguiente y teclado.
+- [x] Traducciones ES/FR/DE/IT/PT.
+- [x] Tests de índice, captura, asociación a sesiones y QML.
+- [x] Recuperación de capturas antiguas por título + timestamp.
+- [x] README/CHANGELOG/WORKFLOW y verificación visual.
+
+### Verificación
+
+- [x] `python -m pytest -q` → **161 passed**.
+- [x] Captura del detalle con timeline (2 miniaturas + `+2`), galería y visor.
+- [x] Comprobado el overlay como ventana independiente (`opened=true`,
+  `cardOpacity=1`, geometría de pantalla).
+- [x] Índice aislado en tests; sin residuos en `%APPDATA%`.
+
 ## Feature 0.18.0 — Review anual estilo Instagram Stories
 
 ### Descripción funcional

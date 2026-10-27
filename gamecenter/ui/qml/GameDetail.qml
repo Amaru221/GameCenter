@@ -29,6 +29,19 @@ Item {
     readonly property real cartridgeMarginY: 72
 
     readonly property var history: root.game.history || []
+    readonly property var screenshots: root.game.screenshots || []
+    property bool viewerOpen: false
+    property var viewerShots: []
+    property int viewerIndex: 0
+
+    readonly property var viewerShot: (
+        viewerOpen
+        && viewerShots.length > 0
+        && viewerIndex >= 0
+        && viewerIndex < viewerShots.length
+    ) ? viewerShots[viewerIndex] : ({})
+    readonly property bool viewerHasPrev: viewerIndex > 0
+    readonly property bool viewerHasNext: viewerIndex < viewerShots.length - 1
     readonly property bool compact: root.width < 940
     readonly property bool is3d: Library.cartridgeStyle === "ds"
     // The 3D viewport is deliberately larger than the card: the model is scaled
@@ -66,6 +79,31 @@ Item {
             peak = Math.max(peak, root.history[i].seconds || 0);
         }
         return peak;
+    }
+
+    function openViewer(shots, index) {
+        if (!shots || shots.length === 0) {
+            return;
+        }
+        viewerShots = shots;
+        viewerIndex = Math.max(0, Math.min(index, shots.length - 1));
+        viewerOpen = true;
+    }
+
+    function closeViewer() {
+        viewerOpen = false;
+    }
+
+    function nextViewer() {
+        if (viewerIndex < viewerShots.length - 1) {
+            viewerIndex += 1;
+        }
+    }
+
+    function previousViewer() {
+        if (viewerIndex > 0) {
+            viewerIndex -= 1;
+        }
     }
 
     function statusLabel(key) {
@@ -137,11 +175,14 @@ Item {
         if (opened) {
             descriptionExpanded = false;
             profileOpen = false;
+            viewerOpen = false;
             scroller.contentY = 0;
             Qt.callLater(function() {
                 scroller.contentY = 0;
                 blurSource.scheduleUpdate();
             });
+        } else {
+            viewerOpen = false;
         }
     }
 
@@ -819,6 +860,11 @@ Item {
                             Item {
                                 width: parent.width
                                 height: 56
+                                readonly property var sessionShots: modelData.screenshots || []
+                                readonly property var previewShots: modelData.previewScreenshots || []
+                                readonly property var overflowShot: modelData.overflowScreenshot || ({})
+                                readonly property int overflowCount: modelData.overflowCount || 0
+                                readonly property bool hasShots: sessionShots.length > 0
 
                                 Rectangle {
                                     x: 8
@@ -850,23 +896,63 @@ Item {
                                 Text {
                                     x: 30
                                     y: 10
+                                    width: Math.max(
+                                        20,
+                                        parent.width - 30
+                                        - (shotRow.visible ? shotRow.width + 16 : 0)
+                                    )
                                     text: root.sessionDate(modelData.timestamp)
                                     color: "#cfd6e2"
                                     font.family: "Sora"
                                     font.pixelSize: 11
+                                    elide: Text.ElideRight
                                 }
 
                                 Text {
                                     x: 30
                                     y: 28
+                                    width: Math.max(
+                                        20,
+                                        parent.width - 30
+                                        - (shotRow.visible ? shotRow.width + 16 : 0)
+                                    )
                                     text: modelData.duration
                                           + (modelData.imported
-                                             ? " · " + Tr.strings["Imported"]
+                                             ? " - " + Tr.strings["Imported"]
                                              : "")
                                     color: "#7b8494"
                                     font.family: "Chakra Petch"
                                     font.pixelSize: 10
                                     font.letterSpacing: 0.6
+                                    elide: Text.ElideRight
+                                }
+
+                                Row {
+                                    id: shotRow
+                                    anchors.right: parent.right
+                                    anchors.rightMargin: 8
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: 5
+                                    visible: hasShots
+
+                                    Repeater {
+                                        model: previewShots
+
+                                        ShotThumb {
+                                            shot: modelData
+                                            onClicked: root.openViewer(
+                                                sessionShots, index
+                                            )
+                                        }
+                                    }
+
+                                    ShotThumb {
+                                        visible: overflowCount > 0
+                                        more: true
+                                        moreCount: overflowCount
+                                        shot: overflowShot
+                                        onClicked: root.openViewer(sessionShots, 2)
+                                    }
                                 }
                             }
                         }
@@ -911,6 +997,68 @@ Item {
                                 font.family: "Sora"
                                 font.pixelSize: 10
                                 wrapMode: Text.WordWrap
+                            }
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.topMargin: 12
+                Layout.preferredHeight: galleryFlow.implicitHeight + 66
+                visible: root.screenshots.length > 0
+                radius: 18
+                color: "#0b0e14"
+                border.width: 1
+                border.color: "#232a36"
+
+                ColumnLayout {
+                    x: 18
+                    y: 18
+                    width: parent.width - 36
+                    spacing: 10
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 10
+
+                        Text {
+                            text: Tr.strings["SCREENSHOTS"]
+                            color: "#dfe6f0"
+                            font.family: "Chakra Petch"
+                            font.pixelSize: 11
+                            font.bold: true
+                            font.letterSpacing: 2.2
+                        }
+
+                        Item { Layout.fillWidth: true }
+
+                        Text {
+                            text: root.screenshots.length === 1
+                                  ? Tr.strings["1 screenshot"]
+                                  : Tr.strings["%1 screenshots"].arg(
+                                        root.screenshots.length
+                                    )
+                            color: "#6f7887"
+                            font.family: "Sora"
+                            font.pixelSize: 10
+                        }
+                    }
+
+                    Flow {
+                        id: galleryFlow
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        Repeater {
+                            model: root.screenshots
+
+                            ShotThumb {
+                                thumbWidth: 96
+                                thumbHeight: 54
+                                shot: modelData
+                                onClicked: root.openViewer(root.screenshots, index)
                             }
                         }
                     }
@@ -1013,6 +1161,187 @@ Item {
         }
     }
 
+    // --- Screenshot viewer ------------------------------------------------
+    Rectangle {
+        id: shotViewer
+        anchors.fill: parent
+        z: 20
+        visible: opacity > 0
+        opacity: root.viewerOpen ? 1 : 0
+        color: "#05070b"
+        Behavior on opacity { NumberAnimation { duration: 180 } }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: root.closeViewer()
+        }
+
+        Image {
+            anchors.fill: parent
+            anchors.topMargin: 74
+            anchors.bottomMargin: 88
+            anchors.leftMargin: root.compact ? 30 : 70
+            anchors.rightMargin: root.compact ? 30 : 70
+            source: root.viewerShot.url || ""
+            fillMode: Image.PreserveAspectFit
+            asynchronous: true
+            cache: true
+        }
+
+        Rectangle {
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: 58
+            color: "#0b0f19"
+            opacity: 0.94
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 22
+                anchors.rightMargin: 18
+                spacing: 12
+
+                Column {
+                    Layout.fillWidth: true
+                    spacing: 1
+
+                    Text {
+                        text: Tr.strings["SCREENSHOTS"]
+                        color: Library.accent
+                        font.family: "Chakra Petch"
+                        font.pixelSize: 9
+                        font.bold: true
+                        font.letterSpacing: 2.0
+                    }
+
+                    Text {
+                        width: parent.width
+                        text: root.game.title || ""
+                        color: "#f2f5fa"
+                        font.family: "Sora"
+                        font.pixelSize: 13
+                        font.bold: true
+                        elide: Text.ElideRight
+                    }
+                }
+
+                Text {
+                    text: (root.viewerIndex + 1) + " / " + root.viewerShots.length
+                    color: "#8b95a5"
+                    font.family: "Chakra Petch"
+                    font.pixelSize: 11
+                }
+
+                Rectangle {
+                    width: 30
+                    height: 30
+                    radius: 15
+                    color: closeViewerArea.containsMouse ? "#232936" : "#171b23"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "×"
+                        color: "#dfe6f0"
+                        font.pixelSize: 16
+                    }
+
+                    MouseArea {
+                        id: closeViewerArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.closeViewer()
+                    }
+                }
+            }
+        }
+
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 30
+            text: root.viewerShot.dateText || ""
+            color: "#8b95a5"
+            font.family: "Sora"
+            font.pixelSize: 11
+        }
+
+        Rectangle {
+            visible: root.viewerHasPrev
+            anchors.left: parent.left
+            anchors.leftMargin: root.compact ? 8 : 24
+            anchors.verticalCenter: parent.verticalCenter
+            width: 42
+            height: 42
+            radius: 21
+            color: prevViewerArea.containsMouse ? "#232936" : "#10141b"
+            border.width: 1
+            border.color: "#2a3140"
+
+            Text {
+                anchors.centerIn: parent
+                text: "‹"
+                color: "#dfe6f0"
+                font.pixelSize: 26
+            }
+
+            MouseArea {
+                id: prevViewerArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.previousViewer()
+            }
+        }
+
+        Rectangle {
+            visible: root.viewerHasNext
+            anchors.right: parent.right
+            anchors.rightMargin: root.compact ? 8 : 24
+            anchors.verticalCenter: parent.verticalCenter
+            width: 42
+            height: 42
+            radius: 21
+            color: nextViewerArea.containsMouse ? "#232936" : "#10141b"
+            border.width: 1
+            border.color: "#2a3140"
+
+            Text {
+                anchors.centerIn: parent
+                text: "›"
+                color: "#dfe6f0"
+                font.pixelSize: 26
+            }
+
+            MouseArea {
+                id: nextViewerArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.nextViewer()
+            }
+        }
+    }
+
+    Shortcut {
+        sequence: "Escape"
+        enabled: root.viewerOpen
+        onActivated: root.closeViewer()
+    }
+
+    Shortcut {
+        sequence: "Left"
+        enabled: root.viewerOpen
+        onActivated: root.previousViewer()
+    }
+
+    Shortcut {
+        sequence: "Right"
+        enabled: root.viewerOpen
+        onActivated: root.nextViewer()
+    }
+
     CloseButton {
         z: 5
         anchors.top: parent.top
@@ -1054,6 +1383,77 @@ Item {
             textureUrl: root.game.texture || ""
             cartridgeColor: root.game.cartridgeColor || Library.cartridgeColor
             onPlayRequested: root.playRequested()
+        }
+    }
+
+    component ShotThumb: Item {
+        id: thumb
+        property var shot: ({})
+        property real thumbWidth: 48
+        property real thumbHeight: 30
+        property bool more: false
+        property int moreCount: 0
+        property real corner: 6
+
+        width: thumbWidth
+        height: thumbHeight
+        implicitWidth: thumbWidth
+        implicitHeight: thumbHeight
+
+        signal clicked()
+
+        Rectangle {
+            anchors.fill: parent
+            radius: thumb.corner
+            color: "#070b12"
+            border.width: 1
+            border.color: hoverArea.containsMouse
+                          ? Library.accent
+                          : "#2a3a52"
+            Behavior on border.color { ColorAnimation { duration: 120 } }
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: 1.5
+            radius: Math.max(2, thumb.corner - 1)
+            color: "#17202f"
+            clip: true
+
+            Image {
+                anchors.fill: parent
+                source: thumb.shot.url || ""
+                sourceSize.width: Math.round(thumb.thumbWidth * 2)
+                sourceSize.height: Math.round(thumb.thumbHeight * 2)
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                cache: true
+            }
+
+            Rectangle {
+                visible: thumb.more
+                anchors.fill: parent
+                color: "#05070b"
+                opacity: 0.72
+            }
+
+            Text {
+                visible: thumb.more
+                anchors.centerIn: parent
+                text: "+" + thumb.moreCount
+                color: "#f8fafc"
+                font.family: "Sora"
+                font.pixelSize: Math.max(9, thumb.thumbHeight * 0.32)
+                font.bold: true
+            }
+        }
+
+        MouseArea {
+            id: hoverArea
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: thumb.clicked()
         }
     }
 }

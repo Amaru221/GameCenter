@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from datetime import datetime
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 
+from gamecenter.core import screenshot_store
 from gamecenter.core.preferences import Preferences
 from gamecenter.core.screenshots import QT_SEQUENCES, ScreenshotManager
 
@@ -19,7 +21,22 @@ class FakeSessions:
 
     @property
     def list(self) -> list[dict]:
-        return [{"title": title} for title in self._titles]
+        return [
+            {
+                "id": f"s{index + 1}",
+                "gameId": "steam:1",
+                "title": title,
+                "startedAt": 1000 + index,
+            }
+            for index, title in enumerate(self._titles)
+        ]
+
+
+@pytest.fixture(autouse=True)
+def isolate_index(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr(
+        screenshot_store, "index_path", lambda: tmp_path / "screenshots.json"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -69,6 +86,42 @@ def test_capture_saves_a_png_for_the_running_game(app, tmp_path: Path, monkeypat
     assert Path(path).name.startswith("Alpha-Quest-")
     assert Path(path).suffix == ".png"
     assert saved == [path]
+    assert manager.lastCapture["gameId"] == "steam:1"
+    assert manager.lastCapture["sessionId"] == "s1"
+    indexed = screenshot_store.for_game("steam:1")
+    assert len(indexed) == 1
+    assert indexed[0]["url"].startswith("file:")
+    assert indexed[0]["path"] == path
+
+
+def test_screenshot_store_records_and_drops_missing_files(tmp_path: Path) -> None:
+    existing = tmp_path / "shot.png"
+    existing.write_bytes(b"png")
+    screenshot_store.record(
+        existing,
+        game_id="steam:1",
+        session_id="s1",
+        session_started_at=1000,
+        title="Alpha Quest",
+        taken_at=1100,
+    )
+    missing = tmp_path / "gone.png"
+    screenshot_store.record(
+        missing,
+        game_id="steam:1",
+        session_id="s1",
+        session_started_at=1000,
+        title="Alpha Quest",
+        taken_at=1200,
+    )
+
+    entries = screenshot_store.for_game("steam:1")
+
+    assert len(entries) == 1
+    assert entries[0]["takenAt"] == 1100
+    assert entries[0]["sessionStartedAt"] == 1000
+    assert entries[0]["url"].startswith("file:")
+    assert screenshot_store.for_game("epic:2") == []
 
 
 def test_capture_is_ignored_without_a_game(app, tmp_path: Path, monkeypatch) -> None:
@@ -84,6 +137,23 @@ def test_capture_is_ignored_without_a_game(app, tmp_path: Path, monkeypatch) -> 
     )
 
     assert manager.captureIfPlaying() == ""
+
+
+def test_screenshot_store_recovers_legacy_files_by_title(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(screenshot_store, "config_dir", lambda: tmp_path)
+    folder = tmp_path / "screenshots"
+    folder.mkdir()
+    legacy = folder / "Alpha-Quest-20261027-204937.png"
+    legacy.write_bytes(b"png")
+
+    entries = screenshot_store.for_game("steam:1", title="Alpha Quest")
+
+    assert len(entries) == 1
+    assert entries[0]["path"] == str(legacy.resolve())
+    assert entries[0]["takenAt"] == int(
+        datetime(2026, 10, 27, 20, 49, 37).timestamp()
+    )
+    assert entries[0]["url"].startswith("file:")
 
 
 def test_capture_always_works_when_requested(app, tmp_path: Path, monkeypatch) -> None:
