@@ -89,9 +89,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "SCORE": "PUNTUACIÓN",
         "Edit profile": "Editar perfil",
         "Close profile": "Cerrar perfil",
-        "Drag to move · Right-drag to rotate": (
-            "Arrastra para mover · Botón derecho para rotar"
-        ),
+        "Drag to rotate": "Arrastra para rotar",
         "Playing": "Jugando",
         "On Going": "En curso",
         "Beaten": "Pasado",
@@ -436,9 +434,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "SCORE": "NOTE",
         "Edit profile": "Modifier le profil",
         "Close profile": "Fermer le profil",
-        "Drag to move · Right-drag to rotate": (
-            "Glisser pour déplacer · Clic droit pour pivoter"
-        ),
+        "Drag to rotate": "Glisser pour pivoter",
         "Playing": "En cours",
         "On Going": "En progression",
         "Beaten": "Terminé",
@@ -791,9 +787,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "SCORE": "WERTUNG",
         "Edit profile": "Profil bearbeiten",
         "Close profile": "Profil schließen",
-        "Drag to move · Right-drag to rotate": (
-            "Ziehen zum Verschieben · Rechtsklick zum Drehen"
-        ),
+        "Drag to rotate": "Ziehen zum Drehen",
         "Playing": "Spielend",
         "On Going": "Laufend",
         "Beaten": "Geschafft",
@@ -1161,9 +1155,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "SCORE": "PUNTEGGIO",
         "Edit profile": "Modifica profilo",
         "Close profile": "Chiudi profilo",
-        "Drag to move · Right-drag to rotate": (
-            "Trascina per spostare · Tasto destro per ruotare"
-        ),
+        "Drag to rotate": "Trascina per ruotare",
         "Playing": "In gioco",
         "On Going": "In corso",
         "Beaten": "Superato",
@@ -1522,9 +1514,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "SCORE": "PONTUAÇÃO",
         "Edit profile": "Editar perfil",
         "Close profile": "Fechar perfil",
-        "Drag to move · Right-drag to rotate": (
-            "Arraste para mover · Botão direito para girar"
-        ),
+        "Drag to rotate": "Arraste para girar",
         "Playing": "Jogando",
         "On Going": "Em andamento",
         "Beaten": "Vencido",

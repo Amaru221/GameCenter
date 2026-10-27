@@ -17,10 +17,11 @@ la muestra como una estantería y lanza los juegos con un doble clic.
 - **Vista de detalle** al hacer clic: modal **a pantalla completa** con un fondo
   **blur opaco translúcido** sobre la biblioteca, carátula grande, Play, tamaño,
   tiempo jugado (Steam), última partida, ruta y botones.
-- **Carátula flotante**: el cartucho (incluido el modelo 3D) vive en una capa
-  libre fuera del scroll, sin marco que lo recorte. Se puede **arrastrar con el
-  botón izquierdo** para moverlo por la ventana y **girar con el botón derecho**
-  (o `Shift` + arrastrar); doble clic para jugar.
+- **Carátula fija**: el cartucho (incluido el modelo 3D) queda anclado en la
+  esquina **superior izquierda**, fuera del scroll y sin marcos que lo recorten.
+  Al arrastrar sobre él **gira en cualquier dirección** (sin desplazarse); el
+  visor 3D es más ancho que la tarjeta para que las esquinas no se corten en
+  ninguna rotación. Doble clic para jugar.
 - **Resumen del juego**: título, tienda, año, descripción, tamaño, estado de
   instalación, tiempo total, última partida, géneros y estudio. La descripción
   se obtiene de la API pública de Steam Store (AppID para Steam; búsqueda por
@@ -32,7 +33,7 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   `%APPDATA%\GameCenter\history.json` (también para Steam, sin tocar su
   `localconfig.vdf`).
 - **Panel responsive**: el detalle se adapta al ancho de la ventana (carátula
-  flotante en dos columnas o vista compacta con miniatura) y el contenido se
+  fija en dos columnas o vista compacta con miniatura) y el contenido se
   desplaza cuando la altura es reducida.
 - **Favoritos con efecto**: la estrella del detalle tiene brillo, rebote y un
   destello animado al añadir el juego, con aviso de “Añadido a favoritos”.
@@ -99,12 +100,12 @@ la muestra como una estantería y lanza los juegos con un doble clic.
 - **Ajustes** (engranaje o `Ctrl+,`): color de acento entre 24 opciones,
   **color de superficie** para la barra superior, el dock Ready y la estantería,
   **color de los cartuchos** y tres estilos: clásico, **Nintendo DS** y **PS2**.
-  - En la vista de detalle de un juego DS puedes **mover el cartucho con el
-    botón izquierdo** (sin marcos que recorten el modelo) y **girarlo con el
-    botón derecho** o `Shift` + arrastrar, manteniendo pulsado; también se
-    inclina arriba/abajo mientras arrastras. El reverso muestra los contactos
-    metálicos. En la biblioteca los cartuchos DS se muestran de frente y no
-    giran. Los cartuchos llevan la marca **GC**.
+  - En la vista de detalle de un juego DS puedes **arrastrar sobre el cartucho
+    para girarlo en cualquier dirección** manteniendo pulsado; el modelo no se
+    desplaza y el visor deja margen suficiente para que **no se corte ninguna
+    esquina** al inclinarlo. El reverso muestra los contactos metálicos. En la
+    biblioteca los cartuchos DS se muestran de frente y no giran. Los cartuchos
+    llevan la marca **GC**.
 - **Idioma de la interfaz**: en Ajustes se puede elegir entre **English,
   Español, Français, Deutsch, Italiano y Português**. El cambio es inmediato y se
   guarda en `%APPDATA%\GameCenter\settings.json`; los textos se traducen sin

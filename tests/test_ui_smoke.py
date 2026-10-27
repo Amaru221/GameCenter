@@ -620,12 +620,13 @@ def test_qml_stats_view_loads_the_year_summary(app, model) -> None:
     assert data["river"]["layers"]
 
 
-def test_qml_detail_is_a_fullscreen_overlay_with_a_floating_cartridge(app, model) -> None:
-    from PySide6.QtCore import QObject
+def test_qml_detail_is_fullscreen_with_a_pinned_rotatable_cartridge(app, model) -> None:
+    from PySide6.QtCore import QObject, QPoint, Qt
     from PySide6.QtTest import QTest
 
     from gamecenter.ui.app import create_engine
 
+    model.setCartridgeStyle("ds")
     engine = create_engine(model)
     root = engine.rootObjects()[0]
     root.resize(1180, 800)
@@ -647,15 +648,39 @@ def test_qml_detail_is_a_fullscreen_overlay_with_a_floating_cartridge(app, model
     card = root.findChild(QObject, "detailCartridge")
     assert card is not None
     assert card.property("visible") is True
-    assert card.property("width") > 0
-    # The cartridge is not inside the clipped scroller, so the 3D model can be
-    # dragged anywhere without a frame cutting it.
+    # Pinned to the top-left corner and wide enough for the rotated model.
+    assert card.property("x") == 24
+    assert card.property("y") == 72
+    assert card.property("width") >= 300
+    assert card.property("height") >= 360
+    # The cartridge is not inside the clipped scroller, so the 3D model is never
+    # cut by a frame.
     scroller = detail.findChild(QObject, "detailScroller")
     assert scroller is not None
     ancestor = card.parent()
     while ancestor is not None:
         assert ancestor is not scroller
         ancestor = ancestor.parent()
+
+    # Dragging rotates the model but never moves it.
+    ds = root.findChild(QObject, "ds3d")
+    assert ds is not None
+    yaw = ds.property("yaw")
+    start = QPoint(
+        int(card.property("x") + card.property("width") / 2),
+        int(card.property("y") + card.property("height") / 2),
+    )
+    QTest.mousePress(root, Qt.LeftButton, Qt.NoModifier, start)
+    for i in range(1, 6):
+        QTest.mouseMove(root, QPoint(start.x() + i * 8, start.y() - i * 4))
+        QTest.qWait(20)
+    QTest.mouseRelease(
+        root, Qt.LeftButton, Qt.NoModifier, QPoint(start.x() + 40, start.y() - 20)
+    )
+    app.processEvents()
+    assert ds.property("yaw") != yaw
+    assert card.property("x") == 24
+    assert card.property("y") == 72
 
 
 def test_qml_search_hides_in_stats_and_clears_focus_outside(app, model) -> None:

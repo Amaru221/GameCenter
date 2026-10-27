@@ -16,25 +16,32 @@ Item {
     // artwork background is used instead.
     property var backdropItem: null
 
-    property real cartridgeX: 0
-    property real cartridgeY: 0
-
+    signal profileChanged()
     signal closeRequested()
     signal playRequested()
     signal folderRequested()
     signal copyRequested()
     signal favoriteRequested()
     signal artRequested()
-    signal profileChanged()
+
+    // The cartridge stays pinned to the top-left corner of the overlay.
+    readonly property real cartridgeMarginX: 24
+    readonly property real cartridgeMarginY: 72
 
     readonly property var history: root.game.history || []
     readonly property bool compact: root.width < 940
     readonly property bool is3d: Library.cartridgeStyle === "ds"
-    readonly property real cartridgeWidth: root.is3d ? 330 : 234
-    readonly property real cartridgeHeight: root.is3d ? 416 : 323
+    // The 3D viewport is deliberately larger than the card: the model is scaled
+    // down inside it so every corner stays visible while rotating.
+    readonly property real cartridgeWidth: root.is3d
+                                           ? Math.min(400, Math.max(300, root.width * 0.34))
+                                           : 260
+    readonly property real cartridgeHeight: root.is3d
+                                            ? root.cartridgeWidth * 1.2
+                                            : 350
     readonly property real cartridgeGutter: root.compact
                                              ? 0
-                                             : Math.max(330, Math.min(470, root.width * 0.32))
+                                             : root.cartridgeWidth + 52
 
     function cartridgeCenter() {
         if (cartridgeHost.visible && cartridgeHost.height > 0) {
@@ -44,35 +51,6 @@ Item {
             return Qt.point(point.x, point.y);
         }
         return Qt.point(root.width / 2, root.height / 2);
-    }
-
-    function resetCartridge() {
-        if (root.compact) {
-            root.cartridgeX = 0;
-            root.cartridgeY = 0;
-            return;
-        }
-        root.cartridgeX = Math.round(
-            (root.cartridgeGutter - root.cartridgeWidth) / 2
-        );
-        root.cartridgeY = Math.round(
-            (root.height - root.cartridgeHeight) / 2
-        );
-    }
-
-    function clampCartridge() {
-        if (root.compact) {
-            return;
-        }
-        var margin = 8;
-        root.cartridgeX = Math.max(
-            margin,
-            Math.min(root.width - root.cartridgeWidth - margin, root.cartridgeX)
-        );
-        root.cartridgeY = Math.max(
-            margin,
-            Math.min(root.height - root.cartridgeHeight - margin, root.cartridgeY)
-        );
     }
 
     function sessionDate(timestamp) {
@@ -160,7 +138,6 @@ Item {
             descriptionExpanded = false;
             profileOpen = false;
             scroller.contentY = 0;
-            resetCartridge();
             Qt.callLater(function() {
                 scroller.contentY = 0;
                 blurSource.scheduleUpdate();
@@ -169,26 +146,14 @@ Item {
     }
 
     onWidthChanged: {
-        if (opened) {
-            clampCartridge();
-        }
         if (blurSource) {
             blurSource.scheduleUpdate();
         }
     }
 
     onHeightChanged: {
-        if (opened) {
-            clampCartridge();
-        }
         if (blurSource) {
             blurSource.scheduleUpdate();
-        }
-    }
-
-    onIs3dChanged: {
-        if (opened) {
-            resetCartridge();
         }
     }
 
@@ -954,15 +919,15 @@ Item {
         }
     }
 
-    // --- Floating cartridge (never clipped by the scrolling column) --------
+    // --- Pinned cartridge (never clipped by the scrolling column) ----------
     Item {
         id: cartridgeHost
         objectName: "detailCartridge"
         z: 4
         width: root.cartridgeWidth
         height: root.cartridgeHeight
-        x: root.cartridgeX
-        y: root.cartridgeY
+        x: root.cartridgeMarginX
+        y: root.cartridgeMarginY
         visible: root.opened && !root.compact
 
         Loader {
@@ -972,32 +937,24 @@ Item {
             sourceComponent: root.is3d ? ds3dCard : flatCard
         }
 
+        // Drag rotates the 3D card. Its viewport is larger than the model, so
+        // the corners stay visible at any angle and the card never moves.
         MouseArea {
             id: cartridgePointer
             anchors.fill: parent
             z: 2
+            enabled: root.is3d
             hoverEnabled: true
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
 
-            property real pressX: 0
-            property real pressY: 0
             property real lastX: 0
             property real lastY: 0
-            property real originX: 0
-            property real originY: 0
-            property bool rotating: false
             property bool moved: false
 
             onPressed: (mouse) => {
-                pressX = mouse.x;
-                pressY = mouse.y;
                 lastX = mouse.x;
                 lastY = mouse.y;
-                originX = root.cartridgeX;
-                originY = root.cartridgeY;
-                rotating = mouse.button === Qt.RightButton
-                        || (mouse.modifiers & Qt.ShiftModifier);
                 moved = false;
             }
 
@@ -1005,37 +962,22 @@ Item {
                 if (!pressed) {
                     return;
                 }
-                var totalX = mouse.x - pressX;
-                var totalY = mouse.y - pressY;
-                if (Math.abs(totalX) + Math.abs(totalY) > 3) {
+                var dx = mouse.x - lastX;
+                var dy = mouse.y - lastY;
+                if (Math.abs(dx) + Math.abs(dy) > 2) {
                     moved = true;
                 }
-                if (rotating) {
-                    var item = detailCard.item;
-                    if (item && item.yaw !== undefined) {
-                        item.yaw += (mouse.x - lastX) * 0.55;
-                        item.pitch = Math.max(
-                            -50,
-                            Math.min(50, item.pitch - (mouse.y - lastY) * 0.4)
-                        );
-                    }
-                } else {
-                    root.cartridgeX = Math.max(
-                        8,
-                        Math.min(root.width - root.cartridgeWidth - 8,
-                                 originX + totalX)
-                    );
-                    root.cartridgeY = Math.max(
-                        8,
-                        Math.min(root.height - root.cartridgeHeight - 8,
-                                 originY + totalY)
+                var item = detailCard.item;
+                if (item && item.yaw !== undefined) {
+                    item.yaw += dx * 0.55;
+                    item.pitch = Math.max(
+                        -50,
+                        Math.min(50, item.pitch - dy * 0.4)
                     );
                 }
                 lastX = mouse.x;
                 lastY = mouse.y;
             }
-
-            onReleased: rotating = false
 
             onDoubleClicked: {
                 if (!moved) {
@@ -1045,8 +987,9 @@ Item {
         }
 
         Rectangle {
-            anchors.top: parent.bottom
-            anchors.topMargin: 14
+            visible: root.is3d
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 10
             anchors.horizontalCenter: parent.horizontalCenter
             width: dragHint.implicitWidth + 22
             height: 26
@@ -1060,7 +1003,7 @@ Item {
             Text {
                 id: dragHint
                 anchors.centerIn: parent
-                text: Tr.strings["Drag to move · Right-drag to rotate"]
+                text: Tr.strings["Drag to rotate"]
                 color: "#98a3b4"
                 font.family: "Sora"
                 font.pixelSize: 9
@@ -1088,7 +1031,7 @@ Item {
             scale: 1.12
             transformOrigin: Item.Center
             showTitle: false
-            interactive: false
+            interactive: true
             style: Library.cartridgeStyle
             gameTitle: root.game.title || ""
             gameSource: root.game.source || ""
@@ -1104,9 +1047,9 @@ Item {
         id: ds3dCard
 
         DsCartridge3D {
-            width: 330
-            height: 416
-            scale: 0.9
+            width: root.cartridgeWidth
+            height: root.cartridgeHeight
+            modelScale: 0.82
             interactive: false
             textureUrl: root.game.texture || ""
             cartridgeColor: root.game.cartridgeColor || Library.cartridgeColor
