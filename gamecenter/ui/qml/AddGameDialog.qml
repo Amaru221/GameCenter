@@ -68,6 +68,35 @@ Item {
 
         MouseArea { anchors.fill: parent }
 
+        Rectangle {
+            id: closeButton
+            objectName: "addGameClose"
+            z: 2
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.topMargin: 18
+            anchors.rightMargin: 18
+            width: 30
+            height: 30
+            radius: 15
+            color: closeArea.containsMouse ? "#232936" : "transparent"
+
+            Text {
+                anchors.centerIn: parent
+                text: "×"
+                color: "#aeb8c7"
+                font.pixelSize: 16
+            }
+
+            MouseArea {
+                id: closeArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.closeRequested()
+            }
+        }
+
         ColumnLayout {
             anchors.fill: parent
             anchors.margins: 28
@@ -93,28 +122,6 @@ Item {
                         color: "#8b95a5"
                         font.family: "Sora"
                         font.pixelSize: 11
-                    }
-                }
-
-                Rectangle {
-                    width: 30
-                    height: 30
-                    radius: 15
-                    color: closeArea.containsMouse ? "#232936" : "transparent"
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "✕"
-                        color: "#aeb8c7"
-                        font.pixelSize: 14
-                    }
-
-                    MouseArea {
-                        id: closeArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.closeRequested()
                     }
                 }
             }

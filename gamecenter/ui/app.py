@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
 from PySide6.QtCore import QSize, QUrl
 from PySide6.QtGui import QFontDatabase, QGuiApplication, QImage
-from PySide6.QtQml import QQmlApplicationEngine
+from PySide6.QtQml import QQmlApplicationEngine, QQmlComponent
 from PySide6.QtQuick import QQuickImageProvider
 from PySide6.QtQuickControls2 import QQuickStyle
 from PySide6.QtWidgets import QApplication
@@ -94,6 +95,15 @@ def create_engine(library: LibraryModel) -> QQmlApplicationEngine:
     gamepad.screenshot.connect(screenshots.captureIfPlaying)
 
     engine.load(QUrl.fromLocalFile(str(QML_DIR / "Main.qml")))
+    if engine.rootObjects() and not os.environ.get("GC_NO_OVERLAY"):
+        overlay = QQmlComponent(
+            engine,
+            QUrl.fromLocalFile(str(QML_DIR / "ScreenshotOverlay.qml")),
+        )
+        overlay_window = overlay.create()
+        if overlay_window is not None:
+            engine._screenshot_component = overlay
+            engine._screenshot_overlay = overlay_window
     return engine
 
 

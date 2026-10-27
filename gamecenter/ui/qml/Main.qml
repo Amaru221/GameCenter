@@ -537,6 +537,7 @@ Window {
     Shortcut {
         sequence: "Escape"
         enabled: !window.bigPictureOpen && !yearReview.opened
+                 && !detail.viewerOpen
         onActivated: {
             if (updateOpen) {
                 updateOpen = false;

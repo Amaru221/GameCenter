@@ -43,13 +43,15 @@ Item {
 
         ScrollView {
             id: scroll
+            objectName: "settingsScroll"
             anchors.fill: parent
             anchors.margins: 30
             clip: true
             ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+            ScrollBar.vertical.policy: ScrollBar.AlwaysOn
 
             ColumnLayout {
-                width: scroll.availableWidth
+                width: scroll.availableWidth - 16
                 spacing: 12
 
                 RowLayout {

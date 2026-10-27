@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.19.0
+
+- **In-game screenshot overlay**: after a capture, a short white flash and a
+  gameplay thumbnail card appear at the bottom-right of the active screen,
+  always on top, click-through and without stealing focus from the game.
+  Hidden automatically after a couple of seconds.
+- **Screenshots linked to sessions**:
+  - a new `screenshots.json` index records the game, session, session start and
+    timestamp of every capture,
+  - the game timeline shows the first two captures to the right of their
+    session and a third thumbnail with a **+N** counter when there are more,
+  - a new **SCREENSHOTS** section in the game detail gathers every capture of
+    the game,
+  - thumbnails open a full-screen viewer with prev/next, counter and date.
+- Timeline refinements: larger thumbnails, longer session connectors and a
+  dedicated vertical scroll area when there are many sessions.
+- UI fixes: the Add-game close button is pinned to the panel's top-right
+  corner, and the Settings scrollbar no longer overlaps the close button.
+- Legacy PNGs without an index entry are recovered by their game-title prefix
+  and filename timestamp.
+- Screenshots are stored, as before, under
+  `%APPDATA%\GameCenter\screenshots`.
+- Added ES/FR/DE/IT/PT strings and isolated the screenshot index in tests.
+- The overlay is created as a separate top-level tool window so it can stay
+  above windowed/borderless games.
+
 ## v0.18.0
 
 - **Year in Review**: the **Review year** button in Stats opens a full-screen
