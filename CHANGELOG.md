@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.19.1
+
+- **Idle power**: the window no longer repaints while nothing happens. Measured
+  on 1920×1080 @ 179 Hz with the library idle: **179.8 → 0 fps**, **17 % → 0.6 %
+  CPU** and **12-30 % → 0 % GPU**.
+  - The Year in Review background orbs only animate while the presentation is
+    open (`running: root.opened`). A running animation inside a closed overlay
+    keeps the whole window repainting at the monitor refresh rate, because
+    `visible: false` / `opacity: 0` do not stop QML animations.
+  - The update badge no longer pulses forever: a short one-shot pulse when it
+    appears, then it stays still (same dot, accent border and tooltip).
+  - **Big Picture** is created on demand and freed after its fade-out instead of
+    living in the tree from startup, which removes the idle carousel repaints.
+  - The dock clock only rewrites its text when the minute changes.
+- New `tools/idle_probe.py`: measures idle frames and CPU, and fails when the
+  app renders more than `--max-fps` (2 fps by default) with no interaction.
+- New `tests/test_idle_animations.py`: every `loops: Animation.Infinite` must be
+  gated with `running:`, and Big Picture must not exist while closed.
+
 ## v0.19.0
 
 - **In-game screenshot overlay**: after a capture, a short white flash and a

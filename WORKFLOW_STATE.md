@@ -1,4 +1,97 @@
-# WORKFLOW STATE — Capturas, inserción por capas y destacados de Stats
+# WORKFLOW STATE — Consumo en reposo (Plan A: idle silencioso)
+
+## Feature 0.19.1 — Idle silencioso: la ventana deja de repintarse sin cambios
+
+### Descripción funcional
+
+- Con la aplicación abierta y **sin interacción**, GameCenter deja de repintar la
+  ventana. Antes se renderizaba a la frecuencia del monitor (medido: **179,8 fps**
+  en 1920×1080 @ 179 Hz, 17 % CPU y 12-30 % GPU) porque tres animaciones
+  decorativas seguían corriendo dentro de overlays cerrados.
+- La **biblioteca**, la **ficha**, **Stats** y el **dock** se siguen viendo y
+  comportando igual; solo cambia que ya no se dibujan frames que el usuario no
+  puede percibir.
+- Los orbes del **Year in Review** siguen animándose mientras la presentación
+  está abierta; al cerrarla se detienen.
+- El punto del **aviso de actualización** deja de latir de forma infinita: hace
+  un pulso corto cuando aparece y se queda fijo. La señal visual (punto + borde
+  de acento + tooltip) se mantiene.
+- **Big Picture** se crea la primera vez que se abre y se destruye al cerrar
+  (con su fundido de 180 ms intacto). Antes existía desde el arranque y su
+  carrusel generaba repintados continuos.
+- El reloj del dock solo reescribe el texto cuando cambia el minuto.
+
+### Decisiones de arquitectura
+
+- **Causa raíz** (medida con `QQuickWindow.frameSwapped` + bisección del árbol
+  QML): `visible: false` u `opacity: 0` **no detienen una animación QML**. Un
+  `NumberAnimation` con `loops: Animation.Infinite` dentro de un overlay cerrado
+  sigue marcando la escena como sucia y el render loop (threaded, por defecto en
+  Windows) dibuja **la ventana completa** en cada refresco del monitor.
+- Las animaciones decorativas se condicionan con `running:` a que su dueño esté
+  abierto. Es la forma mínima y sin riesgo: no cambia el árbol de items, ni los
+  ids, ni los `findChild` de los tests.
+- `BigPicture` pasa a un `Loader` con `active` gobernado por
+  `window.bigPictureMounted`. La destrucción se retrasa 220 ms tras cerrar para
+  respetar el fundido de salida y evitar destruir el item dentro de la emisión
+  de su propia señal. `Main` conserva `bigPictureOpen` como única fuente de
+  verdad; el componente sigue leyendo `opened` de esa propiedad.
+- El pulso del aviso de actualización pasa de `loops: Animation.Infinite` a un
+  `SequentialAnimation` **one-shot** disparado con `onVisibleChanged`. Un punto
+  de 8 px no justifica repintar la ventana entera a 180 Hz mientras haya una
+  actualización pendiente.
+- `tools/idle_probe.py` mide fps reales + CPU del proceso en reposo y sirve de
+  guardarraíl (`--max-fps`). Es una herramienta de desarrollo, no se empaqueta.
+- `tests/test_idle_animations.py` vigila el patrón: cualquier
+  `loops: Animation.Infinite` debe llevar un `running:` en su mismo bloque.
+
+### Contrato de API (adiciones QML)
+
+| Elemento | Tipo | Descripción |
+| --- | --- | --- |
+| `YearReview.orbA/orbB` animations | `running` | Solo animan con `root.opened`. |
+| `TopBar.updateDot` | `Rectangle` | Punto del aviso; `dotPulse` one-shot al aparecer. |
+| `Main.bigPictureMounted` | `bool` | Big Picture instanciado (abierto o fundiendo). |
+| `Main.bigPictureLoader` | `Loader` | Crea/destruye `BigPicture` bajo demanda. |
+| `Dock.clock` | `Text` | Solo se reasigna si el minuto cambió. |
+| `tools/idle_probe.py` | script | `--seconds`, `--max-fps`; imprime fps y CPU. |
+
+### Checklist
+
+#### Frontend
+- [x] `YearReview.qml`: `running: root.opened` en los dos orbes.
+- [x] `TopBar.qml`: pulso infinito → one-shot al aparecer el aviso.
+- [x] `Main.qml`: `Loader` + `bigPictureMounted` con destrucción diferida.
+- [x] `Dock.qml`: reloj sin reescrituras redundantes.
+
+#### Herramientas y tests
+- [x] `tools/idle_probe.py` (fps + CPU en reposo, umbral configurable).
+- [x] `tests/test_idle_animations.py` (guardarraíl de animaciones infinitas +
+      Big Picture bajo demanda).
+- [x] README/CHANGELOG actualizados.
+
+### Verificación
+
+- [x] `python -m pytest -q` → **163 passed**.
+- [x] `python tools/idle_probe.py --seconds 8 --settle 6` → **0 frames en 8 s,
+      CPU 0,40 %** (`RESULT ok`).
+- [x] Antes/después con la app real (1920×1080 @ 179 Hz, 12 hilos):
+
+  | | Antes | Después |
+  | --- | --- | --- |
+  | Frames en reposo | 179,8 fps | **0 fps** |
+  | CPU (media) | 17,0 % (pico 25 %) | **0,58 %** (pico 6,2 % al arrancar) |
+  | GPU (media) | 11,9 % (pico 20 %) | **0,00 %** |
+  | CPU acumulada en 15 s | 7,3 s | **1,6 s** |
+
+- [x] Capturas de verificación: biblioteca, Big Picture (montado bajo demanda,
+      carrusel y pistas correctos), Stats, Year in Review (orbes y diapositivas)
+      y ficha con el blur intacto.
+- [x] Big Picture entra/sale con su fundido de 180 ms y se vuelve a montar al
+      reabrir (cubierto por test).
+- [x] Tras usar la app, vuelve a reposo: 0,0 fps medidos después de abrir/cerrar
+      Big Picture y después del Year in Review.
+
 
 ## Feature 0.19.0 — Overlay de captura y capturas en el timeline
 
