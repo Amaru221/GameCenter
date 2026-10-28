@@ -133,6 +133,10 @@ Item {
         Behavior on color { ColorAnimation { duration: 700 } }
 
         SequentialAnimation on x {
+            // Decorative: keep it asleep until the story is actually on screen.
+            // A running animation inside a closed overlay still forces the
+            // whole window to repaint at the monitor refresh rate.
+            running: root.opened
             loops: Animation.Infinite
             NumberAnimation {
                 from: root.width * 0.55
@@ -162,6 +166,8 @@ Item {
         Behavior on color { ColorAnimation { duration: 700 } }
 
         SequentialAnimation on y {
+            // Same as orbA: only alive while the review is open.
+            running: root.opened
             loops: Animation.Infinite
             NumberAnimation {
                 from: root.height * 0.55

@@ -228,6 +228,15 @@ Item {
             border.color: updateHover.containsMouse ? Library.accent : "#2a3140"
             scale: updateHover.containsMouse ? 1.06 : 1.0
 
+            // Announce the badge once, then stay still. An infinite pulse here
+            // would repaint the whole window at the monitor refresh rate for
+            // as long as an update is pending.
+            onVisibleChanged: {
+                if (visible) {
+                    updateDotPulse.restart();
+                }
+            }
+
             Behavior on color { ColorAnimation { duration: 140 } }
             Behavior on scale { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
 
@@ -249,6 +258,7 @@ Item {
             }
 
             Rectangle {
+                id: updateDot
                 width: 8
                 height: 8
                 radius: 4
@@ -259,11 +269,23 @@ Item {
                 anchors.right: parent.right
                 anchors.topMargin: 3
                 anchors.rightMargin: 3
+            }
 
-                SequentialAnimation on scale {
-                    loops: Animation.Infinite
-                    NumberAnimation { to: 1.25; duration: 850; easing.type: Easing.InOutQuad }
-                    NumberAnimation { to: 1.0; duration: 850; easing.type: Easing.InOutQuad }
+            SequentialAnimation {
+                id: updateDotPulse
+                NumberAnimation {
+                    target: updateDot
+                    property: "scale"
+                    to: 1.25
+                    duration: 260
+                    easing.type: Easing.OutQuad
+                }
+                NumberAnimation {
+                    target: updateDot
+                    property: "scale"
+                    to: 1.0
+                    duration: 260
+                    easing.type: Easing.InOutQuad
                 }
             }
 

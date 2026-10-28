@@ -280,6 +280,7 @@ gamecenter/
     qml/                Main, TopBar, Toolbar, StatsView, YearReview, ScreenshotOverlay, BigPicture, Cartridge, GameDetail, Dock
     fonts/              Sora y Chakra Petch (SIL OFL 1.1)
 tools/screenshot.py     render de la ventana a PNG (desarrollo)
+tools/idle_probe.py      mide fps y CPU en reposo (desarrollo)
 packaging/              PyInstaller, Inno Setup, icono y build de Windows
 tests/                  parser, escáner, modelo y carga del QML
 docs/CLEANROOM.md       política de reimplementación limpia
@@ -376,6 +377,39 @@ Qt Quick (QML) sobre PySide6. La ventana se compone de:
 - **Fondo mesh**: degradado radial multicolor generado con QPainter, viñeta y
   grano, sin imágenes ni shaders.
 - **Cristal**: barra superior y dock con degradados translúcidos y bordes.
+
+## Rendimiento
+
+La ventana **solo se repinta cuando algo cambia**. Las animaciones decorativas
+(los orbes del *Year in Review*) solo corren mientras esa presentación está
+abierta, el punto del aviso de actualización hace un pulso corto al aparecer y
+se queda fijo, y **Big Picture se crea la primera vez que se abre** y se libera
+al cerrar.
+
+Motivo: en Qt Quick, `visible: false` u `opacity: 0` **no detienen** una
+animación. Un `loops: Animation.Infinite` dentro de un overlay cerrado sigue
+marcando la escena como sucia y el render loop redibuja la ventana completa en
+cada refresco del monitor.
+
+Medido con la biblioteca abierta y sin tocar nada (1920×1080 @ 179 Hz):
+
+| | Antes | Después |
+| --- | --- | --- |
+| Frames por segundo | 179,8 | 0 |
+| CPU del proceso | 17 % | 0,6 % |
+| GPU del proceso | 12 % (picos de 20 %) | 0 % |
+
+Para comprobarlo en tu equipo:
+
+```bash
+python tools/idle_probe.py
+```
+
+Falla (código de salida 1) si el reposo vuelve a renderizar; el umbral se ajusta
+con `--max-fps` (2 fps por defecto) y la ventana de medida con `--seconds`.
+`tests/test_idle_animations.py` vigila además que ningún
+`loops: Animation.Infinite` quede sin su `running:` y que Big Picture no exista
+mientras está cerrado.
 
 ## Licencia
 

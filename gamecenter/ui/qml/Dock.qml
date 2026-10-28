@@ -194,6 +194,13 @@ Rectangle {
         running: true
         repeat: true
         triggeredOnStart: true
-        onTriggered: clock.text = Qt.formatTime(new Date(), "hh:mm")
+        onTriggered: {
+            var now = Qt.formatTime(new Date(), "hh:mm");
+            // Writing the same string back still marks the item dirty; only
+            // touch the text when the minute actually changed.
+            if (clock.text !== now) {
+                clock.text = now;
+            }
+        }
     }
 }

@@ -24,11 +24,17 @@ Window {
     property string slotSessionId: ""
     property string currentView: "library"
     property bool bigPictureOpen: false
+    // Big Picture is only instantiated while it is open (plus its fade-out).
+    property bool bigPictureMounted: false
 
     onBigPictureOpenChanged: {
         if (bigPictureOpen) {
+            bigPictureMounted = true;
             topBar.clearSearchFocus();
             requestActivate();
+        } else if (bigPictureMounted) {
+            // Keep the item alive for the 180 ms fade-out, then free it.
+            bigPictureUnmountTimer.restart();
         }
     }
 
@@ -416,12 +422,31 @@ Window {
         anchors.fill: parent
     }
 
-    BigPicture {
-        id: bigPicture
+    // Big Picture is created on demand: keeping the whole carousel alive (and
+    // silently repainting the window) from startup was one of the biggest idle
+    // costs of the app.
+    Loader {
+        id: bigPictureLoader
         anchors.fill: parent
-        appActive: window.active
-        opened: window.bigPictureOpen
-        onCloseRequested: window.bigPictureOpen = false
+        active: window.bigPictureMounted
+        sourceComponent: bigPictureComponent
+    }
+
+    Component {
+        id: bigPictureComponent
+        BigPicture {
+            id: bigPicture
+            anchors.fill: parent
+            appActive: window.active
+            opened: window.bigPictureOpen
+            onCloseRequested: window.bigPictureOpen = false
+        }
+    }
+
+    Timer {
+        id: bigPictureUnmountTimer
+        interval: 220
+        onTriggered: window.bigPictureMounted = false
     }
 
     // While the search box holds the focus, any click anywhere clears it. The
