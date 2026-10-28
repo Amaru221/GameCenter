@@ -1,5 +1,68 @@
 # WORKFLOW STATE — Atajos personalizados, carátulas locales y pulido de UI
 
+## Ajuste fino 0.20.0 — Modal de Big Picture, gatillos y filtros
+
+### Descripción funcional
+
+- **Big Picture**
+  - El cambio de modo del carrusel ya **no muestra un toast**: el propio botón
+    *Mode* indica el modo activo.
+  - Nuevo **botón ☰** en la barra superior con el menú de la app: *Scan all
+    stores*, *Restore removed games*, *Add game manually…*, *Settings* y *Exit*.
+    *Settings* y *Add game* cierran Big Picture y abren el panel en la ventana
+    principal (con su fundido de salida).
+  - **Dentro de la ficha**: **X** favorito, **Y** abre/cierra el **perfil**,
+    **LB/RB** abren el **visor de capturas** (y navegan por él), **B** cierra
+    primero el perfil y después la ficha, **A** sigue jugando.
+  - El **perfil** se edita con mando/teclado: **↑↓** alterna *estado* ↔
+    *puntuación*, **←→** cambia el valor (estado anterior/siguiente, puntuación
+    ±5). La sección activa se resalta en el color de acento y una pista muestra
+    las teclas.
+  - Las píldoras de filtro se dimensionan por su texto (`implicitWidth` +
+    `Layout.preferredWidth`): ya no se solapan ni ignoran el layout.
+- **Mando**: los **gatillos analógicos LT/RT** se leen de `bLeftTrigger`/
+  `bRightTrigger` (umbral 60/255) y cuentan como botones: se pueden capturar en
+  el atajo de captura y combinar con el resto (p. ej. `RT`, `LB+RT`).
+
+### Decisiones de arquitectura
+
+- `BigPicture.qml` gana `toggleProfile()` y `screenshotsStep(delta)`; el modal
+  (`GameDetail`) ya exponía `profileOpen`, `openViewer`, `nextViewer`,
+  `previousViewer` y `closeViewer`.
+- El panel de perfil conserva su edición con ratón y añade `moveFocus`,
+  `adjust`, `cycleStatus` y `nudgeRating`, usados por `Gamepad.navigate` y por
+  las teclas de Big Picture (que mantiene el foco).
+- `GamepadManager.buttons_mask()` convierte `wButtons` + gatillos en una máscara
+  única; `BUTTON_ORDER` y `GAMEPAD_BUTTONS` incluyen `LT`/`RT`.
+- Los tests de UI destruyen ahora los `QQmlApplicationEngine` de forma
+  determinista (cerrar raíces + `shiboken6.delete`): dejar que Python los
+  recolecte con ventanas vivas bloqueaba la carga del siguiente engine.
+
+### Contrato de API (adiciones)
+
+| Elemento | Tipo | Descripción |
+| --- | --- | --- |
+| `BigPicture.settingsRequested()` | signal | Abrir Ajustes tras cerrar Big Picture. |
+| `BigPicture.addRequested()` | signal | Abrir *Add game* tras cerrar Big Picture. |
+| `BigPicture.toggleProfile()` | función | Abre/cierra el perfil del juego abierto. |
+| `BigPicture.screenshotsStep(delta)` | función | Abre el visor o navega por las capturas. |
+| `GameProfilePanel.focusRow` | `int` | 0 = estado, 1 = puntuación. |
+| `GameProfilePanel.moveFocus(delta)` | función | Cambia de fila. |
+| `GameProfilePanel.adjust(direction)` | función | Modifica el valor de la fila activa. |
+| `GameDetail.profileMoveFocus(delta)` | función | Puente hacia el panel. |
+| `GameDetail.profileAdjust(direction)` | función | Puente hacia el panel. |
+| `gamepad.buttons_mask(pad)` | función | `wButtons` + `LT`/`RT` sintéticos. |
+| `gamepad.LEFT_TRIGGER/RIGHT_TRIGGER` | int | Bits sintéticos de los gatillos. |
+
+### Verificación
+
+- [x] `python -m pytest -q` → **179 passed**.
+- [x] Capturas: Big Picture con menú abierto, ficha con perfil y barra de pistas;
+      biblioteca y filtros sin solapes.
+- [x] Leyenda flotante dentro de la ficha (barra inferior, sobre el modal) con
+      A/B/X/Y/LB-RB/↑↓/Start.
+- [x] `tools/idle_probe.py` → 0 frames en reposo (sin regresiones de consumo).
+
 ## Feature 0.20.0 — Atajos personalizados, carátulas del sistema y pulido visual
 
 ### Descripción funcional

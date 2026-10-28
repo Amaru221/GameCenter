@@ -22,6 +22,11 @@ CODES = frozenset(code for code, _name in LANGUAGES)
 
 TRANSLATIONS: dict[str, dict[str, str]] = {
     "es": {
+        "Change": "Cambiar",
+        "Profile": "Perfil",
+        "Screenshots": "Capturas",
+        "Scroll": "Desplazar",
+        "No screenshots yet.": "Aún no hay capturas.",
         "Hold Select for %1 seconds.": "Mantén pulsado Select %1 s.",
         "Record": "Grabar",
         "Gamepad shortcut": "Atajo del mando",
@@ -383,6 +388,11 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "That artwork came back empty.": "Esa carátula llegó vacía.",
     },
     "fr": {
+        "Change": "Modifier",
+        "Profile": "Profil",
+        "Screenshots": "Captures",
+        "Scroll": "Défiler",
+        "No screenshots yet.": "Pas encore de captures.",
         "Hold Select for %1 seconds.": "Maintiens Select %1 s.",
         "Record": "Enregistrer",
         "Gamepad shortcut": "Raccourci manette",
@@ -752,6 +762,11 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "That artwork came back empty.": "Cette jaquette est revenue vide.",
     },
     "de": {
+        "Change": "Ändern",
+        "Profile": "Profil",
+        "Screenshots": "Screenshots",
+        "Scroll": "Scrollen",
+        "No screenshots yet.": "Noch keine Screenshots.",
         "Hold Select for %1 seconds.": "Select %1 s halten.",
         "Record": "Aufnehmen",
         "Gamepad shortcut": "Gamepad-Kürzel",
@@ -1136,6 +1151,11 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "That artwork came back empty.": "Dieses Artwork kam leer zurück.",
     },
     "it": {
+        "Change": "Cambia",
+        "Profile": "Profilo",
+        "Screenshots": "Schermate",
+        "Scroll": "Scorri",
+        "No screenshots yet.": "Ancora nessuna schermata.",
         "Hold Select for %1 seconds.": "Tieni premuto Select per %1 s.",
         "Record": "Registra",
         "Gamepad shortcut": "Scorciatoia del controller",
@@ -1511,6 +1531,11 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "That artwork came back empty.": "Quella copertina è arrivata vuota.",
     },
     "pt": {
+        "Change": "Alterar",
+        "Profile": "Perfil",
+        "Screenshots": "Capturas",
+        "Scroll": "Deslocar",
+        "No screenshots yet.": "Ainda não há capturas.",
         "Hold Select for %1 seconds.": "Mantém Select %1 s.",
         "Record": "Gravar",
         "Gamepad shortcut": "Atalho do comando",

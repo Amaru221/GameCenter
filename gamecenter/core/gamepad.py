@@ -32,6 +32,12 @@ BUTTON_B = 0x2000
 BUTTON_X = 0x4000
 BUTTON_Y = 0x8000
 
+# The triggers are analog (0-255) and do not live in ``wButtons``; they get
+# synthetic bits so they can be used like any other button in combinations.
+LEFT_TRIGGER = 0x01000000
+RIGHT_TRIGGER = 0x02000000
+TRIGGER_THRESHOLD = 60
+
 # Canonical order for user-configured combinations (matches
 # ``preferences.GAMEPAD_BUTTONS``).
 BUTTON_ORDER: tuple[tuple[str, int], ...] = (
@@ -41,6 +47,8 @@ BUTTON_ORDER: tuple[tuple[str, int], ...] = (
     ("Y", BUTTON_Y),
     ("LB", LEFT_SHOULDER),
     ("RB", RIGHT_SHOULDER),
+    ("LT", LEFT_TRIGGER),
+    ("RT", RIGHT_TRIGGER),
     ("Start", BUTTON_START),
     ("Back", BUTTON_BACK),
     ("Up", DPAD_UP),
@@ -61,6 +69,16 @@ SCREENSHOT_HOLD_SECONDS = 5.0
 def combo_for(buttons: int) -> str:
     """Canonical ``"LB+RB"`` text for the pressed button mask."""
     return "+".join(name for name, mask in BUTTON_ORDER if buttons & mask)
+
+
+def buttons_mask(pad, threshold: int = TRIGGER_THRESHOLD) -> int:
+    """``wButtons`` plus synthetic bits for the analog triggers."""
+    mask = int(getattr(pad, "wButtons", 0))
+    if int(getattr(pad, "bLeftTrigger", 0)) >= threshold:
+        mask |= LEFT_TRIGGER
+    if int(getattr(pad, "bRightTrigger", 0)) >= threshold:
+        mask |= RIGHT_TRIGGER
+    return mask
 
 
 class XINPUT_GAMEPAD(ctypes.Structure):
@@ -287,7 +305,7 @@ class GamepadManager(QObject):
             self.connectedChanged.emit()
 
         pad = state.Gamepad
-        buttons = int(pad.wButtons)
+        buttons = buttons_mask(pad)
 
         if self._capturing:
             self._capture_step(buttons)

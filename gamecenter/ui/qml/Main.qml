@@ -26,6 +26,14 @@ Window {
     property bool bigPictureOpen: false
     // Big Picture is only instantiated while it is open (plus its fade-out).
     property bool bigPictureMounted: false
+    // Panels opened from Big Picture wait for its fade-out.
+    property string bigPicturePendingPanel: ""
+
+    function openAfterBigPicture(panel) {
+        bigPictureOpen = false;
+        bigPicturePendingPanel = panel;
+        bigPicturePanelTimer.restart();
+    }
 
     onBigPictureOpenChanged: {
         if (bigPictureOpen) {
@@ -440,6 +448,8 @@ Window {
             appActive: window.active
             opened: window.bigPictureOpen
             onCloseRequested: window.bigPictureOpen = false
+            onSettingsRequested: window.openAfterBigPicture("settings")
+            onAddRequested: window.openAfterBigPicture("add")
         }
     }
 
@@ -447,6 +457,19 @@ Window {
         id: bigPictureUnmountTimer
         interval: 220
         onTriggered: window.bigPictureMounted = false
+    }
+
+    Timer {
+        id: bigPicturePanelTimer
+        interval: 260
+        onTriggered: {
+            if (window.bigPicturePendingPanel === "settings") {
+                window.settingsOpen = true;
+            } else if (window.bigPicturePendingPanel === "add") {
+                window.addOpen = true;
+            }
+            window.bigPicturePendingPanel = "";
+        }
     }
 
     // While the search box holds the focus, any click anywhere clears it. The

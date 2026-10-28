@@ -48,6 +48,8 @@ GAMEPAD_BUTTONS = (
     "Y",
     "LB",
     "RB",
+    "LT",
+    "RT",
     "Start",
     "Back",
     "Up",

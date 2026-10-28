@@ -17,8 +17,11 @@ def app():
     return QApplication.instance() or QApplication([])
 
 
-def _pad(buttons=0, lx=0, ly=0):
-    return SimpleNamespace(wButtons=buttons, sThumbLX=lx, sThumbLY=ly)
+def _pad(buttons=0, lx=0, ly=0, lt=0, rt=0):
+    return SimpleNamespace(
+        wButtons=buttons, sThumbLX=lx, sThumbLY=ly,
+        bLeftTrigger=lt, bRightTrigger=rt,
+    )
 
 
 def test_dpad_maps_to_cardinal_directions() -> None:
@@ -158,3 +161,32 @@ def test_capture_can_be_cancelled(app, monkeypatch) -> None:
     manager.cancelCapture()
     assert manager.capturing is False
     assert manager.screenshotCombo == ""
+
+
+def test_triggers_count_as_buttons() -> None:
+    assert gamepad.buttons_mask(_pad()) == 0
+    assert gamepad.buttons_mask(_pad(lt=10)) == 0  # inside the dead zone
+    assert gamepad.buttons_mask(_pad(lt=200)) == gamepad.LEFT_TRIGGER
+    assert gamepad.buttons_mask(_pad(rt=200)) == gamepad.RIGHT_TRIGGER
+    assert gamepad.buttons_mask(_pad(rt=255)) == gamepad.RIGHT_TRIGGER
+
+    combo = gamepad.buttons_mask(_pad(gamepad.BUTTON_A, lt=120, rt=120))
+    assert gamepad.combo_for(combo) == "A+LT+RT"
+
+
+def test_trigger_combination_can_be_captured(app, monkeypatch, tmp_path) -> None:
+    from gamecenter.core.preferences import Preferences
+
+    monkeypatch.setenv("GC_NO_GAMEPAD", "1")
+    prefs = Preferences(tmp_path / "settings.json")
+    manager = gamepad.GamepadManager(prefs)
+    captured: list[str] = []
+    manager.comboCaptured.connect(captured.append)
+
+    manager.startCapture()
+    manager._capture_step(gamepad.RIGHT_TRIGGER)
+    manager._capture_step(0)
+
+    assert captured == ["RT"]
+    assert prefs.screenshot_gamepad == "RT"
+    assert manager.screenshotCombo == "RT"

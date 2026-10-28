@@ -29,6 +29,18 @@
 - **Stats**: hovering the river chart draws a guide line with dots on every
   layer and a tooltip with the date, the period total and the per-game
   breakdown.
+- **Big Picture** refinements:
+  - new **menu button** (☰) with *Scan all stores*, *Restore removed games*,
+    *Add game manually…*, *Settings* and *Exit*.
+  - inside the game modal: **X** favourite, **Y** opens the game profile,
+    **LB/RB** open the screenshot viewer (and move through it), **B** closes the
+    profile first and the modal second.
+  - the profile panel can be edited with the gamepad/keyboard: ↑↓ to move between
+    status and score, ←→ to change the value.
+  - the mode-change toast is gone (the *Mode* pill already shows it).
+  - filter pills size themselves to their text and no longer overlap.
+- **Gamepad**: analog **LT/RT** triggers are recognised as buttons, so they can be
+  used in custom screenshot shortcuts.
 
 ## v0.19.1
 

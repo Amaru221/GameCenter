@@ -14,6 +14,9 @@ Rectangle {
     property string message: ""
     property int ratingDraft: -1
     property string loadedGameId: ""
+    // Console-style editing: 0 = status, 1 = score.
+    property int focusRow: 0
+    readonly property int rowCount: 2
 
     signal profileEdited()
     signal closeRequested()
@@ -89,6 +92,57 @@ Rectangle {
         root.profileEdited();
     }
 
+    function moveFocus(delta) {
+        focusRow = (focusRow + delta + rowCount) % rowCount;
+    }
+
+    function adjust(direction) {
+        if (focusRow === 0) {
+            cycleStatus(direction);
+        } else {
+            nudgeRating(direction * 5);
+        }
+    }
+
+    function cycleStatus(direction) {
+        if (!game.id) {
+            return;
+        }
+        var order = [""].concat(root.statusKeys);
+        var current = order.indexOf(game.status || "");
+        if (current < 0) {
+            current = 0;
+        }
+        var next = order[(current + direction + order.length) % order.length];
+        Library.setGameStatus(game.id, next);
+        root.profileEdited();
+    }
+
+    function nudgeRating(delta) {
+        if (!game.id) {
+            return;
+        }
+        var base = ratingDraft >= 0 ? ratingDraft : 50;
+        ratingDraft = Math.max(0, Math.min(100, base + delta));
+        root.commitRating();
+    }
+
+    Connections {
+        target: Gamepad
+        enabled: root.expanded
+
+        function onNavigate(dx, dy) {
+            if (!root.expanded) {
+                return;
+            }
+            if (dy !== 0) {
+                root.moveFocus(dy > 0 ? 1 : -1);
+            } else if (dx !== 0) {
+                root.adjust(dx);
+            }
+        }
+    }
+
     function mergeNow() {
         if (!game.id || !sourceId) {
             return;
@@ -107,6 +161,7 @@ Rectangle {
 
     onExpandedChanged: {
         if (expanded) {
+            focusRow = 0;
             message = "";
             reload();
         }
@@ -181,7 +236,7 @@ Rectangle {
 
         Text {
             text: Tr.strings["STATUS"]
-            color: "#7f8a9b"
+            color: root.focusRow === 0 ? Library.accent : "#7f8a9b"
             font.family: "Chakra Petch"
             font.pixelSize: 9
             font.bold: true
@@ -260,7 +315,7 @@ Rectangle {
 
             Text {
                 text: Tr.strings["SCORE"]
-                color: "#7f8a9b"
+                color: root.focusRow === 1 ? Library.accent : "#7f8a9b"
                 font.family: "Chakra Petch"
                 font.pixelSize: 9
                 font.bold: true
@@ -337,6 +392,15 @@ Rectangle {
                 border.width: 3
                 border.color: Library.accent
             }
+        }
+
+        Text {
+            Layout.fillWidth: true
+            text: "↑ ↓  " + Tr.strings["Select"] + "   ·   ← →  "
+                  + Tr.strings["Change"]
+            color: "#5f6a7b"
+            font.family: "Sora"
+            font.pixelSize: 9
         }
 
         Rectangle {

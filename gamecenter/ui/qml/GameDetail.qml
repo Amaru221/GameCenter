@@ -132,6 +132,18 @@ Item {
         return "#3a465c";
     }
 
+    function profileMoveFocus(delta) {
+        if (profilePanel.expanded) {
+            profilePanel.moveFocus(delta);
+        }
+    }
+
+    function profileAdjust(direction) {
+        if (profilePanel.expanded) {
+            profilePanel.adjust(direction);
+        }
+    }
+
     function scrollBy(delta) {
         var maximum = Math.max(0, scroller.contentHeight - scroller.height);
         scroller.contentY = Math.max(

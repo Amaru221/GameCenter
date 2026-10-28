@@ -9,6 +9,8 @@ Item {
     property bool opened: false
     property bool appActive: true
     signal closeRequested()
+    signal settingsRequested()
+    signal addRequested()
 
     property string filter: "all"
     property int selectedIndex: 0
@@ -62,15 +64,20 @@ Item {
                 return [
                     { key: "A", label: Tr.strings["Play"] },
                     { key: "B", label: Tr.strings["Back"] },
-                    { key: "↑ ↓", label: Tr.strings["Select"] },
+                    { key: "X", label: Tr.strings["Favorite"] },
+                    { key: "Y", label: Tr.strings["Profile"] },
+                    { key: "LB / RB", label: Tr.strings["Screenshots"] },
+                    { key: "↑ ↓", label: Tr.strings["Scroll"] },
                     { key: "Start", label: Tr.strings["Exit"] }
                 ];
             }
             return [
                 { key: "Enter", label: Tr.strings["Play"] },
                 { key: "Esc", label: Tr.strings["Back"] },
-                { key: "↑ ↓", label: Tr.strings["Select"] },
-                { key: "I", label: Tr.strings["Details"] }
+                { key: "F", label: Tr.strings["Favorite"] },
+                { key: "P", label: Tr.strings["Profile"] },
+                { key: "← →", label: Tr.strings["Screenshots"] },
+                { key: "↑ ↓", label: Tr.strings["Scroll"] }
             ];
         }
 
@@ -146,8 +153,6 @@ Item {
         var modes = ["arc", "flat", "ring", "wheel"];
         var current = modes.indexOf(carouselMode);
         carouselMode = modes[(current + delta + modes.length) % modes.length];
-        status = Tr.strings["Mode"] + ": " + modeLabel(carouselMode);
-        statusTimer.restart();
     }
 
     function moveSelection(dx) {
@@ -170,6 +175,38 @@ Item {
             return;
         }
         Library.toggleFavoriteById(selected.id);
+    }
+
+    function toggleProfile() {
+        if (!root.detailOpen) {
+            return;
+        }
+        if (gameModal.viewerOpen) {
+            gameModal.closeViewer();
+            return;
+        }
+        gameModal.profileOpen = !gameModal.profileOpen;
+    }
+
+    function screenshotsStep(delta) {
+        if (!root.detailOpen) {
+            return;
+        }
+        var shots = gameModal.screenshots || [];
+        if (!shots.length) {
+            root.status = Tr.strings["No screenshots yet."];
+            statusTimer.restart();
+            return;
+        }
+        if (gameModal.viewerOpen) {
+            if (delta < 0) {
+                gameModal.previousViewer();
+            } else {
+                gameModal.nextViewer();
+            }
+        } else {
+            gameModal.openViewer(shots, delta < 0 ? shots.length - 1 : 0);
+        }
     }
 
     function toggleDetailFavorite() {
@@ -241,7 +278,49 @@ Item {
         }
 
         if (root.detailOpen) {
-            if (event.key === Qt.Key_Up) {
+            if (gameModal.profileOpen) {
+                if (event.key === Qt.Key_Up) {
+                    gameModal.profileMoveFocus(-1);
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Down) {
+                    gameModal.profileMoveFocus(1);
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Left) {
+                    gameModal.profileAdjust(-1);
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Right) {
+                    gameModal.profileAdjust(1);
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_P
+                           || event.key === Qt.Key_Escape
+                           || event.key === Qt.Key_Backspace) {
+                    gameModal.profileOpen = false;
+                    event.accepted = true;
+                }
+                return;
+            }
+            if (gameModal.viewerOpen) {
+                // The viewer owns the arrows while it is open.
+                if (event.key === Qt.Key_Left) {
+                    gameModal.previousViewer();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Right) {
+                    gameModal.nextViewer();
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Escape
+                           || event.key === Qt.Key_Backspace) {
+                    gameModal.closeViewer();
+                    event.accepted = true;
+                }
+                return;
+            }
+            if (event.key === Qt.Key_Left) {
+                root.screenshotsStep(-1);
+                event.accepted = true;
+            } else if (event.key === Qt.Key_Right) {
+                root.screenshotsStep(1);
+                event.accepted = true;
+            } else if (event.key === Qt.Key_Up) {
                 gameModal.scrollBy(-120);
                 event.accepted = true;
             } else if (event.key === Qt.Key_Down) {
@@ -251,7 +330,11 @@ Item {
                        || event.key === Qt.Key_Backspace
                        || event.key === Qt.Key_I
                        || event.key === Qt.Key_D) {
-                root.detailOpen = false;
+                if (gameModal.profileOpen) {
+                    gameModal.profileOpen = false;
+                } else {
+                    root.detailOpen = false;
+                }
                 event.accepted = true;
             } else if (event.key === Qt.Key_Return
                        || event.key === Qt.Key_Enter
@@ -261,6 +344,9 @@ Item {
                 event.accepted = true;
             } else if (event.key === Qt.Key_F) {
                 root.toggleDetailFavorite();
+                event.accepted = true;
+            } else if (event.key === Qt.Key_P) {
+                root.toggleProfile();
                 event.accepted = true;
             }
             return;
@@ -311,6 +397,42 @@ Item {
         }
     }
 
+    component HintItem: Row {
+        id: hintRoot
+        property var hint: ({})
+
+        spacing: 4 * root.uiScale
+        height: 20 * root.uiScale
+
+        Rectangle {
+            width: Math.max(18, hintKeyText.implicitWidth + 9)
+            height: 19 * root.uiScale
+            radius: 5 * root.uiScale
+            color: "#141c28"
+            border.width: 1
+            border.color: "#2a3a52"
+            anchors.verticalCenter: parent.verticalCenter
+
+            Text {
+                id: hintKeyText
+                anchors.centerIn: parent
+                text: hintRoot.hint.key || ""
+                color: "#dfe6f0"
+                font.family: "Chakra Petch"
+                font.pixelSize: Math.max(7, Math.round(8 * root.uiScale))
+                font.bold: true
+            }
+        }
+
+        Text {
+            text: hintRoot.hint.label || ""
+            color: "#93a0b4"
+            font.family: "Sora"
+            font.pixelSize: Math.max(7, Math.round(8 * root.uiScale))
+            anchors.verticalCenter: parent.verticalCenter
+        }
+    }
+
     Connections {
         target: Gamepad
         function onNavigate(dx, dy) {
@@ -326,6 +448,10 @@ Item {
                 return;
             }
             if (root.detailOpen) {
+                // The profile panel and the screenshot viewer own their input.
+                if (gameModal.profileOpen || gameModal.viewerOpen) {
+                    return;
+                }
                 if (dy !== 0) {
                     gameModal.scrollBy(dy > 0 ? 120 : -120);
                 }
@@ -352,6 +478,9 @@ Item {
             if (root.exitConfirmOpen) {
                 root.activateExitFocus();
             } else if (root.detailOpen) {
+                if (gameModal.profileOpen || gameModal.viewerOpen) {
+                    return;
+                }
                 root.detailOpen = false;
                 root.launchGame(root.detailGame.id, root.detailGame.title);
             } else {
@@ -366,7 +495,13 @@ Item {
             if (root.exitConfirmOpen) {
                 root.exitConfirmOpen = false;
             } else if (root.detailOpen) {
-                root.detailOpen = false;
+                if (gameModal.viewerOpen) {
+                    gameModal.closeViewer();
+                } else if (gameModal.profileOpen) {
+                    gameModal.profileOpen = false;
+                } else {
+                    root.detailOpen = false;
+                }
             }
         }
 
@@ -375,20 +510,34 @@ Item {
                     || Date.now() - root.openedAt < 500) {
                 return;
             }
+            if (root.detailOpen
+                    && (gameModal.profileOpen || gameModal.viewerOpen)) {
+                return;
+            }
             root.closeRequested();
         }
 
         function onPageLeft() {
-            if (!root.opened || !root.appActive
-                    || root.exitConfirmOpen || root.detailOpen) {
+            if (!root.opened || !root.appActive || root.exitConfirmOpen) {
+                return;
+            }
+            if (root.detailOpen) {
+                if (!gameModal.profileOpen) {
+                    root.screenshotsStep(-1);
+                }
                 return;
             }
             root.cycleMode(-1);
         }
 
         function onPageRight() {
-            if (!root.opened || !root.appActive
-                    || root.exitConfirmOpen || root.detailOpen) {
+            if (!root.opened || !root.appActive || root.exitConfirmOpen) {
+                return;
+            }
+            if (root.detailOpen) {
+                if (!gameModal.profileOpen) {
+                    root.screenshotsStep(1);
+                }
                 return;
             }
             root.cycleMode(1);
@@ -399,7 +548,9 @@ Item {
                 return;
             }
             if (root.detailOpen) {
-                root.toggleDetailFavorite();
+                if (!gameModal.profileOpen && !gameModal.viewerOpen) {
+                    root.toggleDetailFavorite();
+                }
             } else {
                 root.toggleFavorite();
             }
@@ -410,7 +561,7 @@ Item {
                 return;
             }
             if (root.detailOpen) {
-                root.detailOpen = false;
+                root.toggleProfile();
             } else {
                 root.openDetail();
             }
@@ -515,39 +666,7 @@ Item {
 
                 Repeater {
                     model: root.hints
-
-                    Row {
-                        spacing: 4 * root.uiScale
-                        height: 22 * root.uiScale
-
-                        Rectangle {
-                            width: Math.max(18, hintKey.implicitWidth + 9)
-                            height: 19 * root.uiScale
-                            radius: 5 * root.uiScale
-                            color: "#141c28"
-                            border.width: 1
-                            border.color: "#2a3a52"
-                            anchors.verticalCenter: parent.verticalCenter
-
-                            Text {
-                                id: hintKey
-                                anchors.centerIn: parent
-                                text: modelData.key
-                                color: "#dfe6f0"
-                                font.family: "Chakra Petch"
-                                font.pixelSize: Math.max(7, Math.round(8 * root.uiScale))
-                                font.bold: true
-                            }
-                        }
-
-                        Text {
-                            text: modelData.label
-                            color: "#93a0b4"
-                            font.family: "Sora"
-                            font.pixelSize: Math.max(7, Math.round(8 * root.uiScale))
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
+                    delegate: HintItem { hint: modelData }
                 }
             }
         }
@@ -607,6 +726,174 @@ Item {
                 font.pixelSize: 13 * root.uiScale
                 font.bold: true
                 font.letterSpacing: 1.4
+            }
+        }
+
+        Rectangle {
+            id: menuButton
+            objectName: "bigPictureMenuButton"
+            Layout.alignment: Qt.AlignVCenter
+            width: 32 * root.uiScale
+            height: 32 * root.uiScale
+            radius: 8 * root.uiScale
+            color: menuArea.containsMouse || bigPictureMenu.opened
+                   ? "#202633" : "#11161f"
+            border.width: 1
+            border.color: menuArea.containsMouse || bigPictureMenu.opened
+                          ? Library.accent : "#2a3444"
+
+            Canvas {
+                width: 16 * root.uiScale
+                height: 16 * root.uiScale
+                anchors.centerIn: parent
+                onPaint: {
+                    var ctx = getContext("2d");
+                    ctx.reset();
+                    ctx.strokeStyle = menuArea.containsMouse
+                                      || bigPictureMenu.opened
+                                      ? Library.accent : "#c9d2e0";
+                    ctx.lineWidth = 1.6;
+                    ctx.lineCap = "round";
+                    for (var i = 0; i < 3; i++) {
+                        var y = 4 + i * 4;
+                        ctx.beginPath();
+                        ctx.moveTo(2, y);
+                        ctx.lineTo(14, y);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            MouseArea {
+                id: menuArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: bigPictureMenu.opened
+                           ? bigPictureMenu.close()
+                           : bigPictureMenu.open()
+            }
+
+            Popup {
+                id: bigPictureMenu
+                objectName: "bigPictureMenu"
+                width: 258
+                x: -width + parent.width
+                y: parent.height + 8
+                padding: 8
+                modal: false
+                focus: true
+                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+                property var entries: [
+                    { text: Tr.strings["Scan all stores"], action: "scan" },
+                    {
+                        text: Tr.strings["Restore removed games"],
+                        action: "restore",
+                        enabled: Library.hiddenCount > 0
+                    },
+                    { kind: "space" },
+                    { text: Tr.strings["Add game manually..."], action: "add" },
+                    { text: Tr.strings["Settings"], action: "settings" },
+                    { kind: "space" },
+                    { text: Tr.strings["Exit"], action: "exit" }
+                ]
+
+                function run(entry) {
+                    if (entry.action === "scan") {
+                        Library.scanStore("");
+                    } else if (entry.action === "restore") {
+                        Library.restoreHiddenGames();
+                    } else if (entry.action === "add") {
+                        root.addRequested();
+                    } else if (entry.action === "settings") {
+                        root.settingsRequested();
+                    } else if (entry.action === "exit") {
+                        root.closeRequested();
+                    }
+                    bigPictureMenu.close();
+                }
+
+                background: Rectangle {
+                    radius: 14
+                    border.width: 1
+                    border.color: "#31405a"
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "#1a2130" }
+                        GradientStop { position: 1.0; color: "#0c1017" }
+                    }
+                }
+
+                contentItem: Column {
+                    width: bigPictureMenu.availableWidth
+                    spacing: 2
+
+                    Repeater {
+                        model: bigPictureMenu.entries
+
+                        delegate: Item {
+                            id: menuRow
+                            readonly property bool spacer: modelData.kind === "space"
+                            readonly property bool hovered: rowArea.containsMouse
+                                        && modelData.enabled !== false
+
+                            width: bigPictureMenu.width - 16
+                            height: spacer ? 9 : 34
+
+                            Rectangle {
+                                visible: menuRow.spacer
+                                anchors.verticalCenter: parent.verticalCenter
+                                x: 8
+                                width: parent.width - 16
+                                height: 1
+                                color: "#232c3c"
+                            }
+
+                            Rectangle {
+                                visible: !menuRow.spacer
+                                anchors.fill: parent
+                                radius: 9
+                                color: menuRow.hovered ? "#212b3c" : "transparent"
+
+                                Rectangle {
+                                    visible: menuRow.hovered
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 3
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 2
+                                    height: parent.height - 14
+                                    radius: 1
+                                    color: Library.accent
+                                }
+                            }
+
+                            Text {
+                                visible: !menuRow.spacer
+                                anchors.left: parent.left
+                                anchors.leftMargin: 14
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: menuRow.spacer ? "" : modelData.text
+                                color: modelData.enabled === false
+                                       ? "#5f6a7b"
+                                       : (menuRow.hovered ? "#ffffff" : "#dfe6f0")
+                                font.family: "Sora"
+                                font.pixelSize: 12
+                                elide: Text.ElideRight
+                            }
+
+                            MouseArea {
+                                id: rowArea
+                                anchors.fill: parent
+                                enabled: !menuRow.spacer && modelData.enabled !== false
+                                hoverEnabled: !menuRow.spacer
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: bigPictureMenu.run(modelData)
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -937,12 +1224,17 @@ Item {
 
                 delegate: Rectangle {
                     readonly property bool selected: root.filter === modelData.value
-                    width: Math.max(
+                    // Sized by the text: layouts ignore a plain `width`
+                    // binding, which made the pills overlap on narrow screens.
+                    implicitWidth: Math.max(
                         112 * root.uiScale,
                         filterLabel.implicitWidth + 34 * root.uiScale
                     )
-                    height: 32 * root.uiScale
-                    radius: 16 * root.uiScale
+                    implicitHeight: 32 * root.uiScale
+                    Layout.preferredWidth: implicitWidth
+                    Layout.preferredHeight: implicitHeight
+                    Layout.alignment: Qt.AlignVCenter
+                    radius: implicitHeight / 2
                     color: selected ? "#1e2c42" : "#101722"
                     border.width: 1
                     border.color: selected ? Library.accent : "#243044"
@@ -978,16 +1270,21 @@ Item {
                 color: "#6f7887"
                 font.family: "Sora"
                 font.pixelSize: 10 * root.uiScale
+                Layout.maximumWidth: 140 * root.uiScale
+                elide: Text.ElideRight
             }
 
             Rectangle {
-                width: Math.max(
+                implicitWidth: Math.max(
                     168 * root.uiScale,
                     modeText.implicitWidth + modeHint.implicitWidth
                     + 34 * root.uiScale
                 )
-                height: 30 * root.uiScale
-                radius: 15 * root.uiScale
+                implicitHeight: 30 * root.uiScale
+                Layout.preferredWidth: implicitWidth
+                Layout.preferredHeight: implicitHeight
+                Layout.alignment: Qt.AlignVCenter
+                radius: implicitHeight / 2
                 color: modeArea.containsMouse ? "#1b2535" : "#101722"
                 border.width: 1
                 border.color: modeArea.containsMouse
@@ -1263,6 +1560,35 @@ Item {
                     font.pixelSize: 9
                     horizontalAlignment: Text.AlignRight
                 }
+            }
+        }
+    }
+
+    // The modal covers the top bar, so the legend floats above it while the
+    // game sheet is open.
+    Rectangle {
+        id: modalHints
+        objectName: "bigPictureModalHints"
+        visible: root.detailOpen
+        z: 90
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 16 * root.uiScale
+        width: modalHintRow.implicitWidth + 30 * root.uiScale
+        height: 32 * root.uiScale
+        radius: 16 * root.uiScale
+        color: Qt.rgba(0.04, 0.06, 0.09, 0.9)
+        border.width: 1
+        border.color: "#2a3444"
+
+        Row {
+            id: modalHintRow
+            anchors.centerIn: parent
+            spacing: 11 * root.uiScale
+
+            Repeater {
+                model: root.hints
+                delegate: HintItem { hint: modelData }
             }
         }
     }

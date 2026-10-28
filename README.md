@@ -96,7 +96,13 @@ la muestra como una estantería y lanza los juegos con un doble clic.
     **B** volver, **Y/Triángulo** abrir la ficha del juego (descripción y
     timeline), **LB/RB** cambiar el modo del carrusel, **X** favorito y
     **Start** para **salir**. Mantén **Select/View** 5 segundos para capturar
-    una pantalla del juego.
+    una pantalla del juego. Los **gatillos LT/RT** también se reconocen y se
+    pueden usar en atajos personalizados.
+  - Dentro de la ficha: **X** favorito, **Y** abre el **perfil** (estado y
+    puntuación, editables con ↑↓ y ←→), **LB/RB** abren el visor de **capturas**
+    (y se mueven por él) y **B** cierra primero el perfil y después la ficha.
+  - El botón **☰** de la barra superior abre el menú de Big Picture: escanear
+    tiendas, restaurar juegos ocultos, añadir un juego, ajustes y salir.
   - También funciona con teclado (flechas, Enter, Esc, `I`, `C`/`Tab` para el
     modo, `[`/`]` para filtros, `F` favorito) y ratón; la ficha del juego se
     abre con el botón **Details**.

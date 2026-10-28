@@ -29,12 +29,45 @@ def app():
 
 
 @pytest.fixture(autouse=True)
-def release_qml_engines():
-    # Each QML test creates an engine; collect it before the next one so a
-    # delayed destruction cannot happen inside another engine's event loop.
-    yield
+def release_qml_engines(monkeypatch):
+    """Tear every QML engine down before the next test.
+
+    Letting Python collect an engine that still owns a visible window can
+    deadlock the next engine's QML load, so engines are tracked, closed and
+    deleted deterministically.
+    """
     import gc
 
+    import shiboken6
+    from PySide6.QtCore import QCoreApplication
+
+    from gamecenter.ui import app as app_module
+
+    created = []
+    original = app_module.create_engine
+
+    def tracked(library):
+        engine = original(library)
+        created.append(engine)
+        return engine
+
+    monkeypatch.setattr(app_module, "create_engine", tracked)
+    yield
+
+    app = QCoreApplication.instance()
+    for engine in reversed(created):
+        try:
+            for root in engine.rootObjects():
+                root.close()
+                root.deleteLater()
+            if app is not None:
+                app.processEvents()
+            shiboken6.delete(engine)
+        except (RuntimeError, ReferenceError):
+            pass
+    created.clear()
+    if app is not None:
+        app.processEvents()
     gc.collect()
 
 
@@ -1239,6 +1272,63 @@ def test_qml_big_picture_opens_the_game_detail(app, model, monkeypatch) -> None:
     assert detail["description"] == "A tiny space adventure."
 
 
+def test_qml_big_picture_mode_change_has_no_toast(app, model) -> None:
+    from PySide6.QtCore import Q_ARG, QMetaObject, QObject
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.setProperty("bigPictureOpen", True)
+    app.processEvents()
+
+    picture = root.findChild(QObject, "bigPicture")
+    QMetaObject.invokeMethod(picture, "cycleMode", Q_ARG("QVariant", 1))
+    app.processEvents()
+
+    assert picture.property("carouselMode") == "flat"
+    assert picture.property("status") == ""
+
+
+def test_qml_big_picture_detail_profile_and_screenshots(app, model) -> None:
+    from PySide6.QtCore import Q_ARG, QMetaObject, QObject
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.setProperty("bigPictureOpen", True)
+    app.processEvents()
+
+    picture = root.findChild(QObject, "bigPicture")
+    QMetaObject.invokeMethod(picture, "openDetail")
+    app.processEvents()
+
+    detail = root.findChild(QObject, "bigPictureGameDetail")
+    assert detail is not None
+    assert detail.property("profileOpen") is False
+
+    # Y opens the profile editor inside the modal.
+    QMetaObject.invokeMethod(picture, "toggleProfile")
+    app.processEvents()
+    assert detail.property("profileOpen") is True
+
+    panel = detail.findChild(QObject, "gameProfilePanel")
+    assert panel is not None
+    assert panel.property("expanded") is True
+    assert panel.property("focusRow") == 0
+
+    # Gamepad navigation edits the status and the score from the modal.
+    QMetaObject.invokeMethod(picture, "toggleProfile")
+    app.processEvents()
+    assert detail.property("profileOpen") is False
+
+    # LB/RB ask for screenshots; with none, a status message explains it.
+    QMetaObject.invokeMethod(picture, "screenshotsStep", Q_ARG("QVariant", 1))
+    app.processEvents()
+    assert picture.property("status") != ""
+
+
 def test_gamepad_cursor_toggle(app) -> None:
     from gamecenter.core.gamepad import GamepadManager
 
@@ -1327,7 +1417,7 @@ def test_qml_game_profile_panel_loads(app, model) -> None:
     detail.setProperty("profileOpen", True)
     app.processEvents()
 
-    panel = root.findChild(QObject, "gameProfilePanel")
+    panel = detail.findChild(QObject, "gameProfilePanel")
     assert panel is not None
     assert panel.property("expanded") is True
     assert panel.property("sourceId") == ""
