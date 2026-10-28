@@ -27,6 +27,11 @@
   `wButtons` que usan algunas **paletas traseras** (estilo SCUF) se exponen como
   `P1`/`P2` con nombres estables. La casilla muestra en vivo los botones
   detectados mientras se graba.
+- **Paletas con macros** (BSP G6): no llegan como botones porque el mando emite
+  teclas. El grabador de teclado expone `lastKeyPress` (última combinación
+  recibida, aunque se rechace) para diagnosticarlo, y `F13`–`F24` valen como
+  atajo global: la vía recomendada es programar la macro como `Ctrl+F13` en la
+  app del mando y grabarla como atajo de teclado.
 
 ### Decisiones de arquitectura
 

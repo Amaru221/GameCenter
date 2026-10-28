@@ -44,6 +44,10 @@
   order, and the two spare XInput button bits used by SCUF-style **rear
   paddles** are exposed as `P1`/`P2`. The capture chip shows the buttons as they
   are pressed.
+- **Controller macros**: paddles programmed as macros never reach Windows as
+  gamepad buttons, so the keyboard recorder now shows the **last key it saw**
+  (even when it is rejected). `F13`–`F24` are supported as global hotkeys, which
+  is the recommended target for a macro.
 
 ## v0.19.1
 

@@ -131,6 +131,15 @@ def from_key(key: int, modifiers: int) -> str | None:
     return normalize(sequence.toString(QKeySequence.PortableText))
 
 
+def raw_from_key(key: int, modifiers: int) -> str:
+    """The combination exactly as pressed, even if it is not a valid shortcut."""
+    key_code = _as_int(key)
+    if not key_code:
+        return ""
+    sequence = QKeySequence(key_code | _as_int(modifiers))
+    return sequence.toString(QKeySequence.PortableText)
+
+
 def to_vk(sequence: str | None) -> tuple[int, int] | None:
     """``(modifiers, virtual-key)`` for ``RegisterHotKey``."""
     canonical = normalize(sequence)
@@ -158,9 +167,18 @@ def to_vk(sequence: str | None) -> tuple[int, int] | None:
     return modifiers, vk
 
 
+def prettify(text: str | None) -> str:
+    """Human label for any combination, without validating it."""
+    return "+".join(
+        _DISPLAY.get(token, token)
+        for token in str(text or "").split("+")
+        if token
+    )
+
+
 def display(sequence: str | None) -> str:
     """Human label for the UI (``Ctrl+Page Down``)."""
     canonical = normalize(sequence)
     if not canonical:
         return ""
-    return "+".join(_DISPLAY.get(token, token) for token in canonical.split("+"))
+    return prettify(canonical)

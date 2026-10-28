@@ -237,3 +237,27 @@ def test_capture_always_works_when_requested(app, tmp_path: Path, monkeypatch) -
 
     assert path
     assert Path(path).name.startswith("GameCenter-")
+
+
+def test_recording_reports_the_raw_key(app, tmp_path: Path) -> None:
+    from PySide6.QtCore import Qt
+
+    prefs = Preferences(tmp_path / "settings.json")
+    manager = ScreenshotManager(
+        prefs,
+        FakeSessions(["Alpha Quest"]),
+        directory=tmp_path / "screenshots",
+        register_hotkey=False,
+    )
+
+    manager.startRecording()
+    assert manager.recordKey(Qt.Key_A, Qt.NoModifier) == ""
+    # The chip can show what actually arrived, even when it is rejected.
+    assert manager.lastKeyPress == "A"
+    assert manager.error
+
+    # Macros can be mapped to an unused function key in the controller app.
+    assert manager.recordKey(Qt.Key_F13, Qt.ControlModifier) == "Ctrl+F13"
+    assert manager.lastKeyPress == "Ctrl+F13"
+    assert prefs.screenshot_shortcut == "Ctrl+F13"
+    assert shortcuts.to_vk("Ctrl+F13") == (2, 0x7C)

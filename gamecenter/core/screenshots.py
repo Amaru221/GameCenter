@@ -123,6 +123,7 @@ class ScreenshotManager(QObject):
         self._filter = None
         self._last_has_session = False
         self._recording = False
+        self._last_key_press = ""
         self._hotkeys_enabled = (
             register_hotkey
             and sys.platform == "win32"
@@ -168,12 +169,22 @@ class ScreenshotManager(QObject):
     def recording(self) -> bool:
         return self._recording
 
+    @Property(str, notify=changed)
+    def lastKeyPress(self) -> str:
+        """Raw combination of the last key press while recording.
+
+        Useful when a controller/macro sends keys the app cannot register: the
+        chip shows exactly what arrived.
+        """
+        return self._last_key_press
+
     @Slot()
     def startRecording(self) -> None:
         if self._recording:
             return
         self._recording = True
         self._error = ""
+        self._last_key_press = ""
         # Let the OS see the combination the user wants to capture.
         self._unregister()
         self.changed.emit()
@@ -194,11 +205,15 @@ class ScreenshotManager(QObject):
         if int(key) in shortcuts.IGNORED_KEYS:
             return ""
         canonical = shortcuts.from_key(key, modifiers)
+        self._last_key_press = shortcuts.prettify(
+            shortcuts.raw_from_key(key, modifiers)
+        )
         if canonical is None:
             self._error = tr("Add a modifier (Ctrl, Alt or Shift) or use an F-key.")
             self.changed.emit()
             return ""
         self._recording = False
+        self._last_key_press = shortcuts.display(canonical)
         self._prefs.screenshot_shortcut = canonical
         self._error = ""
         self._apply_hotkey()

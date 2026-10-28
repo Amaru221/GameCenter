@@ -153,7 +153,12 @@ la muestra como una estantería y lanza los juegos con un doble clic.
     combinaciones (**LT + RT**, **LB + RT**, **A + X**…) y las **paletas
     traseras** que algunos mandos SCUF exponen como bits extra aparecen como
     **P1/P2**. Sin combinación guardada se mantiene **mantener Select/View 5
-    segundos**. En Windows el atajo de teclado es
+    segundos**.
+  - Si las paletas están **programadas como macros**, el mando las envía como
+    teclas y no como botones: configura la macro en la app del mando con un
+    modificador (`Ctrl+F13`, por ejemplo; `F13`–`F24` están soportadas como
+    atajo global) y grábalo como **atajo de teclado**. La casilla muestra la
+    última tecla recibida aunque no sea válida, para poder diagnosticarlo. En Windows el atajo de teclado es
     global, así que funciona con el juego en primer plano; si el sistema ya lo
     usa, se muestra el aviso y queda el atajo local. Las imágenes se guardan en
     `%APPDATA%\GameCenter\screenshots` y su vínculo con juego/sesión en

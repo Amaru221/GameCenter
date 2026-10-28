@@ -334,7 +334,9 @@ Item {
                             horizontalAlignment: Text.AlignHCenter
                             elide: Text.ElideRight
                             text: Screenshots.recording
-                                  ? Tr.strings["Press the keys you want to use."]
+                                  ? (Screenshots.lastKeyPress !== ""
+                                     ? Screenshots.lastKeyPress
+                                     : Tr.strings["Press the keys you want to use."])
                                   : (Screenshots.shortcutLabel !== ""
                                      ? Screenshots.shortcutLabel
                                      : Tr.strings["None"])
