@@ -16,6 +16,15 @@ Item {
     property real tiltX: 0
     property real tiltY: 0
 
+    // The store this game belongs to (or LOCAL), shown on the shell.
+    readonly property string sourceTag: {
+        var value = (root.gameSource || "").toUpperCase();
+        if (value.indexOf("EPIC") === 0) return "EPIC";
+        if (value.indexOf("BATTLE") === 0) return "BATTLE.NET";
+        if (value.indexOf("LOCAL") === 0) return "LOCAL";
+        return value.length > 0 ? value : "GAME";
+    }
+
     Rectangle {
         anchors.fill: parent
         radius: 12
@@ -78,13 +87,15 @@ Item {
 
         Text {
             x: 8
+            width: parent.width - 16
             y: 5
-            text: "GC"
+            text: root.sourceTag
             color: "#eef2f7"
             font.family: "Chakra Petch"
             font.pixelSize: 9
             font.bold: true
-            font.letterSpacing: 2.4
+            font.letterSpacing: 1.6
+            elide: Text.ElideRight
         }
 
         Rectangle {

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+import shutil
 import threading
 import time
 from dataclasses import replace
@@ -64,6 +65,8 @@ ROLE_FAVORITE = Qt.UserRole + 9
 ROLE_CARTRIDGE_COLOR = Qt.UserRole + 10
 
 ART_BATCH = 5
+
+_IMAGE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".webp", ".bmp"})
 
 _TAG_WORDS = re.compile(r"[A-Z0-9]+")
 
@@ -783,6 +786,44 @@ class LibraryModel(QAbstractListModel):
         self._notify_cover(game.id)
         self.artChanged.emit()
         self.changed.emit()
+
+    @Slot(result=str)
+    def chooseCoverFile(self) -> str:
+        """Native file picker for a local cover; returns ``""`` if cancelled."""
+        from PySide6.QtWidgets import QFileDialog
+
+        path, _selected = QFileDialog.getOpenFileName(
+            None,
+            tr("Choose a cover image"),
+            "",
+            "Images (*.png *.jpg *.jpeg *.webp *.bmp)",
+        )
+        return str(path or "")
+
+    @Slot(int, str, result=bool)
+    def setGameCover(self, row: int, path: str) -> bool:
+        """Use an image from the user's computer as this game's cover."""
+        game = self._at(row)
+        if game is None or not path:
+            return False
+        source = Path(path)
+        if source.suffix.lower() not in _IMAGE_SUFFIXES:
+            self.failed.emit(tr("That file is not a supported image."))
+            return False
+        if QImage(str(source)).isNull():
+            self.failed.emit(tr("Couldn't read that image."))
+            return False
+        try:
+            folder = artwork.CACHE / "local"
+            folder.mkdir(parents=True, exist_ok=True)
+            name = re.sub(r"[^A-Za-z0-9._-]+", "-", game.id)
+            target = folder / f"{name}{source.suffix.lower()}"
+            shutil.copyfile(source, target)
+        except OSError:
+            self.failed.emit(tr("Couldn't copy that image."))
+            return False
+        self._on_art_downloaded(game.id, str(target))
+        return True
 
     def _notify_cover(self, game_id: str) -> None:
         for row, game in enumerate(self._visible):

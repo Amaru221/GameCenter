@@ -26,6 +26,14 @@ Window {
     property bool bigPictureOpen: false
     // Big Picture is only instantiated while it is open (plus its fade-out).
     property bool bigPictureMounted: false
+    // Panels opened from Big Picture wait for its fade-out.
+    property string bigPicturePendingPanel: ""
+
+    function openAfterBigPicture(panel) {
+        bigPictureOpen = false;
+        bigPicturePendingPanel = panel;
+        bigPicturePanelTimer.restart();
+    }
 
     onBigPictureOpenChanged: {
         if (bigPictureOpen) {
@@ -440,6 +448,8 @@ Window {
             appActive: window.active
             opened: window.bigPictureOpen
             onCloseRequested: window.bigPictureOpen = false
+            onSettingsRequested: window.openAfterBigPicture("settings")
+            onAddRequested: window.openAfterBigPicture("add")
         }
     }
 
@@ -447,6 +457,19 @@ Window {
         id: bigPictureUnmountTimer
         interval: 220
         onTriggered: window.bigPictureMounted = false
+    }
+
+    Timer {
+        id: bigPicturePanelTimer
+        interval: 260
+        onTriggered: {
+            if (window.bigPicturePendingPanel === "settings") {
+                window.settingsOpen = true;
+            } else if (window.bigPicturePendingPanel === "add") {
+                window.addOpen = true;
+            }
+            window.bigPicturePendingPanel = "";
+        }
     }
 
     // While the search box holds the focus, any click anywhere clears it. The
@@ -544,13 +567,14 @@ Window {
 
     Shortcut {
         sequence: Screenshots.shortcutSequence
-        enabled: Screenshots.localShortcutEnabled
+        enabled: Screenshots.localShortcutEnabled && !Screenshots.recording
         onActivated: Screenshots.captureIfPlaying()
     }
 
     Shortcut {
         sequence: "F5"
         enabled: !window.bigPictureOpen && !yearReview.opened
+                 && !Screenshots.recording
         onActivated: {
             Library.refresh();
             if (window.currentView === "stats") {
@@ -563,6 +587,7 @@ Window {
         sequence: "Escape"
         enabled: !window.bigPictureOpen && !yearReview.opened
                  && !detail.viewerOpen
+                 && !Screenshots.recording
         onActivated: {
             if (updateOpen) {
                 updateOpen = false;
@@ -581,6 +606,7 @@ Window {
     Shortcut {
         sequence: "Ctrl+B"
         enabled: !window.bigPictureOpen && !yearReview.opened
+                 && !Screenshots.recording
         onActivated: {
             if (!bigPictureOpen && !detailOpen && !settingsOpen
                     && !updateOpen && !addOpen && !artOpen) {
@@ -592,6 +618,7 @@ Window {
     Shortcut {
         sequence: "Ctrl+,"
         enabled: !window.bigPictureOpen && !yearReview.opened
+                 && !Screenshots.recording
         onActivated: settingsOpen = true
     }
 
@@ -605,6 +632,7 @@ Window {
                  && !window.updateOpen
                  && !window.addOpen
                  && !window.artOpen
+                 && !Screenshots.recording
         onActivated: topBar.focusSearch()
     }
 }

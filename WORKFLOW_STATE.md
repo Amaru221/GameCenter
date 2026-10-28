@@ -1,4 +1,198 @@
-# WORKFLOW STATE — Consumo en reposo (Plan A: idle silencioso)
+# WORKFLOW STATE — Atajos personalizados, carátulas locales y pulido de UI
+
+## Ajuste fino 0.20.0 — Modal de Big Picture, gatillos y filtros
+
+### Descripción funcional
+
+- **Big Picture**
+  - El cambio de modo del carrusel ya **no muestra un toast**: el propio botón
+    *Mode* indica el modo activo.
+  - Nuevo **botón ☰** en la barra superior con el menú de la app: *Scan all
+    stores*, *Restore removed games*, *Add game manually…*, *Settings* y *Exit*.
+    *Settings* y *Add game* cierran Big Picture y abren el panel en la ventana
+    principal (con su fundido de salida).
+  - **Dentro de la ficha**: **X** favorito, **Y** abre/cierra el **perfil**,
+    **LB/RB** abren el **visor de capturas** (y navegan por él), **B** cierra
+    primero el perfil y después la ficha, **A** sigue jugando.
+  - El **perfil** se edita con mando/teclado: **↑↓** alterna *estado* ↔
+    *puntuación*, **←→** cambia el valor (estado anterior/siguiente, puntuación
+    ±5). La sección activa se resalta en el color de acento y una pista muestra
+    las teclas.
+  - Las píldoras de filtro se dimensionan por su texto (`implicitWidth` +
+    `Layout.preferredWidth`): ya no se solapan ni ignoran el layout.
+- **Mando**: los **gatillos analógicos LT/RT** se leen de `bLeftTrigger`/
+  `bRightTrigger` (umbral 60/255) y cuentan como botones. La captura **acumula**
+  los botones mantenidos, así que una combinación se guarda igual sin importar
+  el orden en que se suelten (`LT+RT`, `LB+RT`, `A+X`). Los dos bits libres de
+  `wButtons` que usan algunas **paletas traseras** (estilo SCUF) se exponen como
+  `P1`/`P2` con nombres estables. La casilla muestra en vivo los botones
+  detectados mientras se graba.
+- **Paletas con macros** (BSP G6): no llegan como botones porque el mando emite
+  teclas. El grabador de teclado expone `lastKeyPress` (última combinación
+  recibida, aunque se rechace) para diagnosticarlo, y `F13`–`F24` valen como
+  atajo global: la vía recomendada es programar la macro como `Ctrl+F13` en la
+  app del mando y grabarla como atajo de teclado.
+
+### Decisiones de arquitectura
+
+- `BigPicture.qml` gana `toggleProfile()` y `screenshotsStep(delta)`; el modal
+  (`GameDetail`) ya exponía `profileOpen`, `openViewer`, `nextViewer`,
+  `previousViewer` y `closeViewer`.
+- El panel de perfil conserva su edición con ratón y añade `moveFocus`,
+  `adjust`, `cycleStatus` y `nudgeRating`, usados por `Gamepad.navigate` y por
+  las teclas de Big Picture (que mantiene el foco).
+- `GamepadManager.buttons_mask()` convierte `wButtons` + gatillos en una máscara
+  única; `BUTTON_ORDER` y `GAMEPAD_BUTTONS` incluyen `LT`/`RT`.
+- Los tests de UI destruyen ahora los `QQmlApplicationEngine` de forma
+  determinista (cerrar raíces + `shiboken6.delete`): dejar que Python los
+  recolecte con ventanas vivas bloqueaba la carga del siguiente engine.
+
+### Contrato de API (adiciones)
+
+| Elemento | Tipo | Descripción |
+| --- | --- | --- |
+| `BigPicture.settingsRequested()` | signal | Abrir Ajustes tras cerrar Big Picture. |
+| `BigPicture.addRequested()` | signal | Abrir *Add game* tras cerrar Big Picture. |
+| `BigPicture.toggleProfile()` | función | Abre/cierra el perfil del juego abierto. |
+| `BigPicture.screenshotsStep(delta)` | función | Abre el visor o navega por las capturas. |
+| `GameProfilePanel.focusRow` | `int` | 0 = estado, 1 = puntuación. |
+| `GameProfilePanel.moveFocus(delta)` | función | Cambia de fila. |
+| `GameProfilePanel.adjust(direction)` | función | Modifica el valor de la fila activa. |
+| `GameDetail.profileMoveFocus(delta)` | función | Puente hacia el panel. |
+| `GameDetail.profileAdjust(direction)` | función | Puente hacia el panel. |
+| `gamepad.buttons_mask(pad)` | función | `wButtons` + `LT`/`RT` sintéticos. |
+| `gamepad.LEFT_TRIGGER/RIGHT_TRIGGER` | int | Bits sintéticos de los gatillos. |
+
+### Verificación
+
+- [x] `python -m pytest -q` → **179 passed**.
+- [x] Capturas: Big Picture con menú abierto, ficha con perfil y barra de pistas;
+      biblioteca y filtros sin solapes.
+- [x] Leyenda flotante dentro de la ficha (barra inferior, sobre el modal) con
+      A/B/X/Y/LB-RB/↑↓/Start.
+- [x] `tools/idle_probe.py` → 0 frames en reposo (sin regresiones de consumo).
+
+## Feature 0.20.0 — Atajos personalizados, carátulas del sistema y pulido visual
+
+### Descripción funcional
+
+1. **Atajos de captura personalizados**
+   - **Teclado**: en Ajustes → SCREENSHOTS, el botón **Record** pone el atajo en
+     modo escucha; las siguientes teclas pulsadas (con sus modificadores) se
+     convierten en el atajo. Escape cancela. `Clear` deja el atajo vacío.
+   - **Mando**: el botón **Record** del atajo de mando escucha el mando; al
+     soltar se guarda la combinación pulsada (p. ej. `LB+RB`). Si no hay
+     combinación guardada se mantiene el comportamiento histórico
+     (**mantener Select 5 s**). `Clear` vuelve a ese valor por defecto.
+   - Los atajos se validan: se exige al menos un modificador salvo en teclas de
+     función (`F1`–`F24`) y `Print`. El atajo de teclado se registra como global
+     en Windows (`RegisterHotKey`); si el sistema lo rechaza se avisa en Ajustes.
+2. **Carátula desde el sistema**: en *Choose artwork* hay un botón
+   **Browse…** que abre el selector de archivos y usa la imagen elegida
+   (png/jpg/jpeg/webp/bmp) como carátula, copiándola a la caché de la app.
+3. **Menús modernos**: el menú contextual de las carátulas y el menú de las tres
+   rayas se reestilizan (fondo con degradado, borde de acento, iconos, texto de
+   sección, hover con barra de acento y mejor contraste).
+4. **Separación título/carátula**: el título de la biblioteca baja unos píxeles
+   para no quedar pegado al cartucho.
+5. **Marca del cartucho**: el hueco donde ponía `GC` (PS2 y DS) muestra la
+   tienda del juego (`STEAM`, `EPIC`, `GOG`, `BATTLE.NET`, `RIOT`) o `LOCAL`.
+6. **Big Picture**:
+   - la leyenda de botones sube a la barra superior, entre
+     `GAMECENTER BIG PICTURE` y el estado del mando.
+   - la hora local gana protagonismo (píldora con acento).
+   - al liberar la franja inferior, el carrusel gana altura; ninguna carátula se
+     recorta en la animación (se limita su posición al área visible).
+   - las píldoras de filtro (`All games`, `Recent`, `Favorites`) ajustan su
+     ancho al texto para que no se desborde en otros idiomas.
+7. **Dock**: el punto verde, `Ready` y la hora quedan centrados verticalmente.
+8. **Stats**: al pasar el puntero por la gráfica “a river” aparece un
+   **tooltip** con la fecha del punto, el total del periodo y el desglose por
+   juego (color + horas), con guía vertical y puntos resaltados.
+
+### Decisiones de arquitectura
+
+- **`core/shortcuts.py`** (nuevo): fuente única para normalizar atajos
+  (`"Ctrl+Alt+P"`), convertir `Qt.Key` + modificadores a texto canónico y
+  traducir a `(mods, VK)` de Windows. Preferencias y `ScreenshotManager` lo
+  comparten, así no hay dos listas de teclas.
+- El formato guardado pasa a ser **texto canónico estilo Qt**
+  (`Ctrl+PageDown`). Los valores antiguos (`ctrl+pagedown`, `f12`, `none`…) se
+  migran al cargar, sin romper `settings.json` existentes.
+- `ScreenshotManager` gana `recording` + `startRecording/cancelRecording/
+  recordKey`. Al entrar en escucha se **desregistra el hotkey global** para que
+  el sistema no se coma la combinación que el usuario quiere capturar.
+- `GamepadManager` recibe las preferencias, expone `screenshotCombo`
+  (`""` = mantener Select 5 s), `capturing`, `startCapture/cancelCapture` y
+  `comboCaptured`. Mientras captura no despacha navegación/A/B/…; al completar
+  persiste la combinación. El disparo es por flanco (una captura por pulsación).
+- `Main.qml` desactiva sus `Shortcut` mientras se graba un atajo (si no,
+  `Ctrl+B` o `Escape` ganarían al grabador).
+- La carátula local se copia a `~/.cache/gamecenter/art/local/` con nombre
+  estable por juego y se sirve por el proveedor `image://art` existente.
+- Los menús se construyen con `Menu` + `delegate` propio (icono, texto y atajo
+  opcional) reutilizando un estilo común en cada archivo.
+- El tooltip de Stats se dibuja en QML sobre el `Canvas` (sin repintar el
+  `Canvas` más que al cambiar el índice) con los datos de `river.layers`.
+
+### Contrato de API (adiciones)
+
+| Elemento | Tipo | Descripción |
+| --- | --- | --- |
+| `shortcuts.normalize(value)` | función | Texto canónico (`"Ctrl+Alt+P"`), `""` para ninguno, `None` si no es válido. |
+| `shortcuts.from_key(key, modifiers)` | función | Atajo canónico desde `Qt.Key` + modificadores. |
+| `shortcuts.to_vk(sequence)` | función | `(mods, vk)` para `RegisterHotKey` o `None`. |
+| `Preferences.screenshot_gamepad` | `str` | Combinación de mando (p. ej. `LB+RB`); `""` = mantener Select. |
+| `Screenshots.recording` | `bool` | Está escuchando teclas. |
+| `Screenshots.startRecording()` / `cancelRecording()` | slots | Entrar/salir de escucha. |
+| `Screenshots.recordKey(key, modifiers)` | slot → `str` | Guarda y devuelve el atajo capturado. |
+| `Screenshots.clearShortcut()` | slot | Deja el atajo de teclado vacío. |
+| `Gamepad.screenshotCombo` | `str` | Combinación configurada (`""` = Select 5 s). |
+| `Gamepad.capturing` | `bool` | Está escuchando el mando. |
+| `Gamepad.startCapture()` / `cancelCapture()` | slots | Entrar/salir de escucha. |
+| `Gamepad.setScreenshotCombo(combo)` / `clearScreenshotCombo()` | slots | Guardar/limpiar. |
+| `Gamepad.comboCaptured(combo)` | signal | Combinación capturada. |
+| `Library.chooseCoverFile()` | slot → `str` | Selector de archivos; ruta o `""`. |
+| `Library.setGameCover(row, path)` | slot | Valida, copia a caché y aplica la carátula. |
+| `GameDetail.artChanged` | signal | (existente) refresca la tarjeta tras cambiar la carátula. |
+
+### Checklist
+
+#### Backend
+- [x] `core/shortcuts.py` con normalización, captura y VK.
+- [x] `preferences.py`: atajos canónicos, migración y `screenshotGamepad`.
+- [x] `screenshots.py`: grabación de teclas, secuencias libres y hotkey global.
+- [x] `gamepad.py`: combinación personalizada, captura y disparo por flanco.
+- [x] `app.py`: pasar preferencias al `GamepadManager`.
+- [x] `library_model.py`: carátula desde archivo del sistema.
+- [x] Traducciones ES/FR/DE/IT/PT.
+
+#### Frontend
+- [x] `SettingsPanel.qml`: grabador de atajos de teclado y mando.
+- [x] `ArtPicker.qml`: botón *Browse…*.
+- [x] `TopBar.qml` y `LibraryGrid.qml`: menús modernos.
+- [x] `Cartridge.qml`: más aire bajo la carátula.
+- [x] `PS2Shell.qml` / `DSShell.qml`: marca de tienda en vez de `GC`.
+- [x] `BigPicture.qml` / `BigPictureCarousel.qml`: leyenda arriba, hora
+      destacada, filtros que no desbordan y carátulas sin recortes.
+- [x] `Dock.qml`: punto, texto y hora centrados.
+- [x] `StatsView.qml`: tooltip de la gráfica.
+- [x] `Main.qml`: atajos desactivados durante la grabación.
+
+#### Tests y docs
+- [x] Tests de `shortcuts`, preferencias, `ScreenshotManager`, `GamepadManager`
+      y carátula local.
+- [x] Test QML de los nuevos controles y del tooltip.
+- [x] README/CHANGELOG/WORKFLOW y verificación visual.
+
+### Verificación
+
+- [x] `python -m pytest -q` → **174 passed**.
+- [x] Capturas de Ajustes (atajos), menú superior y contextual, biblioteca
+      (clásico, PS2 y DS), *Choose artwork*, Big Picture (arco y anillo) y Stats
+      con el tooltip abierto.
+- [x] `tools/idle_probe.py` sigue dando 0 frames en reposo tras los cambios.
+- [ ] Prueba real de captura con un atajo personalizado en un juego abierto.
 
 ## Feature 0.19.1 — Idle silencioso: la ventana deja de repintarse sin cambios
 

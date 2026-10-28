@@ -138,7 +138,7 @@ Item {
 
     Text {
         x: 0
-        y: 254
+        y: 260
         width: card.width
         visible: card.showTitle
         horizontalAlignment: Text.AlignHCenter

@@ -3,7 +3,7 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.19.0** - Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
+> Estado: **v0.20.0** - Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 
@@ -63,6 +63,9 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   los juegos principales y tarjetas deslizables, **del periodo actual al más
   antiguo**. El botón **Watch** recorre las tarjetas automáticamente y **Open
   month** salta de un mes del año a su vista semanal.
+  - Al pasar el puntero por el gráfico aparece una **guía vertical con puntos**
+    sobre cada capa y un **tooltip** con la fecha, el total del día/mes y el
+    desglose por juego (color y horas).
   - El banner superior muestra el **juego con más horas del periodo** (con
     carátula y horas) además del tiempo total.
   - Cada tarjeta muestra la **carátula del juego más jugado** junto a su nombre
@@ -93,13 +96,23 @@ la muestra como una estantería y lanza los juegos con un doble clic.
     **B** volver, **Y/Triángulo** abrir la ficha del juego (descripción y
     timeline), **LB/RB** cambiar el modo del carrusel, **X** favorito y
     **Start** para **salir**. Mantén **Select/View** 5 segundos para capturar
-    una pantalla del juego.
+    una pantalla del juego. Los **gatillos LT/RT** también se reconocen y se
+    pueden usar en atajos personalizados.
+  - Dentro de la ficha: **X** favorito, **Y** abre el **perfil** (estado y
+    puntuación, editables con ↑↓ y ←→), **LB/RB** abren el visor de **capturas**
+    (y se mueven por él) y **B** cierra primero el perfil y después la ficha.
+  - El botón **☰** de la barra superior abre el menú de Big Picture: escanear
+    tiendas, restaurar juegos ocultos, añadir un juego, ajustes y salir.
   - También funciona con teclado (flechas, Enter, Esc, `I`, `C`/`Tab` para el
     modo, `[`/`]` para filtros, `F` favorito) y ratón; la ficha del juego se
     abre con el botón **Details**.
   - Las carátulas se muestran **completas, sin recortes**, y la tarjeta
     seleccionada queda siempre **por encima de la barra de pistas**, sin
     solaparse, en cualquier tamaño de ventana.
+  - La **leyenda de botones** vive en la barra superior, entre el título y el
+    estado del mando, y la **hora local** se muestra en una píldora con el color
+    de acento. Sin leyenda abajo, el carrusel gana altura y ninguna carátula se
+    recorta al deslizarse.
   - Efecto visual moderno tipo consola: halo de acento, sombra en profundidad,
     brillo de cristal, pista del anillo y transiciones suaves entre modos.
   - La navegación se adapta al modo: arriba/abajo o izquierda/derecha para
@@ -133,19 +146,30 @@ la muestra como una estantería y lanza los juegos con un doble clic.
 - **Ajustes** (engranaje o `Ctrl+,`): color de acento entre 24 opciones,
   **color de superficie** para la barra superior, el dock Ready y la estantería,
   **color de los cartuchos** y tres estilos: clásico, **Nintendo DS** y **PS2**.
-  - **Capturas de pantalla del juego**: elige el atajo de teclado (por defecto
-    **Ctrl + Av Pág**) y consulta la carpeta donde se guardan. Con mando, el
-    atajo por defecto es **mantener Select/View 5 segundos**. En Windows el
-    atajo de teclado es global, así que funciona con el juego en primer plano;
-    si el sistema ya lo usa, se muestra el aviso y queda el atajo local. Las
-    imágenes se guardan en `%APPDATA%\GameCenter\screenshots` y su vínculo con
-    juego/sesión en `screenshots.json`.
+  - **Capturas de pantalla del juego**: elige el atajo de teclado con el botón
+    **Record** (pulsa la combinación que quieras; por defecto **Ctrl + Av Pág**)
+    y consulta la carpeta donde se guardan. Con mando, **Record** captura los
+    botones que pulses y muestra en la casilla cuáles detecta; admite
+    combinaciones (**LT + RT**, **LB + RT**, **A + X**…) y las **paletas
+    traseras** que algunos mandos SCUF exponen como bits extra aparecen como
+    **P1/P2**. Sin combinación guardada se mantiene **mantener Select/View 5
+    segundos**.
+  - Si las paletas están **programadas como macros**, el mando las envía como
+    teclas y no como botones: configura la macro en la app del mando con un
+    modificador (`Ctrl+F13`, por ejemplo; `F13`–`F24` están soportadas como
+    atajo global) y grábalo como **atajo de teclado**. La casilla muestra la
+    última tecla recibida aunque no sea válida, para poder diagnosticarlo. En Windows el atajo de teclado es
+    global, así que funciona con el juego en primer plano; si el sistema ya lo
+    usa, se muestra el aviso y queda el atajo local. Las imágenes se guardan en
+    `%APPDATA%\GameCenter\screenshots` y su vínculo con juego/sesión en
+    `screenshots.json`.
   - En la vista de detalle de un juego DS puedes **arrastrar sobre el cartucho
     para girarlo en cualquier dirección** manteniendo pulsado; el modelo no se
     desplaza y el visor deja margen suficiente para que **no se corte ninguna
     esquina** al inclinarlo. El reverso muestra los contactos metálicos. En la
-    biblioteca los cartuchos DS se muestran de frente y no giran. Los cartuchos
-    llevan la marca **GC**.
+    biblioteca los cartuchos DS se muestran de frente y no giran. La etiqueta del
+    cartucho muestra la tienda del juego (**STEAM**, **EPIC**, **GOG**,
+    **BATTLE.NET**, **RIOT**) o **LOCAL**.
 - **Idioma de la interfaz**: en Ajustes se puede elegir entre **English,
   Español, Français, Deutsch, Italiano y Português**. El cambio es inmediato y se
   guarda en `%APPDATA%\GameCenter\settings.json`; los textos se traducen sin
@@ -161,7 +185,8 @@ la muestra como una estantería y lanza los juegos con un doble clic.
 - **Carátulas por juego con SteamGridDB**: opciones verticales paginadas, con
   cinco iniciales y **Load more** para seguir explorando; la cuadrícula se
   desplaza. La clave se guarda en el almacén de credenciales del sistema, nunca
-  en el repositorio.
+  en el repositorio. El botón **Browse…** permite usar **una imagen de tu
+  equipo** (png, jpg, webp o bmp) como carátula; se copia a la caché de la app.
 - **Color por cartucho**: clic derecho en una tarjeta de la biblioteca →
   **Cartridge color…** para elegir un color solo para ese juego. **Use default**
   recupera el color global.
@@ -255,6 +280,7 @@ gamecenter/
   cli.py                entrada: GUI o --scan
   core/
     models.py           modelo Game
+    shortcuts.py        atajos canónicos (validación, captura y VK de Windows)
     i18n.py             catálogo de idiomas y traductor de la interfaz
     metadata.py         descripciones de Steam Store con caché local
     stats.py            agregación de historial para estadísticas

@@ -82,26 +82,52 @@ Item {
 
     Menu {
         id: contextMenu
+        objectName: "contextMenu"
         property int row: -1
-        width: 200
+        width: 244
+        padding: 8
+        topPadding: 10
+        bottomPadding: 10
 
         background: Rectangle {
-            color: "#12151b"
-            radius: 11
+            radius: 14
             border.width: 1
-            border.color: "#2a3140"
+            border.color: "#31405a"
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: "#1a2130" }
+                GradientStop { position: 1.0; color: "#0c1017" }
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: 10
+                height: 1
+                radius: 1
+                color: Qt.rgba(Library.accent.r, Library.accent.g,
+                               Library.accent.b, 0.35)
+            }
         }
 
         delegate: MenuItem {
             id: entry
-            width: contextMenu.width - 10
-            implicitHeight: 32
+            // The destructive entry is always the last one.
+            readonly property bool danger: index === contextMenu.count - 1
+
+            width: contextMenu.width - 16
+            implicitHeight: 36
             highlighted: contextMenu.currentIndex === index
 
             contentItem: Text {
-                leftPadding: 12
+                leftPadding: 14
+                rightPadding: 12
                 text: entry.text
-                color: entry.enabled ? "#dfe6f0" : "#5f6a7b"
+                color: !entry.enabled
+                       ? "#5f6a7b"
+                       : (entry.danger && entry.highlighted
+                          ? "#ff8a8a"
+                          : (entry.highlighted ? "#ffffff" : "#dfe6f0"))
                 font.family: "Sora"
                 font.pixelSize: 12
                 verticalAlignment: Text.AlignVCenter
@@ -109,20 +135,39 @@ Item {
             }
 
             background: Rectangle {
-                radius: 7
-                color: entry.highlighted ? "#232936" : "transparent"
+                radius: 9
+                color: entry.highlighted
+                       ? (entry.danger ? "#331f26" : "#212b3c")
+                       : "transparent"
+
+                Rectangle {
+                    visible: entry.highlighted
+                    anchors.left: parent.left
+                    anchors.leftMargin: 3
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 2
+                    height: parent.height - 14
+                    radius: 1
+                    color: entry.danger ? "#f87171" : Library.accent
+                }
             }
         }
 
+        MenuSeparator {
+            contentItem: Rectangle {
+                implicitHeight: 9
+                color: "transparent"
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: parent.width - 24
+                    height: 1
+                    color: "#232c3c"
+                }
+            }
+        }
         MenuItem {
             text: Tr.strings["Launch"]
             onTriggered: Library.launch(contextMenu.row)
-        }
-        MenuSeparator {
-            contentItem: Rectangle {
-                implicitHeight: 1
-                color: "#232936"
-            }
         }
         MenuItem {
             text: Tr.strings["Open install folder"]
@@ -131,6 +176,18 @@ Item {
         MenuItem {
             text: Tr.strings["Copy App ID"]
             onTriggered: Library.copyAppId(contextMenu.row)
+        }
+        MenuSeparator {
+            contentItem: Rectangle {
+                implicitHeight: 9
+                color: "transparent"
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: parent.width - 24
+                    height: 1
+                    color: "#232c3c"
+                }
+            }
         }
         MenuItem {
             text: Tr.strings["Cartridge color..."]
@@ -141,8 +198,14 @@ Item {
         }
         MenuSeparator {
             contentItem: Rectangle {
-                implicitHeight: 1
-                color: "#232936"
+                implicitHeight: 9
+                color: "transparent"
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: parent.width - 24
+                    height: 1
+                    color: "#232c3c"
+                }
             }
         }
         MenuItem {

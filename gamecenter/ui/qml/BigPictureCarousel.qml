@@ -22,9 +22,18 @@ Item {
         return Math.max(0, Math.min(games.length - windowCount, start));
     }
 
-    readonly property real focusHeight: Math.min(
-        height - 18, height * (mode === "wheel" ? 0.66 : 0.9)
-    )
+    readonly property real cardPad: Math.max(6, height * 0.02)
+    readonly property real focusHeight: {
+        // Never taller/wider than the viewport: the focused cover must always
+        // be fully visible, including while the carousel slides.
+        var byHeight = Math.max(140, height - cardPad * 2);
+        var byWidth = Math.max(140, (width - 8) / 0.72);
+        return Math.min(
+            byHeight,
+            byWidth,
+            height * (mode === "wheel" ? 0.66 : 0.9)
+        )
+    }
     readonly property real focusWidth: focusHeight * 0.72
     readonly property real sideHeight: focusHeight
                                       * (mode === "wheel" ? 0.36 : 0.58)
@@ -46,29 +55,32 @@ Item {
         return center - root.sideWidth / 2;
     }
 
-    function cardX(offset, width) {
+    function cardX(offset, cardWidth) {
         if (mode === "wheel") {
-            return root.centerX - width / 2;
+            return root.centerX - cardWidth / 2;
         }
         return horizontalX(offset);
     }
 
-    function cardY(offset, height) {
+    function cardY(offset, cardHeight) {
+        var y = root.centerY - cardHeight / 2;
         if (mode === "wheel") {
             var step = root.focusHeight / 2 + root.sideHeight / 2 + 8;
-            return root.centerY + offset * step - height / 2;
-        }
-        if (mode === "arc") {
+            y = root.centerY + offset * step - cardHeight / 2;
+        } else if (mode === "arc") {
             var drop = Math.min(9, root.height * 0.03)
                        * Math.pow(Math.min(3, Math.abs(offset)), 1.6);
-            return root.centerY - height / 2 + drop;
-        }
-        if (mode === "ring") {
+            y += drop;
+        } else if (mode === "ring") {
             var ringAngle = Math.min(60, Math.abs(offset) * 20) * Math.PI / 180;
             var ringDrop = (1 - Math.cos(ringAngle)) * root.height * 0.5;
-            return root.centerY - height / 2 + ringDrop;
+            y += ringDrop;
         }
-        return root.centerY - height / 2;
+        // Clamp to the viewport so no cover is ever cropped vertically.
+        return Math.max(
+            root.cardPad,
+            Math.min(root.height - cardHeight - root.cardPad, y)
+        );
     }
 
     function cardAngleZ(offset) {

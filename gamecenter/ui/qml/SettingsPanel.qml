@@ -4,6 +4,7 @@ import QtQuick.Layouts
 
 Item {
     id: root
+    objectName: "settingsPanel"
     property bool opened: false
     signal closeRequested()
     signal updateRequested()
@@ -11,6 +12,35 @@ Item {
     visible: opacity > 0
     opacity: opened ? 1 : 0
     Behavior on opacity { NumberAnimation { duration: 180 } }
+
+    // Keyboard capture for custom screenshot shortcuts. While recording, the
+    // next combination (modifiers + key) becomes the shortcut.
+    focus: Screenshots.recording
+    Keys.onPressed: (event) => {
+        if (!Screenshots.recording) {
+            return;
+        }
+        event.accepted = true;
+        Screenshots.recordKey(event.key, event.modifiers);
+    }
+    Keys.onEscapePressed: (event) => {
+        if (Screenshots.recording || Gamepad.capturing) {
+            event.accepted = true;
+            Screenshots.cancelRecording();
+            Gamepad.cancelCapture();
+        }
+    }
+
+    onOpenedChanged: {
+        if (!opened) {
+            if (Screenshots.recording) {
+                Screenshots.cancelRecording();
+            }
+            if (Gamepad.capturing) {
+                Gamepad.cancelCapture();
+            }
+        }
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -277,7 +307,7 @@ Item {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 12
+                    spacing: 10
 
                     Text {
                         Layout.fillWidth: true
@@ -287,19 +317,103 @@ Item {
                         font.pixelSize: 13
                     }
 
-                    PillCombo {
-                        objectName: "screenshotShortcutCombo"
-                        Layout.preferredWidth: 220
-                        entries: [
-                            { text: Tr.strings["Ctrl + Page Down"], value: "ctrl+pagedown" },
-                            { text: Tr.strings["Ctrl + F12"], value: "ctrl+f12" },
-                            { text: Tr.strings["F12"], value: "f12" },
-                            { text: Tr.strings["Print Screen"], value: "printscreen" },
-                            { text: Tr.strings["Ctrl + Shift + S"], value: "ctrl+shift+s" },
-                            { text: Tr.strings["None"], value: "none" }
-                        ]
-                        value: Screenshots.shortcut
-                        onSelected: (chosen) => Screenshots.setShortcut(chosen)
+                    Rectangle {
+                        objectName: "screenshotShortcutChip"
+                        Layout.preferredWidth: 200
+                        height: 34
+                        radius: 9
+                        color: Screenshots.recording ? "#182233" : "#10141b"
+                        border.width: 1
+                        border.color: Screenshots.recording
+                                      ? Library.accent
+                                      : (Screenshots.shortcut !== "" ? "#33415a" : "#232833")
+
+                        Text {
+                            anchors.centerIn: parent
+                            width: parent.width - 20
+                            horizontalAlignment: Text.AlignHCenter
+                            elide: Text.ElideRight
+                            text: Screenshots.recording
+                                  ? (Screenshots.lastKeyPress !== ""
+                                     ? Screenshots.lastKeyPress
+                                     : Tr.strings["Press the keys you want to use."])
+                                  : (Screenshots.shortcutLabel !== ""
+                                     ? Screenshots.shortcutLabel
+                                     : Tr.strings["None"])
+                            color: Screenshots.recording
+                                   ? Library.accent
+                                   : (Screenshots.shortcut !== "" ? "#eef2f8" : "#7d8798")
+                            font.family: "Chakra Petch"
+                            font.pixelSize: Screenshots.recording ? 10 : 12
+                            font.bold: !Screenshots.recording
+                        }
+                    }
+
+                    Rectangle {
+                        objectName: "screenshotRecordButton"
+                        width: Screenshots.recording ? 82 : 92
+                        height: 34
+                        radius: 9
+                        color: recordArea.containsMouse
+                               ? (Screenshots.recording ? "#3a2028" : "#1e2c42")
+                               : (Screenshots.recording ? "#2a1a20" : "#171b23")
+                        border.width: 1
+                        border.color: Screenshots.recording
+                                      ? "#a24a5c"
+                                      : (recordArea.containsMouse ? Library.accent : "#2a3140")
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: Screenshots.recording
+                                  ? Tr.strings["Cancel"]
+                                  : Tr.strings["Record"]
+                            color: Screenshots.recording ? "#ffb4c0" : "#cfd6e2"
+                            font.family: "Sora"
+                            font.pixelSize: 11
+                            font.bold: Screenshots.recording
+                        }
+
+                        MouseArea {
+                            id: recordArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (Screenshots.recording) {
+                                    Screenshots.cancelRecording();
+                                } else {
+                                    Screenshots.startRecording();
+                                    root.forceActiveFocus();
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        objectName: "screenshotClearButton"
+                        visible: !Screenshots.recording && Screenshots.shortcut !== ""
+                        width: 72
+                        height: 34
+                        radius: 9
+                        color: clearArea.containsMouse ? "#232936" : "transparent"
+                        border.width: 1
+                        border.color: clearArea.containsMouse ? "#3b4a63" : "#232833"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: Tr.strings["Clear"]
+                            color: "#8b95a5"
+                            font.family: "Sora"
+                            font.pixelSize: 11
+                        }
+
+                        MouseArea {
+                            id: clearArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Screenshots.clearShortcut()
+                        }
                     }
                 }
 
@@ -313,14 +427,116 @@ Item {
                     wrapMode: Text.WordWrap
                 }
 
-                Text {
+                RowLayout {
                     Layout.fillWidth: true
-                    text: Tr.strings["Gamepad: hold Select for %1 seconds."]
-                              .arg(Gamepad.screenshotHoldSeconds)
-                    color: "#98a3b4"
-                    font.family: "Sora"
-                    font.pixelSize: 11
-                    wrapMode: Text.WordWrap
+                    spacing: 10
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: Tr.strings["Gamepad shortcut"]
+                        color: "#dfe6f0"
+                        font.family: "Sora"
+                        font.pixelSize: 13
+                    }
+
+                    Rectangle {
+                        objectName: "gamepadShortcutChip"
+                        Layout.preferredWidth: 200
+                        height: 34
+                        radius: 9
+                        color: Gamepad.capturing ? "#182233" : "#10141b"
+                        border.width: 1
+                        border.color: Gamepad.capturing
+                                      ? Library.accent
+                                      : (Gamepad.screenshotCombo !== "" ? "#33415a" : "#232833")
+
+                        Text {
+                            anchors.centerIn: parent
+                            width: parent.width - 20
+                            horizontalAlignment: Text.AlignHCenter
+                            elide: Text.ElideRight
+                            text: Gamepad.capturing
+                                  ? (Gamepad.capturePreview !== ""
+                                     ? Gamepad.capturePreview
+                                     : Tr.strings["Press the gamepad buttons you want to use."])
+                                  : (Gamepad.screenshotCombo !== ""
+                                     ? Gamepad.screenshotComboLabel
+                                     : Tr.strings["Hold Select for %1 seconds."]
+                                           .arg(Gamepad.screenshotHoldSeconds))
+                            color: Gamepad.capturing
+                                   ? Library.accent
+                                   : (Gamepad.screenshotCombo !== "" ? "#eef2f8" : "#7d8798")
+                            font.family: "Chakra Petch"
+                            font.pixelSize: Gamepad.capturing ? 9 : 11
+                            font.bold: !Gamepad.capturing
+                        }
+                    }
+
+                    Rectangle {
+                        objectName: "gamepadRecordButton"
+                        width: Gamepad.capturing ? 82 : 92
+                        height: 34
+                        radius: 9
+                        enabled: Gamepad.connected
+                        opacity: Gamepad.connected ? 1 : 0.45
+                        color: padArea.containsMouse && enabled
+                               ? (Gamepad.capturing ? "#3a2028" : "#1e2c42")
+                               : (Gamepad.capturing ? "#2a1a20" : "#171b23")
+                        border.width: 1
+                        border.color: Gamepad.capturing
+                                      ? "#a24a5c"
+                                      : (padArea.containsMouse && enabled
+                                         ? Library.accent : "#2a3140")
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: Gamepad.capturing
+                                  ? Tr.strings["Cancel"]
+                                  : Tr.strings["Record"]
+                            color: Gamepad.capturing ? "#ffb4c0" : "#cfd6e2"
+                            font.family: "Sora"
+                            font.pixelSize: 11
+                            font.bold: Gamepad.capturing
+                        }
+
+                        MouseArea {
+                            id: padArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            enabled: Gamepad.connected
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Gamepad.capturing
+                                       ? Gamepad.cancelCapture()
+                                       : Gamepad.startCapture()
+                        }
+                    }
+
+                    Rectangle {
+                        objectName: "gamepadClearButton"
+                        visible: !Gamepad.capturing && Gamepad.screenshotCombo !== ""
+                        width: 72
+                        height: 34
+                        radius: 9
+                        color: padClearArea.containsMouse ? "#232936" : "transparent"
+                        border.width: 1
+                        border.color: padClearArea.containsMouse ? "#3b4a63" : "#232833"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: Tr.strings["Clear"]
+                            color: "#8b95a5"
+                            font.family: "Sora"
+                            font.pixelSize: 11
+                        }
+
+                        MouseArea {
+                            id: padClearArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Gamepad.clearScreenshotCombo()
+                        }
+                    }
                 }
 
                 RowLayout {

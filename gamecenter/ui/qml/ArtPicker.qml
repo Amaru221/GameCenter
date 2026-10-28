@@ -4,6 +4,7 @@ import QtQuick.Layouts
 
 Item {
     id: root
+    objectName: "artPicker"
     property bool opened: false
     property int index: -1
 
@@ -69,6 +70,7 @@ Item {
 
             RowLayout {
                 Layout.fillWidth: true
+                spacing: 18
 
                 ColumnLayout {
                     Layout.fillWidth: true
@@ -87,6 +89,73 @@ Item {
                         color: "#8b95a5"
                         font.family: "Sora"
                         font.pixelSize: 11
+                    }
+
+                    Text {
+                        text: Tr.strings["Use an image from your computer"]
+                        color: "#6f7887"
+                        font.family: "Sora"
+                        font.pixelSize: 10
+                    }
+                }
+
+                Rectangle {
+                    objectName: "browseCoverButton"
+                    Layout.alignment: Qt.AlignVCenter
+                    width: 132
+                    height: 38
+                    radius: 10
+                    color: browseArea.containsMouse ? "#1e2c42" : "#101722"
+                    border.width: 1
+                    border.color: browseArea.containsMouse ? Library.accent : "#2a3140"
+
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: 8
+
+                        Canvas {
+                            width: 14
+                            height: 14
+                            anchors.verticalCenter: parent.verticalCenter
+                            onPaint: {
+                                var ctx = getContext("2d");
+                                ctx.reset();
+                                ctx.strokeStyle = browseArea.containsMouse
+                                                  ? Library.accent : "#c9d2e0";
+                                ctx.lineWidth = 1.4;
+                                ctx.lineJoin = "round";
+                                ctx.strokeRect(1, 3, 12, 9);
+                                ctx.beginPath();
+                                ctx.moveTo(3, 10);
+                                ctx.lineTo(6.5, 6.5);
+                                ctx.lineTo(9, 9);
+                                ctx.lineTo(11, 7);
+                                ctx.lineTo(13, 10);
+                                ctx.stroke();
+                            }
+                        }
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: Tr.strings["Browse..."]
+                            color: browseArea.containsMouse ? Library.accent : "#dfe6f0"
+                            font.family: "Sora"
+                            font.pixelSize: 11
+                            font.bold: true
+                        }
+                    }
+
+                    MouseArea {
+                        id: browseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            var file = Library.chooseCoverFile();
+                            if (file !== "") {
+                                Library.setGameCover(root.index, file);
+                            }
+                        }
                     }
                 }
             }

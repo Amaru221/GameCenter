@@ -10,9 +10,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 
-from gamecenter.core import screenshot_store
+from gamecenter.core import screenshot_store, shortcuts
 from gamecenter.core.preferences import Preferences
-from gamecenter.core.screenshots import QT_SEQUENCES, ScreenshotManager
+from gamecenter.core.screenshots import ScreenshotManager
 
 
 class FakeSessions:
@@ -49,17 +49,80 @@ def app():
 def test_shortcut_preference_defaults_and_validates(tmp_path: Path) -> None:
     prefs = Preferences(tmp_path / "settings.json")
 
-    assert prefs.screenshot_shortcut == "ctrl+pagedown"
-    assert QT_SEQUENCES[prefs.screenshot_shortcut] == "Ctrl+PageDown"
+    assert prefs.screenshot_shortcut == "Ctrl+PgDown"
+    assert shortcuts.normalize(prefs.screenshot_shortcut) == "Ctrl+PgDown"
+    assert shortcuts.display(prefs.screenshot_shortcut) == "Ctrl+Page Down"
 
-    prefs.screenshot_shortcut = "f12"
-    assert prefs.screenshot_shortcut == "f12"
+    prefs.screenshot_shortcut = "F12"
+    assert prefs.screenshot_shortcut == "F12"
 
     prefs.screenshot_shortcut = "not-a-shortcut"
-    assert prefs.screenshot_shortcut == "f12"
+    assert prefs.screenshot_shortcut == "F12"
+
+    prefs.screenshot_shortcut = "Ctrl+Alt+P"
+    assert prefs.screenshot_shortcut == "Ctrl+Alt+P"
 
     prefs.screenshot_shortcut = "none"
-    assert prefs.screenshot_shortcut == "none"
+    assert prefs.screenshot_shortcut == ""
+    assert shortcuts.normalize("") == ""
+
+
+def test_legacy_shortcut_values_are_migrated(tmp_path: Path) -> None:
+    path = tmp_path / "settings.json"
+    path.write_text('{"screenshotShortcut": "ctrl+pagedown"}', encoding="utf-8")
+    assert Preferences(path).screenshot_shortcut == "Ctrl+PgDown"
+
+    path.write_text('{"screenshotShortcut": "printscreen"}', encoding="utf-8")
+    assert Preferences(path).screenshot_shortcut == "Print"
+
+
+def test_shortcuts_only_allows_safe_combinations() -> None:
+    assert shortcuts.normalize("Ctrl+Shift+S") == "Ctrl+Shift+S"
+    assert shortcuts.normalize("shift+ctrl+s") == "Ctrl+Shift+S"
+    assert shortcuts.normalize("Alt+F4") == "Alt+F4"
+    assert shortcuts.normalize("F8") == "F8"
+    assert shortcuts.normalize("Print") == "Print"
+    # Plain letters would hijack the whole desktop.
+    assert shortcuts.normalize("A") is None
+    assert shortcuts.normalize("Ctrl") is None
+    assert shortcuts.normalize("nonsense") is None
+
+    assert shortcuts.to_vk("Ctrl+PgDown") == (2, 0x22)
+    assert shortcuts.to_vk("F12") == (0, 0x7B)
+    assert shortcuts.to_vk("Ctrl+Alt+P") == (3, 0x50)
+    assert shortcuts.to_vk("A") is None
+
+
+def test_keyboard_recording_captures_the_combination(app, tmp_path: Path) -> None:
+    from PySide6.QtCore import Qt
+
+    prefs = Preferences(tmp_path / "settings.json")
+    manager = ScreenshotManager(
+        prefs,
+        FakeSessions(["Alpha Quest"]),
+        directory=tmp_path / "screenshots",
+        register_hotkey=False,
+    )
+
+    manager.startRecording()
+    assert manager.recording is True
+
+    # A modifier on its own is not a shortcut yet.
+    assert manager.recordKey(Qt.Key_Control, Qt.ControlModifier) == ""
+    assert manager.recording is True
+
+    # Neither is a plain letter.
+    assert manager.recordKey(Qt.Key_A, Qt.NoModifier) == ""
+    assert manager.recording is True
+    assert manager.error
+
+    captured = manager.recordKey(
+        Qt.Key_A, Qt.ControlModifier | Qt.ShiftModifier
+    )
+    assert captured == "Ctrl+Shift+A"
+    assert manager.recording is False
+    assert prefs.screenshot_shortcut == "Ctrl+Shift+A"
+    assert manager.shortcutLabel == "Ctrl+Shift+A"
 
 
 def test_capture_saves_a_png_for_the_running_game(app, tmp_path: Path, monkeypatch) -> None:
@@ -174,3 +237,27 @@ def test_capture_always_works_when_requested(app, tmp_path: Path, monkeypatch) -
 
     assert path
     assert Path(path).name.startswith("GameCenter-")
+
+
+def test_recording_reports_the_raw_key(app, tmp_path: Path) -> None:
+    from PySide6.QtCore import Qt
+
+    prefs = Preferences(tmp_path / "settings.json")
+    manager = ScreenshotManager(
+        prefs,
+        FakeSessions(["Alpha Quest"]),
+        directory=tmp_path / "screenshots",
+        register_hotkey=False,
+    )
+
+    manager.startRecording()
+    assert manager.recordKey(Qt.Key_A, Qt.NoModifier) == ""
+    # The chip can show what actually arrived, even when it is rejected.
+    assert manager.lastKeyPress == "A"
+    assert manager.error
+
+    # Macros can be mapped to an unused function key in the controller app.
+    assert manager.recordKey(Qt.Key_F13, Qt.ControlModifier) == "Ctrl+F13"
+    assert manager.lastKeyPress == "Ctrl+F13"
+    assert prefs.screenshot_shortcut == "Ctrl+F13"
+    assert shortcuts.to_vk("Ctrl+F13") == (2, 0x7C)

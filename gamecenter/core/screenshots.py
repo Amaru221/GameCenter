@@ -4,6 +4,10 @@ The keyboard shortcut is registered as a system-wide hotkey on Windows so it
 keeps working while the game owns the foreground. On other platforms (or when
 the system rejects the combination) QML installs a local ``Shortcut`` instead.
 Screenshots are plain PNG files under ``%APPDATA%/GameCenter/screenshots``.
+
+Shortcuts can be customised: ``startRecording()`` puts the manager in listen
+mode, ``recordKey()`` turns the next key press into a canonical sequence and
+``setShortcut()`` accepts any valid combination directly.
 """
 
 from __future__ import annotations
@@ -27,38 +31,14 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QCursor, QDesktopServices, QGuiApplication
 
+from . import screenshot_store, shortcuts
 from .i18n import tr
-from .preferences import SCREENSHOT_SHORTCUTS, config_dir
-from . import screenshot_store
+from .preferences import config_dir
 
-# Qt key sequences for the local Shortcut fallback.
-QT_SEQUENCES = {
-    "ctrl+pagedown": "Ctrl+PageDown",
-    "ctrl+f12": "Ctrl+F12",
-    "f12": "F12",
-    "printscreen": "Print",
-    "ctrl+shift+s": "Ctrl+Shift+S",
-    "none": "",
-}
-
-# Win32 virtual-key codes and modifiers for RegisterHotKey.
-_MOD_CONTROL = 0x0002
-_MOD_SHIFT = 0x0004
+# RegisterHotKey flags (winuser.h).
 _MOD_NOREPEAT = 0x4000
-_VK_PAGEDOWN = 0x22
-_VK_SNAPSHOT = 0x2C
-_VK_F12 = 0x7B
-_VK_S = 0x53
 _WM_HOTKEY = 0x0312
 HOTKEY_ID = 0x4743  # "GC"
-
-_WIN_HOTKEYS = {
-    "ctrl+pagedown": (_MOD_CONTROL, _VK_PAGEDOWN),
-    "ctrl+f12": (_MOD_CONTROL, _VK_F12),
-    "f12": (0, _VK_F12),
-    "printscreen": (0, _VK_SNAPSHOT),
-    "ctrl+shift+s": (_MOD_CONTROL | _MOD_SHIFT, _VK_S),
-}
 
 
 class _HotkeyFilter(QAbstractNativeEventFilter):
@@ -142,6 +122,8 @@ class ScreenshotManager(QObject):
         self._user32 = None
         self._filter = None
         self._last_has_session = False
+        self._recording = False
+        self._last_key_press = ""
         self._hotkeys_enabled = (
             register_hotkey
             and sys.platform == "win32"
@@ -162,19 +144,85 @@ class ScreenshotManager(QObject):
     def shortcut(self) -> str:
         return self._prefs.screenshot_shortcut
 
+    @Property(str, notify=changed)
+    def shortcutLabel(self) -> str:
+        return shortcuts.display(self._prefs.screenshot_shortcut)
+
     @Slot(str)
     def setShortcut(self, value: str) -> None:
-        value = str(value or "").lower()
-        if value not in SCREENSHOT_SHORTCUTS:
+        canonical = shortcuts.normalize(value)
+        if canonical is None:
+            self._error = tr("That combination can't be used.")
+            self.changed.emit()
             return
-        if value != self._prefs.screenshot_shortcut:
-            self._prefs.screenshot_shortcut = value
+        if canonical != self._prefs.screenshot_shortcut:
+            self._prefs.screenshot_shortcut = canonical
+        self._error = ""
         self._apply_hotkey()
         self.changed.emit()
 
+    @Slot()
+    def clearShortcut(self) -> None:
+        self.setShortcut("")
+
+    @Property(bool, notify=changed)
+    def recording(self) -> bool:
+        return self._recording
+
+    @Property(str, notify=changed)
+    def lastKeyPress(self) -> str:
+        """Raw combination of the last key press while recording.
+
+        Useful when a controller/macro sends keys the app cannot register: the
+        chip shows exactly what arrived.
+        """
+        return self._last_key_press
+
+    @Slot()
+    def startRecording(self) -> None:
+        if self._recording:
+            return
+        self._recording = True
+        self._error = ""
+        self._last_key_press = ""
+        # Let the OS see the combination the user wants to capture.
+        self._unregister()
+        self.changed.emit()
+
+    @Slot()
+    def cancelRecording(self) -> None:
+        if not self._recording:
+            return
+        self._recording = False
+        self._apply_hotkey()
+        self.changed.emit()
+
+    @Slot(int, int, result=str)
+    def recordKey(self, key: int, modifiers: int) -> str:
+        """Store the pressed combination; returns the canonical sequence."""
+        if not self._recording:
+            return ""
+        if int(key) in shortcuts.IGNORED_KEYS:
+            return ""
+        canonical = shortcuts.from_key(key, modifiers)
+        self._last_key_press = shortcuts.prettify(
+            shortcuts.raw_from_key(key, modifiers)
+        )
+        if canonical is None:
+            self._error = tr("Add a modifier (Ctrl, Alt or Shift) or use an F-key.")
+            self.changed.emit()
+            return ""
+        self._recording = False
+        self._last_key_press = shortcuts.display(canonical)
+        self._prefs.screenshot_shortcut = canonical
+        self._error = ""
+        self._apply_hotkey()
+        self.changed.emit()
+        return canonical
+
     @Property(str, notify=changed)
     def shortcutSequence(self) -> str:
-        return QT_SEQUENCES.get(self._prefs.screenshot_shortcut, "")
+        return shortcuts.normalize(self._prefs.screenshot_shortcut) or ""
 
     @Property(bool, notify=changed)
     def localShortcutEnabled(self) -> bool:
@@ -336,18 +384,21 @@ class ScreenshotManager(QObject):
         if (
             not self._hotkeys_enabled
             or self._user32 is None
+            or self._recording
             or not self._has_session()
         ):
             self._registered = False
             return
-        key = self._prefs.screenshot_shortcut
-        if key == "none":
+        sequence = shortcuts.normalize(self._prefs.screenshot_shortcut)
+        if not sequence:
             self._registered = False
             return
-        mods, vk = _WIN_HOTKEYS.get(key, (0, 0))
-        if not vk:
+        combo = shortcuts.to_vk(sequence)
+        if combo is None:
             self._registered = False
+            self._error = tr("This combination can only be used while GameCenter has focus.")
             return
+        mods, vk = combo
         try:
             registered = bool(
                 self._user32.RegisterHotKey(

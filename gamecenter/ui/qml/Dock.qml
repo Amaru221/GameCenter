@@ -68,6 +68,7 @@ Rectangle {
                 height: 8
                 radius: 4
                 color: "#3ddc97"
+                y: (parent.height - height) / 2
             }
 
             Text {
@@ -88,6 +89,7 @@ Rectangle {
                 height: 8
                 radius: 4
                 color: Library.accent
+                y: (parent.height - height) / 2
             }
 
             Text {
@@ -182,6 +184,8 @@ Rectangle {
 
         Text {
             id: clock
+            Layout.alignment: Qt.AlignVCenter
+            verticalAlignment: Text.AlignVCenter
             color: "#aeb8c7"
             font.family: "Chakra Petch"
             font.pixelSize: 12
