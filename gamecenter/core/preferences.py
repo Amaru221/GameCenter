@@ -13,20 +13,53 @@ import sys
 from pathlib import Path
 
 from .i18n import CODES
+from . import shortcuts
 
 DEFAULT_ACCENT = "#4cc9f0"
 DEFAULT_SURFACE = "#12151b"
 DEFAULT_CARTRIDGE = "#3c414a"
 CARTRIDGE_STYLES = ("classic", "ds", "ps2")
-DEFAULT_SCREENSHOT_SHORTCUT = "ctrl+pagedown"
+
+# Canonical (Qt portable) text, e.g. "Ctrl+PgDown" or "" for "none".
+DEFAULT_SCREENSHOT_SHORTCUT = "Ctrl+PgDown"
 SCREENSHOT_SHORTCUTS = (
-    "ctrl+pagedown",
-    "ctrl+f12",
-    "f12",
-    "printscreen",
-    "ctrl+shift+s",
+    "Ctrl+PgDown",
+    "Ctrl+F12",
+    "F12",
+    "Print",
+    "Ctrl+Shift+S",
     "none",
 )
+# Values written by older versions (settings.json compatibility).
+_LEGACY_SHORTCUTS = {
+    "ctrl+pagedown": "Ctrl+PgDown",
+    "ctrl+f12": "Ctrl+F12",
+    "f12": "F12",
+    "printscreen": "Print",
+    "ctrl+shift+s": "Ctrl+Shift+S",
+    "none": "none",
+}
+
+# Buttons the user can combine for the gamepad screenshot shortcut.
+GAMEPAD_BUTTONS = (
+    "A",
+    "B",
+    "X",
+    "Y",
+    "LB",
+    "RB",
+    "Start",
+    "Back",
+    "Up",
+    "Down",
+    "Left",
+    "Right",
+    "L3",
+    "R3",
+)
+DEFAULT_SCREENSHOT_GAMEPAD = ""
+
+_GAMEPAD_LOOKUP = {button.upper(): button for button in GAMEPAD_BUTTONS}
 
 # A wide but curated set; all have enough contrast on the dark background.
 PALETTE = (
@@ -49,6 +82,29 @@ CARTRIDGES = (
 )
 
 _HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def _canonical_shortcut(value: object) -> str | None:
+    """Canonical shortcut text, or ``None`` when the value is not usable."""
+    text = str(value or "").strip()
+    text = _LEGACY_SHORTCUTS.get(text.lower(), text)
+    return shortcuts.normalize(text)
+
+
+def _canonical_gamepad(value: object) -> str | None:
+    """Ordered gamepad combination (``"LB+RB"``) or ``None`` when invalid."""
+    parts = {
+        token.strip().upper()
+        for token in str(value or "").split("+")
+        if token.strip()
+    }
+    if not parts:
+        return DEFAULT_SCREENSHOT_GAMEPAD
+    if any(part not in _GAMEPAD_LOOKUP for part in parts):
+        return None
+    return "+".join(
+        button for button in GAMEPAD_BUTTONS if button.upper() in parts
+    )
 
 
 def config_dir() -> Path:
@@ -113,13 +169,16 @@ class Preferences:
         language = str(data.get("language") or "en")
         data["language"] = language if language in CODES else "en"
 
-        shortcut = str(
-            data.get("screenshotShortcut") or DEFAULT_SCREENSHOT_SHORTCUT
-        ).lower()
+        shortcut = data.get("screenshotShortcut")
+        if shortcut is None:
+            shortcut = DEFAULT_SCREENSHOT_SHORTCUT
+        canonical = _canonical_shortcut(shortcut)
         data["screenshotShortcut"] = (
-            shortcut
-            if shortcut in SCREENSHOT_SHORTCUTS
-            else DEFAULT_SCREENSHOT_SHORTCUT
+            DEFAULT_SCREENSHOT_SHORTCUT if canonical is None else canonical
+        )
+        gamepad_combo = _canonical_gamepad(data.get("screenshotGamepad"))
+        data["screenshotGamepad"] = (
+            DEFAULT_SCREENSHOT_GAMEPAD if gamepad_combo is None else gamepad_combo
         )
         try:
             data["lastUpdateCheck"] = float(data.get("lastUpdateCheck") or 0)
@@ -234,9 +293,20 @@ class Preferences:
 
     @screenshot_shortcut.setter
     def screenshot_shortcut(self, value: str) -> None:
-        value = str(value or "").lower()
-        if value in SCREENSHOT_SHORTCUTS and value != self._data["screenshotShortcut"]:
-            self._data["screenshotShortcut"] = value
+        canonical = _canonical_shortcut(value)
+        if canonical is not None and canonical != self._data["screenshotShortcut"]:
+            self._data["screenshotShortcut"] = canonical
+            self._save()
+
+    @property
+    def screenshot_gamepad(self) -> str:
+        return str(self._data["screenshotGamepad"])
+
+    @screenshot_gamepad.setter
+    def screenshot_gamepad(self, value: str) -> None:
+        canonical = _canonical_gamepad(value)
+        if canonical is not None and canonical != self._data["screenshotGamepad"]:
+            self._data["screenshotGamepad"] = canonical
             self._save()
 
     # -- per-game cover ---------------------------------------------------

@@ -369,93 +369,224 @@ Item {
                 onClicked: mainMenu.open()
             }
 
-            Menu {
+            Popup {
                 id: mainMenu
-                width: 250
+                objectName: "mainMenu"
+                width: 272
                 x: -width + parent.width
                 y: parent.height + 8
+                padding: 8
+                modal: false
+                focus: true
+                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+                // Small declarative model: sections, spacers and rows live in
+                // one list so the popup can be styled freely.
+                property var entries: [
+                    { kind: "section", text: Tr.strings["STORES"] },
+                    {
+                        kind: "item",
+                        text: Tr.strings["Scan Steam games"],
+                        dot: "#66c0f4",
+                        action: "scan",
+                        value: "steam"
+                    },
+                    {
+                        kind: "item",
+                        text: Tr.strings["Scan Epic games"],
+                        dot: "#d9e2ee",
+                        action: "scan",
+                        value: "epic"
+                    },
+                    {
+                        kind: "item",
+                        text: Tr.strings["Scan GOG games"],
+                        dot: "#b48cf0",
+                        action: "scan",
+                        value: "gog"
+                    },
+                    {
+                        kind: "item",
+                        text: Tr.strings["Scan Battle.net games"],
+                        dot: "#3aa9ff",
+                        action: "scan",
+                        value: "battlenet"
+                    },
+                    {
+                        kind: "item",
+                        text: Tr.strings["Scan Riot games"],
+                        dot: "#ff4655",
+                        action: "scan",
+                        value: "riot"
+                    },
+                    {
+                        kind: "item",
+                        text: Tr.strings["Scan all stores"],
+                        dot: Library.accent,
+                        action: "scan",
+                        value: ""
+                    },
+                    { kind: "space" },
+                    { kind: "section", text: Tr.strings["LIBRARY"] },
+                    {
+                        kind: "item",
+                        text: Tr.strings["Restore removed games"],
+                        action: "restore",
+                        enabled: Library.hiddenCount > 0
+                    },
+                    {
+                        kind: "item",
+                        text: Tr.strings["Add game manually..."],
+                        action: "add"
+                    },
+                    { kind: "space" },
+                    { kind: "section", text: Tr.strings["APP"] },
+                    {
+                        kind: "item",
+                        text: Tr.strings["Big Picture"],
+                        action: "bigpicture"
+                    },
+                    {
+                        kind: "item",
+                        text: Tr.strings["Settings"],
+                        action: "settings"
+                    }
+                ]
+
+                function run(entry) {
+                    if (entry.action === "scan") {
+                        root.scanRequested(entry.value);
+                    } else if (entry.action === "restore") {
+                        root.restoreHiddenRequested();
+                    } else if (entry.action === "add") {
+                        root.addRequested();
+                    } else if (entry.action === "bigpicture") {
+                        root.bigPictureRequested();
+                    } else if (entry.action === "settings") {
+                        root.settingsRequested();
+                    }
+                    mainMenu.close();
+                }
 
                 background: Rectangle {
-                    color: "#12151b"
-                    radius: 11
+                    radius: 14
                     border.width: 1
-                    border.color: "#2a3140"
-                }
-
-                delegate: MenuItem {
-                    id: entry
-                    width: mainMenu.width - 10
-                    implicitHeight: 32
-                    highlighted: mainMenu.currentIndex === index
-
-                    contentItem: Text {
-                        leftPadding: 12
-                        text: entry.text
-                        color: entry.enabled ? "#dfe6f0" : "#5f6a7b"
-                        font.family: "Sora"
-                        font.pixelSize: 12
-                        verticalAlignment: Text.AlignVCenter
-                        elide: Text.ElideRight
+                    border.color: "#31405a"
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "#1a2130" }
+                        GradientStop { position: 1.0; color: "#0c1017" }
                     }
 
-                    background: Rectangle {
-                        radius: 7
-                        color: entry.highlighted ? "#232936" : "transparent"
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.margins: 10
+                        height: 1
+                        radius: 1
+                        color: Qt.rgba(Library.accent.r, Library.accent.g,
+                                       Library.accent.b, 0.35)
                     }
                 }
 
-                MenuItem {
-                    text: Tr.strings["Scan Steam games"]
-                    onTriggered: root.scanRequested("steam")
-                }
-                MenuItem {
-                    text: Tr.strings["Scan Epic games"]
-                    onTriggered: root.scanRequested("epic")
-                }
-                MenuItem {
-                    text: Tr.strings["Scan GOG games"]
-                    onTriggered: root.scanRequested("gog")
-                }
-                MenuItem {
-                    text: Tr.strings["Scan Battle.net games"]
-                    onTriggered: root.scanRequested("battlenet")
-                }
-                MenuItem {
-                    text: Tr.strings["Scan Riot games"]
-                    onTriggered: root.scanRequested("riot")
-                }
-                MenuItem {
-                    text: Tr.strings["Scan all stores"]
-                    onTriggered: root.scanRequested("")
-                }
-                MenuSeparator {
-                    contentItem: Rectangle {
-                        implicitHeight: 1
-                        color: "#232936"
+                contentItem: Column {
+                    width: mainMenu.availableWidth
+                    spacing: 2
+
+                    Repeater {
+                        model: mainMenu.entries
+
+                        delegate: Item {
+                            id: menuRow
+                            readonly property bool section: modelData.kind === "section"
+                            readonly property bool spacer: modelData.kind === "space"
+                            readonly property bool row: modelData.kind === "item"
+                            readonly property bool hovered: rowArea.containsMouse
+                                        && modelData.enabled !== false
+
+                            width: mainMenu.width - 16
+                            height: section ? 24 : (spacer ? 9 : 36)
+
+                            Text {
+                                visible: menuRow.section
+                                anchors.left: parent.left
+                                anchors.leftMargin: 10
+                                anchors.bottom: parent.bottom
+                                anchors.bottomMargin: 4
+                                text: menuRow.section ? modelData.text : ""
+                                color: "#6f7887"
+                                font.family: "Chakra Petch"
+                                font.pixelSize: 9
+                                font.bold: true
+                                font.letterSpacing: 2.2
+                            }
+
+                            Rectangle {
+                                visible: menuRow.spacer
+                                anchors.verticalCenter: parent.verticalCenter
+                                x: 8
+                                width: parent.width - 16
+                                height: 1
+                                color: "#232c3c"
+                            }
+
+                            Rectangle {
+                                visible: menuRow.row
+                                anchors.fill: parent
+                                radius: 9
+                                color: menuRow.hovered ? "#212b3c" : "transparent"
+
+                                Rectangle {
+                                    visible: menuRow.hovered
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 3
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 2
+                                    height: parent.height - 14
+                                    radius: 1
+                                    color: Library.accent
+                                }
+                            }
+
+                            Rectangle {
+                                visible: menuRow.row && modelData.dot !== undefined
+                                anchors.left: parent.left
+                                anchors.leftMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 7
+                                height: 7
+                                radius: 3.5
+                                color: modelData.dot !== undefined
+                                       ? modelData.dot : "transparent"
+                            }
+
+                            Text {
+                                visible: menuRow.row
+                                anchors.left: parent.left
+                                anchors.leftMargin:
+                                    modelData.dot !== undefined ? 30 : 14
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: menuRow.row ? modelData.text : ""
+                                color: modelData.enabled === false
+                                       ? "#5f6a7b"
+                                       : (menuRow.hovered ? "#ffffff" : "#dfe6f0")
+                                font.family: "Sora"
+                                font.pixelSize: 12
+                                elide: Text.ElideRight
+                            }
+
+                            MouseArea {
+                                id: rowArea
+                                anchors.fill: parent
+                                enabled: menuRow.row && modelData.enabled !== false
+                                hoverEnabled: menuRow.row
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: mainMenu.run(modelData)
+                            }
+                        }
                     }
-                }
-                MenuItem {
-                    text: Tr.strings["Restore removed games"]
-                    enabled: Library.hiddenCount > 0
-                    onTriggered: root.restoreHiddenRequested()
-                }
-                MenuSeparator {
-                    contentItem: Rectangle {
-                        implicitHeight: 1
-                        color: "#232936"
-                    }
-                }
-                MenuItem {
-                    text: Tr.strings["Add game manually..."]
-                    onTriggered: root.addRequested()
-                }
-                MenuItem {
-                    text: Tr.strings["Big Picture"]
-                    onTriggered: root.bigPictureRequested()
-                }
-                MenuItem {
-                    text: Tr.strings["Settings"]
-                    onTriggered: root.settingsRequested()
                 }
             }
         }

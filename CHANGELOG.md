@@ -1,5 +1,35 @@
 # Changelog
 
+## v0.20.0
+
+- **Custom screenshot shortcuts**:
+  - **Keyboard**: in Settings → SCREENSHOTS, **Record** listens for the next
+    combination (modifiers + key) and stores it; **Clear** disables it. Any valid
+    combination is registered as a global hotkey on Windows, with a local
+    fallback when the system rejects it.
+  - **Gamepad**: **Record** captures the buttons you press (for example
+    `LB + RB`). Without a custom combination the previous **hold Select for 5
+    seconds** gesture is kept.
+  - Shortcuts are stored in canonical form (`Ctrl+PgDown`) and old
+    `settings.json` values are migrated automatically.
+- **Covers from your computer**: the artwork picker gains a **Browse…** button
+  that uses a local image (png/jpg/webp/bmp) as the cover, copied into the app
+  cache.
+- **Modern menus**: the cartridge context menu and the top-right menu now use a
+  gradient panel, section labels, store colour dots, a hover accent bar and a
+  danger style for *Remove from library*.
+- **Cartridge tag**: the DS and PS2 shells show the store (STEAM, EPIC, GOG,
+  BATTLE.NET, RIOT) or LOCAL instead of `GC`. Library titles have more room
+  below the cover.
+- **Big Picture**: the button legend moved to the top bar (between the title and
+  the controller status), the local time is highlighted in an accent pill, the
+  carousel uses the freed height and clamps cards to the viewport so covers are
+  never cropped, and the filter pills size themselves to their text.
+- **Dock**: the green dot, *Ready* and the clock are vertically centred.
+- **Stats**: hovering the river chart draws a guide line with dots on every
+  layer and a tooltip with the date, the period total and the per-game
+  breakdown.
+
 ## v0.19.1
 
 - **Idle power**: the window no longer repaints while nothing happens. Measured

@@ -7,6 +7,7 @@ suite instead of only showing up when someone runs the app.
 import os
 import time
 from datetime import date
+from pathlib import Path
 
 import pytest
 
@@ -668,17 +669,172 @@ def test_qml_screenshot_shortcut_setting(app, model) -> None:
 
     engine = create_engine(model)
     root = engine.rootObjects()[0]
-    combo = root.findChild(QObject, "screenshotShortcutCombo")
-    assert combo is not None
-    assert combo.property("value") == "ctrl+pagedown"
+    chip = root.findChild(QObject, "screenshotShortcutChip")
+    record = root.findChild(QObject, "screenshotRecordButton")
+    padChip = root.findChild(QObject, "gamepadShortcutChip")
+    assert chip is not None
+    assert record is not None
+    assert padChip is not None
 
     screenshots = engine.rootContext().contextProperty("Screenshots")
     assert screenshots is not None
-    screenshots.setShortcut("f12")
+    assert screenshots.property("shortcut") == "Ctrl+PgDown"
+
+    screenshots.setShortcut("F12")
+    app.processEvents()
+    assert screenshots.property("shortcut") == "F12"
+    assert screenshots.property("shortcutLabel") == "F12"
+
+    screenshots.startRecording()
+    app.processEvents()
+    assert screenshots.property("recording") is True
+    screenshots.cancelRecording()
+    app.processEvents()
+    assert screenshots.property("recording") is False
+
+    gamepad = engine.rootContext().contextProperty("Gamepad")
+    gamepad.setScreenshotCombo("LB+RB")
+    app.processEvents()
+    assert gamepad.property("screenshotCombo") == "LB+RB"
+    assert gamepad.property("screenshotComboLabel") == "LB + RB"
+
+    gamepad.clearScreenshotCombo()
+    app.processEvents()
+    assert gamepad.property("screenshotCombo") == ""
+
+
+def test_qml_records_a_custom_keyboard_shortcut(app, model) -> None:
+    from PySide6.QtCore import QObject, Qt
+    from PySide6.QtTest import QTest
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.resize(1180, 800)
+    root.show()
+    root.setProperty("settingsOpen", True)
     app.processEvents()
 
-    assert screenshots.property("shortcut") == "f12"
-    assert combo.property("value") == "f12"
+    screenshots = engine.rootContext().contextProperty("Screenshots")
+    panel = root.findChild(QObject, "settingsPanel")
+    assert panel is not None
+
+    screenshots.startRecording()
+    panel.forceActiveFocus()
+    app.processEvents()
+
+    QTest.keyPress(root, Qt.Key_P, Qt.ControlModifier | Qt.ShiftModifier)
+    QTest.keyRelease(root, Qt.Key_P, Qt.ControlModifier | Qt.ShiftModifier)
+    app.processEvents()
+
+    assert screenshots.property("recording") is False
+    assert screenshots.property("shortcut") == "Ctrl+Shift+P"
+    assert screenshots.property("shortcutLabel") == "Ctrl+Shift+P"
+
+
+def test_qml_art_picker_offers_a_local_file(app, model) -> None:
+    from PySide6.QtCore import QObject
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.resize(1180, 800)
+    root.show()
+    root.setProperty("detailIndex", 0)
+    root.setProperty("detailGame", model.gameAt(0))
+    root.setProperty("artOpen", True)
+    app.processEvents()
+
+    from PySide6.QtTest import QTest
+    QTest.qWait(240)
+    app.processEvents()
+
+    browse = root.findChild(QObject, "browseCoverButton")
+    assert browse is not None
+    assert browse.property("visible") is True
+
+
+def test_local_cover_from_disk(model, tmp_path) -> None:
+    from PySide6.QtGui import QColor, QImage
+
+    source = tmp_path / "my-cover.png"
+    image = QImage(300, 400, QImage.Format_RGB32)
+    image.fill(QColor("#123456"))
+    assert image.save(str(source))
+
+    game_id = model.gameAt(0)["id"]
+    assert model.setGameCover(0, str(source)) is True
+
+    cached = model._prefs.cover_for(game_id)
+    assert Path(cached).is_file()
+    assert model.gameAt(0)["cover"].startswith("image://art/")
+
+    assert model.setGameCover(0, str(tmp_path / "nope.png")) is False
+    assert model.setGameCover(0, str(source.parent / "notes.txt")) is False
+
+
+def test_qml_stats_river_tooltip(app, model) -> None:
+    from PySide6.QtCore import QObject
+
+    from gamecenter.ui.app import create_engine
+
+    game = model._all[0]
+    now = int(time.time())
+    library_model.playtime.record_session(game, now, 600)
+    library_model.playtime.record_session(game, now - 86400, 900)
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.resize(1180, 800)
+    root.show()
+    root.setProperty("currentView", "stats")
+    app.processEvents()
+
+    card = root.findChild(QObject, "riverChartCard")
+    tooltip = root.findChild(QObject, "riverTooltip")
+    assert card is not None
+    assert tooltip is not None
+    assert tooltip.property("visible") is False
+
+    river = stats = root.findChild(QObject, "statsView")
+    data = stats.property("statsData")
+    if hasattr(data, "toVariant"):
+        data = data.toVariant()
+    labels = data["river"]["labels"]
+    card.setProperty("hoverIndex", len(labels) - 1)
+    app.processEvents()
+
+    assert tooltip.property("visible") is True
+    info = card.property("hoverInfo")
+    if hasattr(info, "toVariant"):
+        info = info.toVariant()
+    assert info["rows"]
+    assert info["total"] > 0
+    assert info["label"]
+
+    card.setProperty("hoverIndex", -1)
+    app.processEvents()
+    assert tooltip.property("visible") is False
+
+
+def test_qml_big_picture_hints_sit_in_the_top_bar(app, model) -> None:
+    from PySide6.QtCore import QObject
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.resize(1280, 720)
+    root.show()
+    root.setProperty("bigPictureOpen", True)
+    app.processEvents()
+
+    hints = root.findChild(QObject, "bigPictureHints")
+    assert hints is not None
+    position = hints.mapToItem(root.contentItem(), 0, 0)
+    assert position.y() < 80
 
 
 def test_qml_stats_cards_show_cover_and_highlights(app, model) -> None:

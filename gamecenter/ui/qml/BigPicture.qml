@@ -21,16 +21,18 @@ Item {
     property string carouselMode: "arc"
 
     readonly property real uiScale: Math.max(1, Math.min(1.5, height / 800))
+    // The button legend lives in the top bar now, so the hero and the carousel
+    // can use the space the bottom strip used to take.
     readonly property real heroHeight: Math.max(
-        200,
+        190,
         Math.min(
-            520,
-            (height - 230) * (carouselMode === "wheel" ? 0.30
-                               : carouselMode === "ring" ? 0.35 : 0.38)
+            500,
+            (height - 190) * (carouselMode === "wheel" ? 0.28
+                               : carouselMode === "ring" ? 0.34 : 0.36)
         )
     )
     readonly property real carouselHeight: Math.max(
-        220, Math.min(700, height - heroHeight - 170)
+        240, Math.min(760, height - heroHeight - 126)
     )
     readonly property real coverWidth: heroHeight * 0.8
 
@@ -498,7 +500,57 @@ Item {
             font.letterSpacing: 2.2
         }
 
-        Item { Layout.fillWidth: true }
+        // Button legend: sits between the title and the controller/clock pill.
+        // It fills the free space and centres its row, so the layout always
+        // reads "title · hints · status".
+        Item {
+            objectName: "bigPictureHints"
+            Layout.fillWidth: true
+            height: 24 * root.uiScale
+            clip: true
+
+            Row {
+                anchors.centerIn: parent
+                spacing: 9 * root.uiScale
+
+                Repeater {
+                    model: root.hints
+
+                    Row {
+                        spacing: 4 * root.uiScale
+                        height: 22 * root.uiScale
+
+                        Rectangle {
+                            width: Math.max(18, hintKey.implicitWidth + 9)
+                            height: 19 * root.uiScale
+                            radius: 5 * root.uiScale
+                            color: "#141c28"
+                            border.width: 1
+                            border.color: "#2a3a52"
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            Text {
+                                id: hintKey
+                                anchors.centerIn: parent
+                                text: modelData.key
+                                color: "#dfe6f0"
+                                font.family: "Chakra Petch"
+                                font.pixelSize: Math.max(7, Math.round(8 * root.uiScale))
+                                font.bold: true
+                            }
+                        }
+
+                        Text {
+                            text: modelData.label
+                            color: "#93a0b4"
+                            font.family: "Sora"
+                            font.pixelSize: Math.max(7, Math.round(8 * root.uiScale))
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+                }
+            }
+        }
 
         Row {
             spacing: 7 * root.uiScale
@@ -523,13 +575,39 @@ Item {
             }
         }
 
-        Text {
-            id: clock
-            color: "#dfe6f0"
-            font.family: "Chakra Petch"
-            font.pixelSize: 12 * root.uiScale
-            font.letterSpacing: 1.0
-            Layout.leftMargin: 8 * root.uiScale
+        Rectangle {
+            Layout.alignment: Qt.AlignVCenter
+            Layout.leftMargin: 4 * root.uiScale
+            width: clockLabel.implicitWidth + 22 * root.uiScale
+            height: 28 * root.uiScale
+            radius: 14 * root.uiScale
+            color: Qt.rgba(Library.accent.r, Library.accent.g,
+                           Library.accent.b, 0.14)
+            border.width: 1
+            border.color: Qt.rgba(Library.accent.r, Library.accent.g,
+                                  Library.accent.b, 0.45)
+
+            Text {
+                id: clock
+                anchors.centerIn: parent
+                color: "#f8fafc"
+                font.family: "Chakra Petch"
+                font.pixelSize: 13 * root.uiScale
+                font.bold: true
+                font.letterSpacing: 1.4
+            }
+
+            // Measured once per minute by the timer below; the extra element
+            // keeps the pill wide enough for the widest time of day.
+            Text {
+                id: clockLabel
+                visible: false
+                text: "00:00"
+                font.family: "Chakra Petch"
+                font.pixelSize: 13 * root.uiScale
+                font.bold: true
+                font.letterSpacing: 1.4
+            }
         }
 
         Rectangle {
@@ -859,7 +937,10 @@ Item {
 
                 delegate: Rectangle {
                     readonly property bool selected: root.filter === modelData.value
-                    width: 112 * root.uiScale
+                    width: Math.max(
+                        112 * root.uiScale,
+                        filterLabel.implicitWidth + 34 * root.uiScale
+                    )
                     height: 32 * root.uiScale
                     radius: 16 * root.uiScale
                     color: selected ? "#1e2c42" : "#101722"
@@ -867,7 +948,11 @@ Item {
                     border.color: selected ? Library.accent : "#243044"
 
                     Text {
+                        id: filterLabel
                         anchors.centerIn: parent
+                        width: parent.width - 18 * root.uiScale
+                        horizontalAlignment: Text.AlignHCenter
+                        elide: Text.ElideRight
                         text: Tr.strings[modelData.label]
                         color: selected ? "#f2f5fa" : "#8b95a5"
                         font.family: "Sora"
@@ -896,7 +981,11 @@ Item {
             }
 
             Rectangle {
-                width: 168 * root.uiScale
+                width: Math.max(
+                    168 * root.uiScale,
+                    modeText.implicitWidth + modeHint.implicitWidth
+                    + 34 * root.uiScale
+                )
                 height: 30 * root.uiScale
                 radius: 15 * root.uiScale
                 color: modeArea.containsMouse ? "#1b2535" : "#101722"
@@ -910,6 +999,7 @@ Item {
                     spacing: 6 * root.uiScale
 
                     Text {
+                        id: modeText
                         text: Tr.strings["Mode"] + ": "
                               + root.modeLabel(root.carouselMode)
                         color: modeArea.containsMouse
@@ -921,6 +1011,7 @@ Item {
                     }
 
                     Text {
+                        id: modeHint
                         text: "‹ ›"
                         color: "#6f7887"
                         font.family: "Sora"
@@ -1033,63 +1124,6 @@ Item {
             font.pixelSize: 13
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
-        }
-
-        Item { Layout.fillHeight: true }
-
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 14
-
-            Flow {
-                Layout.fillWidth: true
-                spacing: 14
-
-                Repeater {
-                    model: root.hints
-
-                    Row {
-                        spacing: 6
-
-                        Rectangle {
-                            width: Math.max(24, hintKey.implicitWidth + 12)
-                            height: 23
-                            radius: 6
-                            color: "#141c28"
-                            border.width: 1
-                            border.color: "#2a3a52"
-
-                            Text {
-                                id: hintKey
-                                anchors.centerIn: parent
-                                text: modelData.key
-                                color: "#c9d2e0"
-                                font.family: "Chakra Petch"
-                                font.pixelSize: 9
-                                font.bold: true
-                            }
-                        }
-
-                        Text {
-                            text: modelData.label
-                            color: "#8b95a5"
-                            font.family: "Sora"
-                            font.pixelSize: 9
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-                }
-            }
-
-            Text {
-                Layout.maximumWidth: 360
-                text: Tr.strings["Click to select · Double-click to play"]
-                color: "#4f5b6d"
-                font.family: "Sora"
-                font.pixelSize: 9
-                horizontalAlignment: Text.AlignRight
-                elide: Text.ElideRight
-            }
         }
     }
 

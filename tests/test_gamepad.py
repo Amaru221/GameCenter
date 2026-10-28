@@ -87,3 +87,74 @@ def test_select_hold_requests_one_screenshot(app, monkeypatch) -> None:
     manager._update_back_hold(gamepad.BUTTON_BACK, 25.0)
     assert shots == [True, True]
     assert gamepad.SCREENSHOT_HOLD_SECONDS == 5.0
+
+
+def test_button_order_matches_the_preferences() -> None:
+    from gamecenter.core.preferences import GAMEPAD_BUTTONS
+
+    assert tuple(name for name, _mask in gamepad.BUTTON_ORDER) == GAMEPAD_BUTTONS
+
+
+def test_custom_combo_fires_once_per_press(app, monkeypatch, tmp_path) -> None:
+    from gamecenter.core.preferences import Preferences
+
+    monkeypatch.setenv("GC_NO_GAMEPAD", "1")
+    prefs = Preferences(tmp_path / "settings.json")
+    prefs.screenshot_gamepad = "rb+lb"
+    assert prefs.screenshot_gamepad == "LB+RB"
+
+    manager = gamepad.GamepadManager(prefs)
+    shots: list[bool] = []
+    manager.screenshot.connect(lambda: shots.append(True))
+
+    manager._check_screenshot_combo("LB+RB")
+    manager._check_screenshot_combo("LB+RB")  # still held
+    manager._check_screenshot_combo("")
+    manager._check_screenshot_combo("LB+RB")
+
+    assert shots == [True, True]
+
+    # The custom combo replaces the Select-hold gesture.
+    manager._last_buttons = 0
+    manager._update_back_hold(gamepad.BUTTON_BACK, 10.0)
+    manager._last_buttons = gamepad.BUTTON_BACK
+    manager._update_back_hold(gamepad.BUTTON_BACK, 20.0)
+    assert shots == [True, True]
+
+
+def test_combo_capture_waits_for_the_release(app, monkeypatch, tmp_path) -> None:
+    from gamecenter.core.preferences import Preferences
+
+    monkeypatch.setenv("GC_NO_GAMEPAD", "1")
+    prefs = Preferences(tmp_path / "settings.json")
+    manager = gamepad.GamepadManager(prefs)
+    captured: list[str] = []
+    manager.comboCaptured.connect(captured.append)
+
+    manager.startCapture()
+    assert manager.capturing is True
+
+    manager._capture_step(gamepad.LEFT_SHOULDER)
+    manager._capture_step(gamepad.LEFT_SHOULDER | gamepad.BUTTON_START)
+    assert manager.capturing is True
+    assert captured == []
+
+    manager._capture_step(0)
+    assert manager.capturing is False
+    assert captured == ["LB+Start"]
+    assert prefs.screenshot_gamepad == "LB+Start"
+    assert manager.screenshotCombo == "LB+Start"
+    assert manager.screenshotComboLabel == "LB + Start"
+
+    manager.clearScreenshotCombo()
+    assert manager.screenshotCombo == ""
+    assert prefs.screenshot_gamepad == ""
+
+
+def test_capture_can_be_cancelled(app, monkeypatch) -> None:
+    monkeypatch.setenv("GC_NO_GAMEPAD", "1")
+    manager = gamepad.GamepadManager()
+    manager.startCapture()
+    manager.cancelCapture()
+    assert manager.capturing is False
+    assert manager.screenshotCombo == ""

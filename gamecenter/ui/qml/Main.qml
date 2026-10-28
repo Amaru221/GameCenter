@@ -544,13 +544,14 @@ Window {
 
     Shortcut {
         sequence: Screenshots.shortcutSequence
-        enabled: Screenshots.localShortcutEnabled
+        enabled: Screenshots.localShortcutEnabled && !Screenshots.recording
         onActivated: Screenshots.captureIfPlaying()
     }
 
     Shortcut {
         sequence: "F5"
         enabled: !window.bigPictureOpen && !yearReview.opened
+                 && !Screenshots.recording
         onActivated: {
             Library.refresh();
             if (window.currentView === "stats") {
@@ -563,6 +564,7 @@ Window {
         sequence: "Escape"
         enabled: !window.bigPictureOpen && !yearReview.opened
                  && !detail.viewerOpen
+                 && !Screenshots.recording
         onActivated: {
             if (updateOpen) {
                 updateOpen = false;
@@ -581,6 +583,7 @@ Window {
     Shortcut {
         sequence: "Ctrl+B"
         enabled: !window.bigPictureOpen && !yearReview.opened
+                 && !Screenshots.recording
         onActivated: {
             if (!bigPictureOpen && !detailOpen && !settingsOpen
                     && !updateOpen && !addOpen && !artOpen) {
@@ -592,6 +595,7 @@ Window {
     Shortcut {
         sequence: "Ctrl+,"
         enabled: !window.bigPictureOpen && !yearReview.opened
+                 && !Screenshots.recording
         onActivated: settingsOpen = true
     }
 
@@ -605,6 +609,7 @@ Window {
                  && !window.updateOpen
                  && !window.addOpen
                  && !window.artOpen
+                 && !Screenshots.recording
         onActivated: topBar.focusSearch()
     }
 }

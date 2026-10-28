@@ -84,6 +84,20 @@ Rectangle {
         return Qt.formatDateTime(new Date(timestamp * 1000), "dd/MM");
     }
 
+    function durationText(seconds) {
+        var total = Math.max(0, Number(seconds) || 0);
+        if (total <= 0) {
+            return "0 min";
+        }
+        var minutes = Math.max(1, Math.round(total / 60));
+        if (minutes < 60) {
+            return minutes + " min";
+        }
+        var hours = Math.floor(minutes / 60);
+        var rest = minutes % 60;
+        return rest > 0 ? hours + " h " + rest + " min" : hours + " h";
+    }
+
     function changeColor(text) {
         return (text || "").indexOf("-") === 0 ? "#fb7185" : "#34d399";
     }
@@ -566,13 +580,62 @@ Rectangle {
             }
 
             Rectangle {
+                id: chartCard
+                objectName: "riverChartCard"
                 Layout.fillWidth: true
                 Layout.preferredHeight: 246
                 radius: 20
                 color: "#0e1522"
                 border.width: 1
-                border.color: "#202b3d"
+                border.color: hoverIndex >= 0 ? "#33507a" : "#202b3d"
                 clip: true
+
+                property int hoverIndex: -1
+                property real hoverX: 0
+
+                readonly property var hoverInfo: {
+                    var info = { total: 0, rows: [], extra: 0, label: "" };
+                    var labels = (root.river && root.river.labels)
+                                 ? root.river.labels : [];
+                    var layers = (root.river && root.river.layers)
+                                 ? root.river.layers : [];
+                    var index = hoverIndex;
+                    if (index < 0 || index >= labels.length) {
+                        return info;
+                    }
+                    info.label = labels[index];
+                    var rows = [];
+                    for (var i = 0; i < layers.length; i++) {
+                        var value = layers[i].values[index] || 0;
+                        info.total += value;
+                        if (value > 0) {
+                            rows.push({
+                                name: layers[i].name,
+                                color: layers[i].color,
+                                value: value
+                            });
+                        }
+                    }
+                    rows.sort(function(a, b) { return b.value - a.value; });
+                    info.extra = Math.max(0, rows.length - 4);
+                    info.rows = rows.slice(0, 4);
+                    return info;
+                }
+
+                function indexAt(x) {
+                    var labels = (root.river && root.river.labels)
+                                 ? root.river.labels : [];
+                    var count = labels.length;
+                    if (count === 0) {
+                        return -1;
+                    }
+                    var plotWidth = Math.max(1, riverChart.width - 16);
+                    var ratio = (x - 8) / plotWidth;
+                    return Math.max(
+                        0,
+                        Math.min(count - 1, Math.round(ratio * (count - 1)))
+                    );
+                }
 
                 Canvas {
                     id: riverChart
@@ -586,10 +649,12 @@ Rectangle {
                                          ? riverData.labels
                                          : ((riverData && riverData.months)
                                             ? riverData.months : [])
+                    property int hover: chartCard.hoverIndex
 
                     onRiverDataChanged: requestPaint()
                     onLayersChanged: requestPaint()
                     onLabelsChanged: requestPaint()
+                    onHoverChanged: requestPaint()
                     onWidthChanged: requestPaint()
                     onHeightChanged: requestPaint()
                     Component.onCompleted: requestPaint()
@@ -721,7 +786,155 @@ Rectangle {
                         ctx.font = "9px Sora";
                         ctx.textAlign = "center";
                         for (var label = 0; label < count; label++) {
+                            ctx.fillStyle = label === hover
+                                            ? "#dfe6f0" : "#64748b";
                             ctx.fillText(labels[label], px(label), h - 5);
+                        }
+
+                        // Hover guide: a dashed vertical line plus a dot on
+                        // every stack boundary, so the tooltip has context.
+                        if (hover >= 0 && hover < count) {
+                            var hx = px(hover);
+                            ctx.save();
+                            ctx.strokeStyle = "rgba(166, 190, 220, 0.35)";
+                            ctx.lineWidth = 1;
+                            ctx.setLineDash([3, 4]);
+                            ctx.beginPath();
+                            ctx.moveTo(hx, top - 6);
+                            ctx.lineTo(hx, h - bottom + 6);
+                            ctx.stroke();
+                            ctx.restore();
+
+                            var acc = 0;
+                            for (var li = 0; li < layers.length; li++) {
+                                acc += (layers[li].values[hover] || 0);
+                                var dy = py(acc);
+                                ctx.beginPath();
+                                ctx.arc(hx, dy, 3.4, 0, Math.PI * 2);
+                                ctx.fillStyle = layers[li].color;
+                                ctx.fill();
+                                ctx.lineWidth = 1.6;
+                                ctx.strokeStyle = "#0e1522";
+                                ctx.stroke();
+                            }
+                        }
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    anchors.margins: 14
+                    hoverEnabled: true
+                    acceptedButtons: Qt.NoButton
+                    cursorShape: Qt.CrossCursor
+
+                    onPositionChanged: (mouse) => {
+                        chartCard.hoverX = mouse.x + 14;
+                        chartCard.hoverIndex = chartCard.indexAt(mouse.x);
+                    }
+                    onExited: chartCard.hoverIndex = -1
+                }
+
+                Rectangle {
+                    id: chartTip
+                    objectName: "riverTooltip"
+                    visible: chartCard.hoverIndex >= 0
+                    width: 238
+                    height: tipColumn.implicitHeight + 20
+                    radius: 12
+                    x: Math.max(
+                        10,
+                        Math.min(chartCard.width - width - 10,
+                                 chartCard.hoverX - width / 2)
+                    )
+                    y: 10
+                    color: "#111a2a"
+                    border.width: 1
+                    border.color: "#31445f"
+                    opacity: visible ? 1 : 0
+                    Behavior on opacity { NumberAnimation { duration: 110 } }
+
+                    Column {
+                        id: tipColumn
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        spacing: 6
+
+                        Row {
+                            width: parent.width
+
+                            Text {
+                                text: chartCard.hoverInfo.label
+                                color: Library.accent
+                                font.family: "Chakra Petch"
+                                font.pixelSize: 11
+                                font.bold: true
+                                font.letterSpacing: 1.4
+                            }
+
+                            Item { width: parent.width - 96; height: 1 }
+
+                            Text {
+                                text: root.durationText(chartCard.hoverInfo.total)
+                                color: "#f8fafc"
+                                font.family: "Chakra Petch"
+                                font.pixelSize: 11
+                                font.bold: true
+                            }
+                        }
+
+                        Rectangle {
+                            width: parent.width
+                            height: 1
+                            color: "#243349"
+                        }
+
+                        Repeater {
+                            model: chartCard.hoverInfo.rows
+
+                            Item {
+                                width: tipColumn.width
+                                height: 15
+
+                                Rectangle {
+                                    width: 7
+                                    height: 7
+                                    radius: 3.5
+                                    color: modelData.color
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+
+                                Text {
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 14
+                                    anchors.right: tipValue.left
+                                    anchors.rightMargin: 8
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: modelData.name
+                                    color: "#b7c2d2"
+                                    font.family: "Sora"
+                                    font.pixelSize: 10
+                                    elide: Text.ElideRight
+                                }
+
+                                Text {
+                                    id: tipValue
+                                    anchors.right: parent.right
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: root.durationText(modelData.value)
+                                    color: "#8fa3bd"
+                                    font.family: "Chakra Petch"
+                                    font.pixelSize: 9
+                                }
+                            }
+                        }
+
+                        Text {
+                            visible: chartCard.hoverInfo.extra > 0
+                            text: "+" + chartCard.hoverInfo.extra
+                            color: "#6f7887"
+                            font.family: "Chakra Petch"
+                            font.pixelSize: 9
                         }
                     }
                 }

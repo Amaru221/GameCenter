@@ -85,7 +85,7 @@ def create_engine(library: LibraryModel) -> QQmlApplicationEngine:
     engine.rootContext().setContextProperty("Library", library)
     engine.rootContext().setContextProperty("Sessions", library.sessions)
     engine.rootContext().setContextProperty("Tr", library.translator)
-    gamepad = GamepadManager()
+    gamepad = GamepadManager(library._prefs)
     gamepad.setParent(engine)
     engine.rootContext().setContextProperty("Gamepad", gamepad)
 

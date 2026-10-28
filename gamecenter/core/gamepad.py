@@ -23,6 +23,8 @@ DPAD_LEFT = 0x0004
 DPAD_RIGHT = 0x0008
 BUTTON_START = 0x0010
 BUTTON_BACK = 0x0020
+LEFT_THUMB = 0x0040
+RIGHT_THUMB = 0x0080
 LEFT_SHOULDER = 0x0100
 RIGHT_SHOULDER = 0x0200
 BUTTON_A = 0x1000
@@ -30,11 +32,35 @@ BUTTON_B = 0x2000
 BUTTON_X = 0x4000
 BUTTON_Y = 0x8000
 
+# Canonical order for user-configured combinations (matches
+# ``preferences.GAMEPAD_BUTTONS``).
+BUTTON_ORDER: tuple[tuple[str, int], ...] = (
+    ("A", BUTTON_A),
+    ("B", BUTTON_B),
+    ("X", BUTTON_X),
+    ("Y", BUTTON_Y),
+    ("LB", LEFT_SHOULDER),
+    ("RB", RIGHT_SHOULDER),
+    ("Start", BUTTON_START),
+    ("Back", BUTTON_BACK),
+    ("Up", DPAD_UP),
+    ("Down", DPAD_DOWN),
+    ("Left", DPAD_LEFT),
+    ("Right", DPAD_RIGHT),
+    ("L3", LEFT_THUMB),
+    ("R3", RIGHT_THUMB),
+)
+
 DEADZONE = 0.55
 REPEAT_FIRST = 0.35
 REPEAT_NEXT = 0.13
 POLL_MS = 33
 SCREENSHOT_HOLD_SECONDS = 5.0
+
+
+def combo_for(buttons: int) -> str:
+    """Canonical ``"LB+RB"`` text for the pressed button mask."""
+    return "+".join(name for name, mask in BUTTON_ORDER if buttons & mask)
 
 
 class XINPUT_GAMEPAD(ctypes.Structure):
@@ -99,6 +125,8 @@ def _axis_navigation(pad) -> tuple[int, int]:
 
 class GamepadManager(QObject):
     connectedChanged = Signal()
+    changed = Signal()
+    capturingChanged = Signal()
     navigate = Signal(int, int)
     accept = Signal()
     back = Signal()
@@ -108,9 +136,11 @@ class GamepadManager(QObject):
     favorite = Signal()
     details = Signal()
     screenshot = Signal()
+    comboCaptured = Signal(str)
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, prefs=None, parent=None) -> None:
         super().__init__(parent)
+        self._prefs = prefs
         self._library = None if os.environ.get("GC_NO_GAMEPAD") else _load_xinput()
         self._connected = False
         self._index = 0
@@ -122,6 +152,14 @@ class GamepadManager(QObject):
         self._back_screenshot = False
         self._cursor_hidden = False
         self._cursor_pos = QCursor.pos()
+        self._screenshot_combo = ""
+        if prefs is not None:
+            self._screenshot_combo = str(
+                getattr(prefs, "screenshot_gamepad", "") or ""
+            )
+        self._last_combo = ""
+        self._capturing = False
+        self._capture_seen = ""
         self._timer = QTimer(self)
         self._timer.setInterval(POLL_MS)
         self._timer.timeout.connect(self._poll)
@@ -138,6 +176,52 @@ class GamepadManager(QObject):
     @Property(float, constant=True)
     def screenshotHoldSeconds(self) -> float:
         return SCREENSHOT_HOLD_SECONDS
+
+    # -- custom screenshot shortcut ---------------------------------------
+
+    @Property(str, notify=changed)
+    def screenshotCombo(self) -> str:
+        return self._screenshot_combo
+
+    @Property(str, notify=changed)
+    def screenshotComboLabel(self) -> str:
+        return self._screenshot_combo.replace("+", " + ")
+
+    @Property(bool, notify=capturingChanged)
+    def capturing(self) -> bool:
+        return self._capturing
+
+    @Slot(str)
+    def setScreenshotCombo(self, combo: str) -> None:
+        if self._prefs is not None:
+            self._prefs.screenshot_gamepad = combo
+            self._screenshot_combo = self._prefs.screenshot_gamepad
+        else:
+            self._screenshot_combo = str(combo or "").upper()
+        self._last_combo = ""
+        self.changed.emit()
+
+    @Slot()
+    def clearScreenshotCombo(self) -> None:
+        self.setScreenshotCombo("")
+
+    @Slot()
+    def startCapture(self) -> None:
+        if self._capturing:
+            return
+        self._capturing = True
+        self._capture_seen = ""
+        self._last_combo = ""
+        self.showCursor()
+        self.capturingChanged.emit()
+
+    @Slot()
+    def cancelCapture(self) -> None:
+        if not self._capturing:
+            return
+        self._capturing = False
+        self._capture_seen = ""
+        self.capturingChanged.emit()
 
     def _hide_cursor(self) -> None:
         if self._cursor_hidden:
@@ -195,6 +279,7 @@ class GamepadManager(QObject):
             self._nav_dy = 0
             self._back_down_at = 0.0
             self._back_screenshot = False
+            self._last_combo = ""
             return
 
         if not self._connected:
@@ -203,12 +288,19 @@ class GamepadManager(QObject):
 
         pad = state.Gamepad
         buttons = int(pad.wButtons)
+
+        if self._capturing:
+            self._capture_step(buttons)
+            self._last_buttons = buttons
+            return
+
         fresh = buttons & ~self._last_buttons
         self._update_back_hold(buttons, time.monotonic())
         self._last_buttons = buttons
         if fresh:
             self._hide_cursor()
 
+        combo = combo_for(buttons)
         if fresh & BUTTON_A:
             self.accept.emit()
         if fresh & BUTTON_B:
@@ -226,10 +318,42 @@ class GamepadManager(QObject):
         if fresh & RIGHT_SHOULDER:
             self.pageRight.emit()
 
+        self._check_screenshot_combo(combo)
         self._update_navigation(pad)
+
+    def _check_screenshot_combo(self, combo: str) -> None:
+        """Fire once per press of the user-configured combination."""
+        if (
+            self._screenshot_combo
+            and combo == self._screenshot_combo
+            and combo != self._last_combo
+        ):
+            self.screenshot.emit()
+        self._last_combo = combo
+
+    def _capture_step(self, buttons: int) -> None:
+        """Collect the buttons of a combination until they are released."""
+        combo = combo_for(buttons)
+        if combo:
+            self._capture_seen = combo
+            return
+        if not self._capture_seen:
+            return
+        combo = self._capture_seen
+        self._capture_seen = ""
+        self._capturing = False
+        self._last_combo = ""
+        self.setScreenshotCombo(combo)
+        self.capturingChanged.emit()
+        self.comboCaptured.emit(combo)
 
     def _update_back_hold(self, buttons: int, now: float) -> None:
         """Select/View held for five seconds asks for a screenshot."""
+        if self._screenshot_combo:
+            # A custom combination replaces the hold gesture.
+            self._back_down_at = 0.0
+            self._back_screenshot = False
+            return
         if buttons & BUTTON_BACK:
             if not self._last_buttons & BUTTON_BACK:
                 self._back_down_at = now
