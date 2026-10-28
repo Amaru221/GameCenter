@@ -62,6 +62,8 @@ GAMEPAD_BUTTONS = (
 DEFAULT_SCREENSHOT_GAMEPAD = ""
 
 _GAMEPAD_LOOKUP = {button.upper(): button for button in GAMEPAD_BUTTONS}
+# Extra rear paddles reported outside the standard XInput layout.
+_PADDLE = re.compile(r"^P([1-9]|[12][0-9]|3[0-2])$")
 
 # A wide but curated set; all have enough contrast on the dark background.
 PALETTE = (
@@ -102,10 +104,17 @@ def _canonical_gamepad(value: object) -> str | None:
     }
     if not parts:
         return DEFAULT_SCREENSHOT_GAMEPAD
-    if any(part not in _GAMEPAD_LOOKUP for part in parts):
+
+    paddles = {
+        part for part in parts if _PADDLE.match(part)
+    }
+    if any(part not in _GAMEPAD_LOOKUP and part not in paddles for part in parts):
         return None
+
+    order = [(button.upper(), button) for button in GAMEPAD_BUTTONS]
+    order += [(f"P{i}", f"P{i}") for i in range(1, 33)]
     return "+".join(
-        button for button in GAMEPAD_BUTTONS if button.upper() in parts
+        canonical for upper, canonical in order if upper in parts
     )
 
 

@@ -149,8 +149,11 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   - **Capturas de pantalla del juego**: elige el atajo de teclado con el botón
     **Record** (pulsa la combinación que quieras; por defecto **Ctrl + Av Pág**)
     y consulta la carpeta donde se guardan. Con mando, **Record** captura los
-    botones que pulses (p. ej. **LB + RB**); sin combinación guardada se mantiene
-    **mantener Select/View 5 segundos**. En Windows el atajo de teclado es
+    botones que pulses y muestra en la casilla cuáles detecta; admite
+    combinaciones (**LT + RT**, **LB + RT**, **A + X**…) y las **paletas
+    traseras** que algunos mandos SCUF exponen como bits extra aparecen como
+    **P1/P2**. Sin combinación guardada se mantiene **mantener Select/View 5
+    segundos**. En Windows el atajo de teclado es
     global, así que funciona con el juego en primer plano; si el sistema ya lo
     usa, se muestra el aviso y queda el atajo local. Las imágenes se guardan en
     `%APPDATA%\GameCenter\screenshots` y su vínculo con juego/sesión en

@@ -190,3 +190,48 @@ def test_trigger_combination_can_be_captured(app, monkeypatch, tmp_path) -> None
     assert captured == ["RT"]
     assert prefs.screenshot_gamepad == "RT"
     assert manager.screenshotCombo == "RT"
+
+
+def test_extra_paddles_use_stable_names() -> None:
+    assert gamepad.combo_for(0x0400) == "P1"
+    assert gamepad.combo_for(0x0800) == "P2"
+    assert gamepad.combo_for(0x0400 | 0x0800) == "P1+P2"
+    assert gamepad.combo_for(gamepad.BUTTON_A | 0x0800) == "A+P2"
+
+
+def test_chord_capture_is_independent_of_release_order(app, monkeypatch, tmp_path) -> None:
+    from gamecenter.core.preferences import Preferences
+
+    monkeypatch.setenv("GC_NO_GAMEPAD", "1")
+    prefs = Preferences(tmp_path / "settings.json")
+    manager = gamepad.GamepadManager(prefs)
+    captured: list[str] = []
+    manager.comboCaptured.connect(captured.append)
+
+    manager.startCapture()
+    manager._capture_step(gamepad.LEFT_TRIGGER)
+    assert manager.capturePreview == "LT"
+    manager._capture_step(gamepad.LEFT_TRIGGER | gamepad.RIGHT_TRIGGER)
+    assert manager.capturePreview == "LT + RT"
+    # Releasing LT first keeps the whole chord.
+    manager._capture_step(gamepad.RIGHT_TRIGGER)
+    manager._capture_step(0)
+
+    assert captured == ["LT+RT"]
+    assert prefs.screenshot_gamepad == "LT+RT"
+
+
+def test_paddle_shortcut_persists(app, monkeypatch, tmp_path) -> None:
+    from gamecenter.core.preferences import Preferences
+
+    monkeypatch.setenv("GC_NO_GAMEPAD", "1")
+    prefs = Preferences(tmp_path / "settings.json")
+    prefs.screenshot_gamepad = "p2+p1"
+    assert prefs.screenshot_gamepad == "P1+P2"
+
+    manager = gamepad.GamepadManager(prefs)
+    shots: list[bool] = []
+    manager.screenshot.connect(lambda: shots.append(True))
+    manager._check_screenshot_combo("P1+P2")
+    manager._check_screenshot_combo("P1+P2")
+    assert shots == [True]

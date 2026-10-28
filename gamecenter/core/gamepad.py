@@ -66,9 +66,20 @@ POLL_MS = 33
 SCREENSHOT_HOLD_SECONDS = 5.0
 
 
+# Some controllers (SCUF-style rear paddles) report extra buttons in the two
+# spare bits of ``wButtons``. They get stable names so a paddle always maps to
+# the same shortcut.
+PADDLE_ORDER: tuple[tuple[str, int], ...] = (
+    ("P1", 0x0400),
+    ("P2", 0x0800),
+)
+
+
 def combo_for(buttons: int) -> str:
     """Canonical ``"LB+RB"`` text for the pressed button mask."""
-    return "+".join(name for name, mask in BUTTON_ORDER if buttons & mask)
+    parts = [name for name, mask in BUTTON_ORDER if buttons & mask]
+    parts += [name for name, mask in PADDLE_ORDER if buttons & mask]
+    return "+".join(parts)
 
 
 def buttons_mask(pad, threshold: int = TRIGGER_THRESHOLD) -> int:
@@ -208,6 +219,11 @@ class GamepadManager(QObject):
     @Property(bool, notify=capturingChanged)
     def capturing(self) -> bool:
         return self._capturing
+
+    @Property(str, notify=changed)
+    def capturePreview(self) -> str:
+        """Buttons seen so far while recording a combination."""
+        return self._capture_seen.replace("+", " + ")
 
     @Slot(str)
     def setScreenshotCombo(self, combo: str) -> None:
@@ -350,10 +366,22 @@ class GamepadManager(QObject):
         self._last_combo = combo
 
     def _capture_step(self, buttons: int) -> None:
-        """Collect the buttons of a combination until they are released."""
+        """Collect the buttons of a combination until they are released.
+
+        Every mask seen while at least one button is held is merged, so the
+        result does not depend on the release order (LT+RT stays LT+RT).
+        """
         combo = combo_for(buttons)
         if combo:
-            self._capture_seen = combo
+            merged = "+".join(
+                dict.fromkeys(
+                    (self._capture_seen + "+" + combo).split("+")
+                    if self._capture_seen else combo.split("+")
+                )
+            )
+            if merged != self._capture_seen:
+                self._capture_seen = merged
+                self.changed.emit()
             return
         if not self._capture_seen:
             return

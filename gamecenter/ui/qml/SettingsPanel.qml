@@ -454,7 +454,9 @@ Item {
                             horizontalAlignment: Text.AlignHCenter
                             elide: Text.ElideRight
                             text: Gamepad.capturing
-                                  ? Tr.strings["Press the gamepad buttons you want to use."]
+                                  ? (Gamepad.capturePreview !== ""
+                                     ? Gamepad.capturePreview
+                                     : Tr.strings["Press the gamepad buttons you want to use."])
                                   : (Gamepad.screenshotCombo !== ""
                                      ? Gamepad.screenshotComboLabel
                                      : Tr.strings["Hold Select for %1 seconds."]

@@ -21,8 +21,12 @@
   - Las píldoras de filtro se dimensionan por su texto (`implicitWidth` +
     `Layout.preferredWidth`): ya no se solapan ni ignoran el layout.
 - **Mando**: los **gatillos analógicos LT/RT** se leen de `bLeftTrigger`/
-  `bRightTrigger` (umbral 60/255) y cuentan como botones: se pueden capturar en
-  el atajo de captura y combinar con el resto (p. ej. `RT`, `LB+RT`).
+  `bRightTrigger` (umbral 60/255) y cuentan como botones. La captura **acumula**
+  los botones mantenidos, así que una combinación se guarda igual sin importar
+  el orden en que se suelten (`LT+RT`, `LB+RT`, `A+X`). Los dos bits libres de
+  `wButtons` que usan algunas **paletas traseras** (estilo SCUF) se exponen como
+  `P1`/`P2` con nombres estables. La casilla muestra en vivo los botones
+  detectados mientras se graba.
 
 ### Decisiones de arquitectura
 

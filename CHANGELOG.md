@@ -39,8 +39,11 @@
     status and score, ←→ to change the value.
   - the mode-change toast is gone (the *Mode* pill already shows it).
   - filter pills size themselves to their text and no longer overlap.
-- **Gamepad**: analog **LT/RT** triggers are recognised as buttons, so they can be
-  used in custom screenshot shortcuts.
+- **Gamepad**: analog **LT/RT** triggers are recognised as buttons, combinations
+  are captured as chords (`LT+RT`, `LB+RT`, `A+X`…) regardless of the release
+  order, and the two spare XInput button bits used by SCUF-style **rear
+  paddles** are exposed as `P1`/`P2`. The capture chip shows the buttons as they
+  are pressed.
 
 ## v0.19.1
 
