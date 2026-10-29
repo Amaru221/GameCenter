@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.21.0
+## v0.20.2
 
 - **Big Picture feels faster**:
   - the carousel now keeps a 9-card window instead of 13, so off-screen covers,

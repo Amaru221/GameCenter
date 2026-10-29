@@ -1,6 +1,6 @@
 # WORKFLOW STATE - Fluidez de Big Picture, Stats y sonidos de interfaz
 
-## Feature 0.21.0 - Rendimiento, UX y sonidos estilo PS5
+## Feature 0.20.2 - Rendimiento, UX y sonidos estilo PS5
 
 ### Descripcion funcional
 
