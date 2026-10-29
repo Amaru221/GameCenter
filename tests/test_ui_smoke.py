@@ -888,7 +888,7 @@ def test_qml_stats_river_tooltip(app, model) -> None:
 
 
 def test_qml_big_picture_carousel_slides_through_a_long_library(app, model) -> None:
-    from PySide6.QtCore import QObject
+    from PySide6.QtCore import Q_ARG, QMetaObject, QObject
     from PySide6.QtTest import QTest
 
     from gamecenter.ui.app import create_engine
@@ -913,19 +913,49 @@ def test_qml_big_picture_carousel_slides_through_a_long_library(app, model) -> N
         games = games.toVariant()
     assert len(games) == 20
 
-    # Jump to the middle: the 9-card window shifts, so the track performs a
-    # directional slide instead of swapping covers in place.
+    # Jump to the middle: a far jump places the window on the target.
     picture.setProperty("selectedIndex", 10)
     app.processEvents()
     assert carousel.property("windowStart") == 6
-    step = carousel.property("slotStep")
-    offset = carousel.property("slideOffset")
-    assert offset > 0
-    assert offset <= step + 1
+    assert carousel.property("displayIndex") == 10
+    assert carousel.property("windowCount") == 9
 
+    # A normal one-slot step keeps the window and animates a real transition.
+    def card_positions():
+        found = {}
+
+        def walk(item):
+            yield item
+            for child in item.childItems():
+                yield from walk(child)
+
+        for item in walk(carousel):
+            index = item.property("absoluteIndex")
+            if index is not None:
+                found[int(index)] = item.property("x")
+        return found
+
+    before = card_positions()
+    center_x = carousel.property("centerX")
+    focus_width = carousel.property("focusWidth")
+
+    QMetaObject.invokeMethod(picture, "moveSelection", Q_ARG("QVariant", 1))
+    QTest.qWait(50)
+    app.processEvents()
+    assert carousel.property("displayIndex") == 11
+    assert carousel.property("windowStart") == 6
+    assert carousel.property("pendingIndex") == 11
+
+    middle = card_positions()
     QTest.qWait(260)
     app.processEvents()
-    assert abs(carousel.property("slideOffset")) < 1
+    after = card_positions()
+
+    final_focus_x = center_x - focus_width / 2
+    assert abs(after[11] - final_focus_x) < 2
+    assert before[11] > final_focus_x + 20
+    assert final_focus_x < middle[11] < before[11]
+    assert middle[10] < before[10]
 
 
 def test_qml_big_picture_hints_sit_in_the_top_bar(app, model) -> None:

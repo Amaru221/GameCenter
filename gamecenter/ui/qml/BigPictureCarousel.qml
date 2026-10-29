@@ -14,13 +14,17 @@ Item {
 
     readonly property int windowRadius: 4
     readonly property int windowCount: Math.min(games.length, windowRadius * 2 + 1)
-    readonly property int windowStart: {
-        if (!games.length) {
-            return 0;
-        }
-        var start = selectedIndex - windowRadius;
-        return Math.max(0, Math.min(games.length - windowCount, start));
-    }
+    readonly property int centerSlot: Math.floor(windowCount / 2)
+
+    // `windowStart` is mutable on purpose: before every step we recentre the
+    // window on the card that is currently on screen. That recentre is
+    // invisible (the same games stay at the same screen positions), and it lets
+    // the following step animate a single real slot without swapping covers.
+    property int windowStart: 0
+    property int displayIndex: 0
+    property int pendingIndex: 0
+    property bool suspendCardAnimations: false
+    property bool syncing: false
 
     readonly property real cardPad: Math.max(6, height * 0.02)
     readonly property real focusHeight: {
@@ -43,42 +47,85 @@ Item {
     readonly property real labelSize: Math.max(9, Math.min(14, height * 0.035))
     readonly property real slotStep: focusWidth / 2 + 14 + sideWidth / 2
 
-    // Keeps the movement readable when the 9-card window slides through a long
-    // library: the delegates keep their slots, so the whole track performs a
-    // short directional slide instead of swapping covers in place.
-    property int previousSelected: 0
-    property real slideOffset: 0
+    function maxWindowStart() {
+        return Math.max(0, games.length - windowCount);
+    }
 
-    function windowStartFor(index) {
+    function centerWindow(index) {
         if (!games.length) {
-            return 0;
+            windowStart = 0;
+            return;
         }
-        var start = index - windowRadius;
-        return Math.max(0, Math.min(games.length - windowCount, start));
+        var start = Math.max(
+            0,
+            Math.min(maxWindowStart(), index - centerSlot)
+        );
+        if (start !== windowStart) {
+            suspendCardAnimations = true;
+            windowStart = start;
+        }
     }
 
     onSelectedIndexChanged: {
-        var oldStart = windowStartFor(previousSelected);
-        var newStart = windowStartFor(selectedIndex);
-        var direction = selectedIndex > previousSelected ? 1 : -1;
-        previousSelected = selectedIndex;
-        if (games.length > windowCount && newStart !== oldStart
-                && direction !== 0) {
-            slideAnimation.stop();
-            slideOffset = direction * slotStep;
-            slideAnimation.start();
+        if (syncing || !games.length) {
+            return;
         }
+        pendingIndex = Math.max(0, Math.min(selectedIndex, games.length - 1));
+        if (Math.abs(pendingIndex - displayIndex) > windowRadius) {
+            // A far jump (programmatic selection, filter reset) cannot be
+            // disguised as a one-slot slide: place the window on the target and
+            // show it immediately.
+            suspendCardAnimations = true;
+            centerWindow(pendingIndex);
+            displayIndex = pendingIndex;
+            Qt.callLater(function() {
+                root.suspendCardAnimations = false;
+            });
+            return;
+        }
+        // Recentre for the card currently on screen (invisible), then let the
+        // next tick animate the real one-slot step.
+        centerWindow(displayIndex);
+        stepTimer.restart();
     }
 
-    onGamesChanged: previousSelected = selectedIndex
+    onGamesChanged: {
+        syncing = true;
+        suspendCardAnimations = true;
+        windowStart = 0;
+        displayIndex = games.length
+                       ? Math.max(0, Math.min(selectedIndex, games.length - 1))
+                       : 0;
+        pendingIndex = displayIndex;
+        Qt.callLater(function() {
+            root.centerWindow(root.displayIndex);
+            root.suspendCardAnimations = false;
+            root.syncing = false;
+        });
+    }
 
-    NumberAnimation {
-        id: slideAnimation
-        target: root
-        property: "slideOffset"
-        to: 0
-        duration: 190
-        easing.type: Easing.OutCubic
+    Component.onCompleted: {
+        displayIndex = selectedIndex;
+        pendingIndex = selectedIndex;
+        centerWindow(displayIndex);
+        Qt.callLater(function() {
+            root.suspendCardAnimations = false;
+        });
+    }
+
+    Timer {
+        id: stepTimer
+        interval: 1
+        repeat: false
+        onTriggered: {
+            if (!root.games.length) {
+                return;
+            }
+            root.suspendCardAnimations = false;
+            root.displayIndex = Math.max(
+                0, Math.min(root.pendingIndex, root.games.length - 1)
+            );
+        }
     }
 
     function horizontalX(offset) {
@@ -168,17 +215,16 @@ Item {
 
     Item {
         anchors.fill: parent
-        transform: Translate { x: root.slideOffset }
 
         Repeater {
             model: root.windowCount
 
-        delegate: Item {
-            id: card
-            readonly property int absoluteIndex: root.windowStart + index
-            readonly property int offset: absoluteIndex - root.selectedIndex
-            readonly property bool focused: offset === 0
-            readonly property var game: root.games[absoluteIndex] || ({})
+            delegate: Item {
+                id: card
+                readonly property int absoluteIndex: root.windowStart + index
+                readonly property int offset: absoluteIndex - root.displayIndex
+                readonly property bool focused: offset === 0
+                readonly property var game: root.games[absoluteIndex] || ({})
 
             width: focused ? root.focusWidth : root.sideWidth
             height: focused ? root.focusHeight : root.sideHeight
@@ -214,15 +260,40 @@ Item {
             ]
 
             // Snappy, console-style response: short enough to keep up with the
-            // gamepad's 130 ms repeat, long enough to read as motion.
-            Behavior on x { NumberAnimation { duration: 190; easing.type: Easing.OutCubic } }
-            Behavior on y { NumberAnimation { duration: 190; easing.type: Easing.OutCubic } }
-            Behavior on width { NumberAnimation { duration: 170; easing.type: Easing.OutCubic } }
-            Behavior on height { NumberAnimation { duration: 170; easing.type: Easing.OutCubic } }
-            Behavior on opacity { NumberAnimation { duration: 150 } }
-            Behavior on angleX { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-            Behavior on angleY { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-            Behavior on angleZ { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+            // gamepad's 130 ms repeat, long enough to read as motion. The
+            // invisible window recentre disables them for a single frame.
+            Behavior on x {
+                enabled: !root.suspendCardAnimations
+                NumberAnimation { duration: 190; easing.type: Easing.OutCubic }
+            }
+            Behavior on y {
+                enabled: !root.suspendCardAnimations
+                NumberAnimation { duration: 190; easing.type: Easing.OutCubic }
+            }
+            Behavior on width {
+                enabled: !root.suspendCardAnimations
+                NumberAnimation { duration: 170; easing.type: Easing.OutCubic }
+            }
+            Behavior on height {
+                enabled: !root.suspendCardAnimations
+                NumberAnimation { duration: 170; easing.type: Easing.OutCubic }
+            }
+            Behavior on opacity {
+                enabled: !root.suspendCardAnimations
+                NumberAnimation { duration: 150 }
+            }
+            Behavior on angleX {
+                enabled: !root.suspendCardAnimations
+                NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+            }
+            Behavior on angleY {
+                enabled: !root.suspendCardAnimations
+                NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+            }
+            Behavior on angleZ {
+                enabled: !root.suspendCardAnimations
+                NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+            }
 
             // The glow and the drop shadow are expensive overdraw; only the
             // focused cover needs them. Side cards keep a cheap border.

@@ -50,7 +50,7 @@ def test_sound_manager_is_silent_in_headless_mode(monkeypatch) -> None:
     assert manager._available is False
 
     # Every slot must be a harmless no-op without an audio device.
-    for name in ("navigate", "open", "close", "tab", "launch", "toggle"):
+    for name in ("navigate", "open", "close", "tab", "launch", "toggle", "startup"):
         getattr(manager, name)()
     manager.preload()
 

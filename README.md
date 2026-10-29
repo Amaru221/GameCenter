@@ -139,10 +139,13 @@ la muestra como una estantería y lanza los juegos con un doble clic.
     las animaciones duran 170-190 ms (a juego con la repeticion del mando), las
     caratulas se decodifican a un tamano acotado y solo la tarjeta enfocada pinta
     halo y brillo. El cambio de juego reutiliza la cache de imagen del hero y del
-    fondo.
+    fondo. En bibliotecas largas la ventana se recentra de forma invisible antes
+    de cada paso, asi cada caratula se mueve de verdad en lugar de intercambiar
+    contenido.
   - **Sonidos de interfaz estilo PS5**: navegar entre juegos, abrir/cerrar la
     ficha, cambiar de filtro/modo o de pestana en Stats e iniciar un juego tienen
-    cues cortos y originales, sintetizados en local. Se pueden silenciar en
+    cues cortos y originales, sintetizados en local; al entrar en Big Picture
+    suena un arranque calido tipo consola. Se pueden silenciar en
     **Ajustes -> Sonido**.
   - La navegación se adapta al modo: arriba/abajo o izquierda/derecha para
     moverse y para cambiar de filtro según el carrusel activo.

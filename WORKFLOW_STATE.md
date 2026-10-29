@@ -35,10 +35,13 @@
      de vista pinte antes de recalcular.
 
 3. **Sonidos de interfaz estilo PS5 (unicos, sintetizados)**
-   - Navegar entre juegos: tick corto y suave.
+   - Navegar entre juegos: tick moderno, redondo y con cuerpo grave (sin armonicos
+     brillantes de 8 bits).
    - Abrir/cerrar el modal de detalle: swell ascendente / descenso aireado.
    - Cambiar de pestana/filtro/modo o periodo de Stats: blip de dos tonos.
    - Iniciar un juego: swell grave con quinta y shimmer.
+   - Entrar en Big Picture: arranque calido tipo consola (acorde ascendente,
+     sub, shimmer y aire).
    - Favorito: click sutil.
    - Los WAV se generan una vez en la cache local (`QStandardPaths.CacheLocation`)
      y se reproducen con `QSoundEffect` (baja latencia). No se anaden binarios al
@@ -61,7 +64,13 @@
 - `playtime.all_history()` usa una cache module-level con `(ruta, mtime_ns)` como
   clave; las escrituras existentes ya cambian el mtime.
 - En `BigPictureCarousel` la ventana se reduce a radio 4. La posicion sigue
-  calculandose por offset, asi que no cambia el contrato visual.
+  calculandose por offset, pero `windowStart` es mutable: antes de cada paso se
+  recentra de forma invisible sobre la tarjeta que esta en pantalla (mismos
+  juegos en las mismas posiciones) y despues se anima un unico slot real. Asi
+  las caratulas conservan su identidad y no se intercambia el contenido.
+- Un salto lejano (seleccion programatica o reset de filtro) recoloca la ventana
+  en el destino y muestra el resultado sin animacion; los pasos normales de
+  mando/teclado siempre transicionan.
 - El Canvas del river se divide en `riverChart` (estatico) y `riverHover` (solo
   hover). `chartCard.hoverIndex` sigue siendo la unica fuente de verdad.
 
@@ -75,6 +84,7 @@
 | `Sounds.tab()` | Slot | Cambio de pestana, filtro, modo o periodo. |
 | `Sounds.launch()` | Slot | Inicio de juego. |
 | `Sounds.toggle()` | Slot | Favorito / ajuste puntual. |
+| `Sounds.startup()` | Slot | Arranque tipo consola al entrar en Big Picture. |
 | `Sounds.enabled` | bool (notify enabledChanged) | Silencia o activa los efectos. |
 | `Sounds.setEnabled(bool)` | Slot | Persiste la preferencia. |
 | `Preferences.sound_enabled` | property bool | Valor guardado en settings.json. |
@@ -85,7 +95,7 @@
 ### Checklist
 
 #### Backend
-- [x] `core/sounds.py`: sintesis WAV de 6 cues, cache en disco, pool `QSoundEffect`, fallback sin audio.
+- [x] `core/sounds.py`: sintesis WAV de 7 cues, cache en disco, pool `QSoundEffect`, fallback sin audio.
 - [x] `preferences.py`: `sound_enabled` (default true) con getter/setter persistente.
 - [x] `app.py`: instanciar `SoundManager`, exponer `Sounds` y precargar en idle.
 - [x] `library_model.py`: cache de `stats()` / `yearReview()` y de URLs de caratula, invalidados por senales.
@@ -96,8 +106,8 @@
 #### Frontend
 - [x] `BigPicture.qml`: hooks de sonido, `closeDetail()`, imagenes con `sourceSize`/`mipmap`.
 - [x] `BigPictureCarousel.qml`: radio 4, animaciones 180-220 ms, menos overdraw, `sourceSize`.
-- [x] `BigPictureCarousel.qml`: deslizamiento direccional cuando la ventana de tarjetas se recoloca.
-- [x] `Main.qml`: sonido en el cambio de vista Biblioteca/Stats/Tienda.
+- [x] `BigPictureCarousel.qml`: recentrado invisible + transicion real de un slot; salto lejano instantaneo.
+- [x] `Main.qml`: sonido en el cambio de vista Biblioteca/Stats/Tienda y arranque al entrar en Big Picture.
 - [x] `StatsView.qml`: Canvas de hover separado, refresco diferido, sonidos de pestana/periodo/ano, `sourceSize` en caratulas.
 - [x] `SettingsPanel.qml`: toggle "Efectos de sonido" enlazado a `Sounds.enabled`.
 - [x] `i18n.py`: traducciones ES/FR/DE/IT/PT de las etiquetas nuevas.

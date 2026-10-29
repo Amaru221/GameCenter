@@ -30,16 +30,17 @@ except Exception:  # noqa: BLE001 - an optional dependency at runtime
     QSoundEffect = None  # type: ignore[assignment]
 
 SAMPLE_RATE = 44100
-CUE_VERSION = 3
-CUES = ("navigate", "open", "close", "tab", "launch", "toggle")
-_VOICES = {"navigate": 3, "tab": 3, "toggle": 2}
+CUE_VERSION = 5
+CUES = ("navigate", "open", "close", "tab", "launch", "toggle", "startup")
+_VOICES = {"navigate": 3, "tab": 3, "toggle": 2, "startup": 1}
 _VOLUME = {
-    "navigate": 0.26,
+    "navigate": 0.24,
     "open": 0.34,
     "close": 0.30,
     "tab": 0.28,
     "launch": 0.42,
     "toggle": 0.22,
+    "startup": 0.55,
 }
 
 
@@ -117,21 +118,42 @@ def _add_air(
 
 
 def _navigate() -> list[float]:
-    duration = 0.060
+    """A soft, modern UI tick: rounded body, no bright square-ish harmonics."""
+    duration = 0.075
     size = int(duration * SAMPLE_RATE)
     buffer = [0.0] * size
     _add_tone(
         buffer,
         start=0.0,
         duration=duration,
-        start_hz=1120.0,
-        end_hz=980.0,
-        amplitude=0.55,
+        start_hz=520.0,
+        end_hz=468.0,
+        amplitude=0.56,
+        attack=0.003,
+        curve=5.5,
+        partials=((1.0, 1.0), (2.0, 0.07)),
+    )
+    _add_tone(
+        buffer,
+        start=0.0,
+        duration=0.050,
+        start_hz=260.0,
+        end_hz=238.0,
+        amplitude=0.12,
+        attack=0.004,
+        curve=4.0,
+    )
+    _add_tone(
+        buffer,
+        start=0.0,
+        duration=0.040,
+        start_hz=1040.0,
+        end_hz=940.0,
+        amplitude=0.045,
         attack=0.002,
         curve=7.0,
-        partials=((1.0, 1.0), (2.0, 0.16), (3.0, 0.05)),
     )
-    _add_air(buffer, start=0.0, duration=0.012, amplitude=0.18, seed=11)
+    _add_air(buffer, start=0.0, duration=0.016, amplitude=0.045, seed=11, smooth=10)
     return buffer
 
 
@@ -293,6 +315,86 @@ def _launch() -> list[float]:
     return buffer
 
 
+def _startup() -> list[float]:
+    """A warm, ascending console-boot swell (PlayStation-inspired)."""
+    duration = 1.350
+    size = int(duration * SAMPLE_RATE)
+    buffer = [0.0] * size
+
+    # Sub foundation that rises gently under the chord.
+    _add_tone(
+        buffer,
+        start=0.0,
+        duration=1.250,
+        start_hz=55.0,
+        end_hz=82.41,
+        amplitude=0.20,
+        attack=0.160,
+        curve=1.6,
+        partials=((1.0, 1.0), (2.0, 0.18)),
+    )
+
+    # Warm A-major chord with staggered entries.
+    for start, frequency, amplitude in (
+        (0.00, 220.00, 0.16),
+        (0.06, 277.18, 0.13),
+        (0.12, 329.63, 0.13),
+        (0.20, 440.00, 0.12),
+    ):
+        _add_tone(
+            buffer,
+            start=start,
+            duration=max(0.30, 1.10 - start),
+            start_hz=frequency,
+            end_hz=frequency * 1.01,
+            amplitude=amplitude,
+            attack=0.100,
+            curve=1.5,
+            partials=((1.0, 1.0), (2.0, 0.12), (3.0, 0.04)),
+        )
+
+    # Airy shimmer that opens up during the swell.
+    _add_tone(
+        buffer,
+        start=0.320,
+        duration=0.850,
+        start_hz=879.0,
+        end_hz=1046.5,
+        amplitude=0.050,
+        attack=0.200,
+        curve=1.3,
+        partials=((1.0, 1.0), (2.0, 0.08)),
+    )
+    _add_tone(
+        buffer,
+        start=0.460,
+        duration=0.700,
+        start_hz=1318.5,
+        end_hz=1567.98,
+        amplitude=0.032,
+        attack=0.200,
+        curve=1.3,
+    )
+    _add_tone(
+        buffer,
+        start=0.580,
+        duration=0.550,
+        start_hz=2093.0,
+        amplitude=0.018,
+        attack=0.180,
+        curve=1.1,
+    )
+    _add_air(
+        buffer,
+        start=0.050,
+        duration=0.950,
+        amplitude=0.060,
+        seed=101,
+        smooth=30,
+    )
+    return buffer
+
+
 def _toggle() -> list[float]:
     duration = 0.070
     size = int(duration * SAMPLE_RATE)
@@ -319,6 +421,7 @@ _BUILDERS = {
     "tab": _tab,
     "launch": _launch,
     "toggle": _toggle,
+    "startup": _startup,
 }
 
 
@@ -504,3 +607,8 @@ class SoundManager(QObject):
     @Slot()
     def toggle(self) -> None:
         self._play("toggle")
+
+    @Slot()
+    def startup(self) -> None:
+        """Console-boot swell played when Big Picture opens."""
+        self._play("startup")

@@ -50,6 +50,7 @@ Window {
     onBigPictureOpenChanged: {
         if (bigPictureOpen) {
             bigPictureMounted = true;
+            Sounds.startup();
             topBar.clearSearchFocus();
             requestActivate();
         } else if (bigPictureMounted) {

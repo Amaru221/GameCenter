@@ -7,6 +7,8 @@
     shadows and animations are not decoded or painted;
   - transitions run in 170-190 ms, matching the gamepad repeat rate without
     dropping frames;
+  - the window is recentred invisibly before each step, so every cover keeps its
+    identity and animates a real slot instead of swapping content in place;
   - covers are decoded at a bounded `sourceSize` (and the background uses
     `mipmap`), while the hero, backdrop and focused card share the same cached
     image;
@@ -23,9 +25,10 @@
     paints immediately.
 - **PS5-inspired interface sounds**: short, original synthesized cues for
   moving between games, opening/closing the detail modal, changing tabs,
-  filters and modes, toggling a favourite and launching a game. WAVs are
-  generated once in the local cache and played with `QSoundEffect`; no binary
-  assets ship with the repository.
+  filters and modes, toggling a favourite and launching a game. The navigation
+  tick is soft and rounded (not a retro beep), and opening Big Picture plays a
+  warm console-boot swell. WAVs are generated once in the local cache and played
+  with `QSoundEffect`; no binary assets ship with the repository.
 - **Sound settings**: new **Settings -> Sound -> Interface sounds** toggle,
   persisted in `settings.json`. Headless/CI runs and machines without an audio
   device silently disable the effects.
