@@ -6,7 +6,7 @@ import os
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QSize, QUrl
+from PySide6.QtCore import QSize, QTimer, QUrl
 from PySide6.QtGui import QFontDatabase, QGuiApplication, QImage
 from PySide6.QtQml import QQmlApplicationEngine, QQmlComponent
 from PySide6.QtQuick import QQuickImageProvider
@@ -16,6 +16,7 @@ from PySide6.QtWidgets import QApplication
 from .. import __version__
 from ..core.gamepad import GamepadManager
 from ..core.screenshots import ScreenshotManager
+from ..core.sounds import SoundManager
 from . import covers
 from .library_model import LibraryModel
 
@@ -94,7 +95,18 @@ def create_engine(library: LibraryModel) -> QQmlApplicationEngine:
     engine.rootContext().setContextProperty("Screenshots", screenshots)
     gamepad.screenshot.connect(screenshots.captureIfPlaying)
 
+    sounds = SoundManager(library._prefs)
+    sounds.setParent(engine)
+    engine.rootContext().setContextProperty("Sounds", sounds)
+
     engine.load(QUrl.fromLocalFile(str(QML_DIR / "Main.qml")))
+    # Generate/load the cues just after the first frame so opening the window
+    # is never blocked by audio synthesis on the very first run. The timer is
+    # parented to the engine, so tearing the engine down cancels it safely.
+    preload_timer = QTimer(engine)
+    preload_timer.setSingleShot(True)
+    preload_timer.timeout.connect(sounds.preload)
+    preload_timer.start(600)
     if engine.rootObjects() and not os.environ.get("GC_NO_OVERLAY"):
         overlay = QQmlComponent(
             engine,

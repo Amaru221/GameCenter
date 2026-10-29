@@ -177,6 +177,7 @@ class Preferences:
         )
 
         data["checkUpdates"] = bool(data.get("checkUpdates", True))
+        data["soundEnabled"] = bool(data.get("soundEnabled", True))
         language = str(data.get("language") or "en")
         data["language"] = language if language in CODES else "en"
 
@@ -294,6 +295,17 @@ class Preferences:
     @last_update_check.setter
     def last_update_check(self, value: float) -> None:
         self._data["lastUpdateCheck"] = float(value)
+        self._save()
+
+    # -- interface sounds -------------------------------------------------
+
+    @property
+    def sound_enabled(self) -> bool:
+        return bool(self._data["soundEnabled"])
+
+    @sound_enabled.setter
+    def sound_enabled(self, value: bool) -> None:
+        self._data["soundEnabled"] = bool(value)
         self._save()
 
     # -- screenshots ------------------------------------------------------

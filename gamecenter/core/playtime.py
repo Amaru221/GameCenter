@@ -313,9 +313,25 @@ def record_session(game: Game, started_at: float, seconds: float) -> None:
     _write(path, data)
 
 
+_HISTORY_CACHE: tuple[str, int, dict[str, list[dict]]] | None = None
+
+
 def all_history() -> dict[str, list[dict]]:
-    """Every stored session, grouped by game id."""
-    raw = _read(history_path())
+    """Every stored session, grouped by game id (cached by path + mtime)."""
+    global _HISTORY_CACHE
+    path = history_path()
+    try:
+        stamp = path.stat().st_mtime_ns
+    except OSError:
+        return {}
+    if (
+        _HISTORY_CACHE is not None
+        and _HISTORY_CACHE[0] == str(path)
+        and _HISTORY_CACHE[1] == stamp
+    ):
+        return _HISTORY_CACHE[2]
+
+    raw = _read(path)
     out: dict[str, list[dict]] = {}
     for game_id, entries in raw.items():
         if not isinstance(entries, list):
@@ -342,11 +358,12 @@ def all_history() -> dict[str, list[dict]]:
             )
         if parsed:
             out[str(game_id)] = parsed
+    _HISTORY_CACHE = (str(path), stamp, out)
     return out
 
 
 def history_for(game: Game) -> list[dict]:
     """Finished sessions for a game, newest first."""
-    entries = all_history().get(game.id, [])
+    entries = list(all_history().get(game.id, []))
     entries.sort(key=lambda item: item["start"], reverse=True)
     return entries

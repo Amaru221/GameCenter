@@ -153,14 +153,18 @@ Item {
         var modes = ["arc", "flat", "ring", "wheel"];
         var current = modes.indexOf(carouselMode);
         carouselMode = modes[(current + delta + modes.length) % modes.length];
+        Sounds.tab();
     }
 
     function moveSelection(dx) {
         if (!games.length) {
             return;
         }
-        selectedIndex = Math.max(0, Math.min(games.length - 1,
-                                            selectedIndex + dx));
+        var next = Math.max(0, Math.min(games.length - 1, selectedIndex + dx));
+        if (next !== selectedIndex) {
+            selectedIndex = next;
+            Sounds.navigate();
+        }
     }
 
     function cycleFilter(delta) {
@@ -168,6 +172,7 @@ Item {
         var current = order.indexOf(filter);
         filter = order[(current + delta + order.length) % order.length];
         selectedIndex = 0;
+        Sounds.tab();
     }
 
     function toggleFavorite() {
@@ -175,6 +180,7 @@ Item {
             return;
         }
         Library.toggleFavoriteById(selected.id);
+        Sounds.toggle();
     }
 
     function toggleProfile() {
@@ -186,6 +192,7 @@ Item {
             return;
         }
         gameModal.profileOpen = !gameModal.profileOpen;
+        Sounds.tab();
     }
 
     function screenshotsStep(delta) {
@@ -215,6 +222,7 @@ Item {
         }
         Library.toggleFavoriteById(detailGame.id);
         detailGame = Library.gameDetailById(detailGame.id);
+        Sounds.toggle();
     }
 
     function openDetail() {
@@ -223,7 +231,24 @@ Item {
         }
         detailGame = Library.gameDetailById(selected.id);
         detailOpen = true;
+        Sounds.open();
         Library.loadDetailsById(selected.id);
+    }
+
+    function closeDetail() {
+        if (!detailOpen) {
+            return;
+        }
+        if (gameModal.viewerOpen) {
+            gameModal.closeViewer();
+            return;
+        }
+        if (gameModal.profileOpen) {
+            gameModal.profileOpen = false;
+            return;
+        }
+        detailOpen = false;
+        Sounds.close();
     }
 
     function launchGame(gameId, title) {
@@ -232,6 +257,7 @@ Item {
         }
         var session = Library.launchById(gameId);
         if (session) {
+            Sounds.launch();
             status = Tr.strings["Launching..."] + " " + (title || "");
         } else {
             status = Tr.strings["Couldn't launch the game."];
@@ -246,14 +272,27 @@ Item {
     function requestExit() {
         exitConfirmOpen = true;
         exitFocus = 0;
+        Sounds.open();
+    }
+
+    function cancelExit() {
+        if (exitConfirmOpen) {
+            exitConfirmOpen = false;
+            Sounds.close();
+        }
     }
 
     function activateExitFocus() {
         if (exitFocus === 1) {
-            root.closeRequested();
+            confirmExit();
         } else {
-            exitConfirmOpen = false;
+            cancelExit();
         }
+    }
+
+    function confirmExit() {
+        Sounds.close();
+        root.closeRequested();
     }
 
     Keys.onPressed: (event) => {
@@ -271,7 +310,7 @@ Item {
                 event.accepted = true;
             } else if (event.key === Qt.Key_Escape
                        || event.key === Qt.Key_Backspace) {
-                root.exitConfirmOpen = false;
+                root.cancelExit();
                 event.accepted = true;
             }
             return;
@@ -333,7 +372,7 @@ Item {
                 if (gameModal.profileOpen) {
                     gameModal.profileOpen = false;
                 } else {
-                    root.detailOpen = false;
+                    root.closeDetail();
                 }
                 event.accepted = true;
             } else if (event.key === Qt.Key_Return
@@ -493,14 +532,14 @@ Item {
                 return;
             }
             if (root.exitConfirmOpen) {
-                root.exitConfirmOpen = false;
+                root.cancelExit();
             } else if (root.detailOpen) {
                 if (gameModal.viewerOpen) {
                     gameModal.closeViewer();
                 } else if (gameModal.profileOpen) {
                     gameModal.profileOpen = false;
                 } else {
-                    root.detailOpen = false;
+                    root.closeDetail();
                 }
             }
         }
@@ -606,9 +645,11 @@ Item {
     Image {
         anchors.fill: parent
         source: root.selected.cover || ""
+        sourceSize.width: 512
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
         cache: true
+        mipmap: true
         opacity: 0.18
         smooth: true
     }
@@ -952,10 +993,12 @@ Item {
                 Image {
                     anchors.fill: parent
                     source: root.selected.cover || ""
+                    sourceSize.width: 512
                     fillMode: Image.PreserveAspectFit
                     asynchronous: true
                     cache: true
                     smooth: true
+                    mipmap: true
                 }
 
                 Rectangle {
@@ -1373,7 +1416,12 @@ Item {
                 games: root.games
                 selectedIndex: root.selectedIndex
                 mode: root.carouselMode
-                onSelected: (index) => root.selectedIndex = index
+                onSelected: (index) => {
+                    if (index !== root.selectedIndex) {
+                        root.selectedIndex = index;
+                        Sounds.navigate();
+                    }
+                }
                 onActivated: (index) => {
                     var game = root.games[index] || ({});
                     root.launchGame(game.id, game.title);
@@ -1456,7 +1504,7 @@ Item {
 
         MouseArea {
             anchors.fill: parent
-            onClicked: root.exitConfirmOpen = false
+            onClicked: root.cancelExit()
         }
 
         Rectangle {
@@ -1515,7 +1563,7 @@ Item {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onEntered: root.exitFocus = 0
-                            onClicked: root.exitConfirmOpen = false
+                            onClicked: root.cancelExit()
                         }
                     }
 
@@ -1547,7 +1595,7 @@ Item {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onEntered: root.exitFocus = 1
-                            onClicked: root.closeRequested()
+                            onClicked: root.confirmExit()
                         }
                     }
                 }
@@ -1602,7 +1650,7 @@ Item {
         game: root.detailGame
         backdropItem: null
         showArt: false
-        onCloseRequested: root.detailOpen = false
+        onCloseRequested: root.closeDetail()
         onPlayRequested: {
             root.detailOpen = false;
             root.launchGame(root.detailGame.id, root.detailGame.title);

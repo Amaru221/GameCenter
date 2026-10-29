@@ -808,6 +808,41 @@ def test_local_cover_from_disk(model, tmp_path) -> None:
     assert model.setGameCover(0, str(source.parent / "notes.txt")) is False
 
 
+def test_stats_are_memoized_and_invalidated(model, monkeypatch) -> None:
+    calls: list[int] = []
+    original = library_model.stats_module.build
+
+    def counting(*args, **kwargs):
+        calls.append(1)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(library_model.stats_module, "build", counting)
+    model._stats_cache.clear()
+    year = date.today().year
+
+    first = model.stats("year", year)
+    second = model.stats("year", year)
+    assert first is second
+    assert len(calls) == 1
+
+    model.playtimeChanged.emit()
+    model.stats("year", year)
+    assert len(calls) == 2
+
+    model.translator.setLanguage("es")
+    model.stats("year", year)
+    assert len(calls) == 3
+
+
+def test_cover_urls_are_cached_per_game(model) -> None:
+    game = model._all[0]
+    first = model._cover_url(game)
+    assert model._cover_url(game) is first
+    model._notify_cover(game.id)
+    assert game.id not in model._cover_urls
+    assert model._cover_url(game) == first
+
+
 def test_qml_stats_river_tooltip(app, model) -> None:
     from PySide6.QtCore import QObject
 
@@ -850,6 +885,47 @@ def test_qml_stats_river_tooltip(app, model) -> None:
     card.setProperty("hoverIndex", -1)
     app.processEvents()
     assert tooltip.property("visible") is False
+
+
+def test_qml_big_picture_carousel_slides_through_a_long_library(app, model) -> None:
+    from PySide6.QtCore import QObject
+    from PySide6.QtTest import QTest
+
+    from gamecenter.ui.app import create_engine
+
+    model._all = [
+        Game(id=f"steam:{index}", title=f"Game {index:02d}", source="steam")
+        for index in range(20)
+    ]
+    model._refresh_rows()
+    model._cover_urls.clear()
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.setProperty("bigPictureOpen", True)
+    app.processEvents()
+
+    picture = root.findChild(QObject, "bigPicture")
+    carousel = root.findChild(QObject, "bigPictureCarousel")
+    assert picture is not None and carousel is not None
+    games = carousel.property("games")
+    if hasattr(games, "toVariant"):
+        games = games.toVariant()
+    assert len(games) == 20
+
+    # Jump to the middle: the 9-card window shifts, so the track performs a
+    # directional slide instead of swapping covers in place.
+    picture.setProperty("selectedIndex", 10)
+    app.processEvents()
+    assert carousel.property("windowStart") == 6
+    step = carousel.property("slotStep")
+    offset = carousel.property("slideOffset")
+    assert offset > 0
+    assert offset <= step + 1
+
+    QTest.qWait(260)
+    app.processEvents()
+    assert abs(carousel.property("slideOffset")) < 1
 
 
 def test_qml_big_picture_hints_sit_in_the_top_bar(app, model) -> None:
@@ -1368,6 +1444,33 @@ def test_qml_big_picture_mode_change_has_no_toast(app, model) -> None:
 
     assert picture.property("carouselMode") == "flat"
     assert picture.property("status") == ""
+
+
+def test_qml_settings_has_a_sound_toggle(app, model) -> None:
+    from PySide6.QtCore import QObject
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.show()
+    root.setProperty("settingsOpen", True)
+    app.processEvents()
+
+    toggle = root.findChild(QObject, "soundToggle")
+    assert toggle is not None
+    sound = engine.rootContext().contextProperty("Sounds")
+    assert sound is not None
+
+    sound.setEnabled(False)
+    app.processEvents()
+    assert sound.property("enabled") is False
+    assert model._prefs.sound_enabled is False
+
+    sound.setEnabled(True)
+    app.processEvents()
+    assert sound.property("enabled") is True
+    assert model._prefs.sound_enabled is True
 
 
 def test_qml_big_picture_detail_profile_and_screenshots(app, model) -> None:

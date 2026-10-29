@@ -1,5 +1,7 @@
 """Playtime files for non-Steam games."""
 
+import time
+
 import pytest
 
 from gamecenter.core import playtime
@@ -30,6 +32,22 @@ def test_writes_in_the_game_root(tmp_path) -> None:
     assert stored.is_file()
     assert '"seconds": 120' in stored.read_text(encoding="utf-8")
     assert playtime.summary_for(game)["sessions"] == 2
+
+
+def test_all_history_is_cached_until_the_file_changes(tmp_path) -> None:
+    game = _game(tmp_path)
+    playtime.record_session(game, 1000, 60)
+
+    first = playtime.all_history()
+    assert first[game.id][0]["seconds"] == 60
+    assert playtime.all_history() is first
+
+    time.sleep(0.01)
+    playtime.record_session(game, 2000, 120)
+
+    second = playtime.all_history()
+    assert second is not first
+    assert len(second[game.id]) == 2
 
 
 def test_steam_is_never_written(tmp_path) -> None:

@@ -12,7 +12,7 @@ Item {
     signal selected(int index)
     signal activated(int index)
 
-    readonly property int windowRadius: 6
+    readonly property int windowRadius: 4
     readonly property int windowCount: Math.min(games.length, windowRadius * 2 + 1)
     readonly property int windowStart: {
         if (!games.length) {
@@ -41,6 +41,45 @@ Item {
     readonly property real centerX: width / 2
     readonly property real centerY: height / 2
     readonly property real labelSize: Math.max(9, Math.min(14, height * 0.035))
+    readonly property real slotStep: focusWidth / 2 + 14 + sideWidth / 2
+
+    // Keeps the movement readable when the 9-card window slides through a long
+    // library: the delegates keep their slots, so the whole track performs a
+    // short directional slide instead of swapping covers in place.
+    property int previousSelected: 0
+    property real slideOffset: 0
+
+    function windowStartFor(index) {
+        if (!games.length) {
+            return 0;
+        }
+        var start = index - windowRadius;
+        return Math.max(0, Math.min(games.length - windowCount, start));
+    }
+
+    onSelectedIndexChanged: {
+        var oldStart = windowStartFor(previousSelected);
+        var newStart = windowStartFor(selectedIndex);
+        var direction = selectedIndex > previousSelected ? 1 : -1;
+        previousSelected = selectedIndex;
+        if (games.length > windowCount && newStart !== oldStart
+                && direction !== 0) {
+            slideAnimation.stop();
+            slideOffset = direction * slotStep;
+            slideAnimation.start();
+        }
+    }
+
+    onGamesChanged: previousSelected = selectedIndex
+
+    NumberAnimation {
+        id: slideAnimation
+        target: root
+        property: "slideOffset"
+        to: 0
+        duration: 190
+        easing.type: Easing.OutCubic
+    }
 
     function horizontalX(offset) {
         if (offset === 0) {
@@ -127,8 +166,12 @@ Item {
         z: 0
     }
 
-    Repeater {
-        model: root.windowCount
+    Item {
+        anchors.fill: parent
+        transform: Translate { x: root.slideOffset }
+
+        Repeater {
+            model: root.windowCount
 
         delegate: Item {
             id: card
@@ -143,6 +186,7 @@ Item {
             y: root.cardY(offset, height)
             z: focused ? 100 : 50 - Math.abs(offset) * 4
             opacity: root.cardOpacity(offset)
+            antialiasing: true
 
             property real angleX: root.cardAngleX(offset)
             property real angleY: root.cardAngleY(offset)
@@ -169,21 +213,26 @@ Item {
                 }
             ]
 
-            Behavior on x { NumberAnimation { duration: 280; easing.type: Easing.OutCubic } }
-            Behavior on y { NumberAnimation { duration: 280; easing.type: Easing.OutCubic } }
-            Behavior on width { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
-            Behavior on height { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
-            Behavior on opacity { NumberAnimation { duration: 220 } }
-            Behavior on angleX { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
-            Behavior on angleY { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
-            Behavior on angleZ { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
+            // Snappy, console-style response: short enough to keep up with the
+            // gamepad's 130 ms repeat, long enough to read as motion.
+            Behavior on x { NumberAnimation { duration: 190; easing.type: Easing.OutCubic } }
+            Behavior on y { NumberAnimation { duration: 190; easing.type: Easing.OutCubic } }
+            Behavior on width { NumberAnimation { duration: 170; easing.type: Easing.OutCubic } }
+            Behavior on height { NumberAnimation { duration: 170; easing.type: Easing.OutCubic } }
+            Behavior on opacity { NumberAnimation { duration: 150 } }
+            Behavior on angleX { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+            Behavior on angleY { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+            Behavior on angleZ { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
 
+            // The glow and the drop shadow are expensive overdraw; only the
+            // focused cover needs them. Side cards keep a cheap border.
             Rectangle {
                 anchors.fill: parent
                 anchors.margins: -8
                 radius: 24
                 color: Library.accent
-                opacity: card.focused ? 0.12 : 0
+                opacity: 0.12
+                visible: card.focused
                 z: -2
             }
 
@@ -192,8 +241,9 @@ Item {
                 anchors.margins: -2
                 radius: 18
                 color: "#000000"
-                opacity: card.focused ? 0.45 : 0.3
+                opacity: 0.45
                 y: 5
+                visible: card.focused
                 z: -1
             }
 
@@ -216,13 +266,16 @@ Item {
                 Image {
                     anchors.fill: parent
                     source: card.game.cover || ""
+                    sourceSize.width: 512
                     fillMode: Image.PreserveAspectFit
                     asynchronous: true
                     cache: true
                     smooth: true
+                    mipmap: true
                 }
 
                 Rectangle {
+                    visible: card.focused
                     width: cover.width * 2
                     height: cover.height * 0.55
                     x: -cover.width * 0.45
@@ -233,7 +286,7 @@ Item {
                         GradientStop { position: 0.55; color: "#0affffff" }
                         GradientStop { position: 1.0; color: "#00ffffff" }
                     }
-                    opacity: card.focused ? 0.16 : 0.05
+                    opacity: 0.16
                 }
             }
 
@@ -259,6 +312,7 @@ Item {
                 onClicked: root.selected(card.absoluteIndex)
                 onDoubleClicked: root.activated(card.absoluteIndex)
             }
+        }
         }
     }
 

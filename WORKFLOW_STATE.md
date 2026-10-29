@@ -1,3 +1,116 @@
+# WORKFLOW STATE - Fluidez de Big Picture, Stats y sonidos de interfaz
+
+## Feature 0.21.0 - Rendimiento, UX y sonidos estilo PS5
+
+### Descripcion funcional
+
+1. **Big Picture mas fluido**
+   - Menos delegados vivos en el carrusel (ventana de 9 tarjetas en vez de 13)
+     para recortar decodificacion de imagenes, sombras y animaciones fuera de
+     pantalla.
+   - Animaciones mas cortas y con salida suave (180-220 ms) para que la respuesta
+     al mando/teclado se sienta inmediata sin perder el fundido.
+   - La ventana de 9 tarjetas mantiene sus posiciones cuando se desplaza por el
+     centro de una biblioteca larga; un deslizamiento direccional de 190 ms
+     acompania el cambio para que no parezca un intercambio de caratulas.
+   - Las caratulas se decodifican a un tamano maximo (`sourceSize`) y el fondo a
+     baja resolucion; hero, fondo y tarjeta comparten cache para que el cambio de
+     juego no vuelva a leer el archivo.
+   - Solo la tarjeta enfocada pinta el glow y el brillo decorativo: menos overdraw
+     por frame.
+   - El fondo del modo Big Picture usa `mipmap` y un tamano de origen acotado.
+
+2. **Estadisticas mas fluidas**
+   - El grafico "river" se separa en dos capas: un Canvas estatico con las pilas
+     y un Canvas superpuesto que solo dibuja la guia y los puntos del hover. Mover
+     el raton ya no repinta todas las curvas.
+   - `Library.stats()` y `Library.yearReview()` se memorizan por periodo/ano/mes/
+     idioma. El cache se invalida al cambiar el historial, la biblioteca o el
+     idioma.
+   - `playtime.all_history()` cachea el JSON por ruta y `mtime`, evitando leer el
+     archivo en cada refresco.
+   - Las URLs de caratula se cachean por juego y se invalidan al llegar arte nuevo;
+     construir el mapa de caratulas de Stats deja de hacer `stat()` por juego.
+   - El refresco de Stats se difiere un frame (`Qt.callLater`) para que el cambio
+     de vista pinte antes de recalcular.
+
+3. **Sonidos de interfaz estilo PS5 (unicos, sintetizados)**
+   - Navegar entre juegos: tick corto y suave.
+   - Abrir/cerrar el modal de detalle: swell ascendente / descenso aireado.
+   - Cambiar de pestana/filtro/modo o periodo de Stats: blip de dos tonos.
+   - Iniciar un juego: swell grave con quinta y shimmer.
+   - Favorito: click sutil.
+   - Los WAV se generan una vez en la cache local (`QStandardPaths.CacheLocation`)
+     y se reproducen con `QSoundEffect` (baja latencia). No se anaden binarios al
+     repositorio.
+   - Ajuste "Efectos de sonido" en Settings para silenciarlos. Se recuerda en
+     `settings.json`.
+
+### Decisiones de arquitectura
+
+- `gamecenter/core/sounds.py` encapsula sintesis, cache y reproduccion. Expone
+  `Sounds` como context property. Si no hay dispositivo de audio, Qt esta en
+  offscreen o `GC_NO_SOUND=1`, el manager queda inactivo y todos los slots son
+  no-op (tests y CI seguros).
+- El pool de efectos es de 3 voces por sonido para que la navegacion rapida no
+  corte el cue anterior.
+- La preferencia vive en `Preferences.sound_enabled` y `SoundManager` la expone a
+  QML con `enabled` / `setEnabled`.
+- `LibraryModel` mantiene caches de Stats y de URLs de caratula; se invalidan con
+  las senales existentes (`changed`, `playtimeChanged`, `languageChanged`).
+- `playtime.all_history()` usa una cache module-level con `(ruta, mtime_ns)` como
+  clave; las escrituras existentes ya cambian el mtime.
+- En `BigPictureCarousel` la ventana se reduce a radio 4. La posicion sigue
+  calculandose por offset, asi que no cambia el contrato visual.
+- El Canvas del river se divide en `riverChart` (estatico) y `riverHover` (solo
+  hover). `chartCard.hoverIndex` sigue siendo la unica fuente de verdad.
+
+### Contrato de API
+
+| Elemento | Tipo | Descripcion |
+| --- | --- | --- |
+| `Sounds.navigate()` | Slot | Tick de navegacion entre juegos. |
+| `Sounds.open()` | Slot | Swell al abrir el modal de detalle. |
+| `Sounds.close()` | Slot | Descenso al cerrar el modal. |
+| `Sounds.tab()` | Slot | Cambio de pestana, filtro, modo o periodo. |
+| `Sounds.launch()` | Slot | Inicio de juego. |
+| `Sounds.toggle()` | Slot | Favorito / ajuste puntual. |
+| `Sounds.enabled` | bool (notify enabledChanged) | Silencia o activa los efectos. |
+| `Sounds.setEnabled(bool)` | Slot | Persiste la preferencia. |
+| `Preferences.sound_enabled` | property bool | Valor guardado en settings.json. |
+| `Library.stats(period, year, month)` | Slot | Mismo contrato; ahora cacheado. |
+| `Library.yearReview(year)` | Slot | Mismo contrato; ahora cacheado. |
+| `playtime.all_history()` | function | Mismo contrato; cache por mtime. |
+
+### Checklist
+
+#### Backend
+- [x] `core/sounds.py`: sintesis WAV de 6 cues, cache en disco, pool `QSoundEffect`, fallback sin audio.
+- [x] `preferences.py`: `sound_enabled` (default true) con getter/setter persistente.
+- [x] `app.py`: instanciar `SoundManager`, exponer `Sounds` y precargar en idle.
+- [x] `library_model.py`: cache de `stats()` / `yearReview()` y de URLs de caratula, invalidados por senales.
+- [x] `playtime.py`: cache de `all_history()` por ruta + `mtime`.
+- [x] `packaging/gamecenter.spec`: incluir `PySide6.QtMultimedia` como hidden import.
+- [x] Tests de sonido (WAV valido, manager inactivo en offscreen, preferencia) y de cache de Stats.
+
+#### Frontend
+- [x] `BigPicture.qml`: hooks de sonido, `closeDetail()`, imagenes con `sourceSize`/`mipmap`.
+- [x] `BigPictureCarousel.qml`: radio 4, animaciones 180-220 ms, menos overdraw, `sourceSize`.
+- [x] `BigPictureCarousel.qml`: deslizamiento direccional cuando la ventana de tarjetas se recoloca.
+- [x] `Main.qml`: sonido en el cambio de vista Biblioteca/Stats/Tienda.
+- [x] `StatsView.qml`: Canvas de hover separado, refresco diferido, sonidos de pestana/periodo/ano, `sourceSize` en caratulas.
+- [x] `SettingsPanel.qml`: toggle "Efectos de sonido" enlazado a `Sounds.enabled`.
+- [x] `i18n.py`: traducciones ES/FR/DE/IT/PT de las etiquetas nuevas.
+- [x] README/CHANGELOG actualizados.
+
+### Verificacion
+
+- [x] `python -m pytest -q` -> **199 passed**.
+- [x] Comprobar navegacion, apertura/cierre de modal, filtros/modos y lanzamiento con sonido.
+- [x] Comprobar hover del grafico de Stats sin tirones y cambio de periodo instantaneo.
+- [x] Comprobar que Big Picture sigue montandose solo al abrirse.
+- [x] Prueba visual en ventana real (no offscreen).
+
 # WORKFLOW STATE — Atajos personalizados, carátulas locales y pulido de UI
 
 ## Feature 0.20.1 — Stats sin header, navbar superior y estadísticas destacadas

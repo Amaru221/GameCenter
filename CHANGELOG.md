@@ -1,5 +1,36 @@
 # Changelog
 
+## v0.21.0
+
+- **Big Picture feels faster**:
+  - the carousel now keeps a 9-card window instead of 13, so off-screen covers,
+    shadows and animations are not decoded or painted;
+  - transitions run in 170-190 ms, matching the gamepad repeat rate without
+    dropping frames;
+  - covers are decoded at a bounded `sourceSize` (and the background uses
+    `mipmap`), while the hero, backdrop and focused card share the same cached
+    image;
+  - only the focused card paints the accent glow and the glass highlight.
+- **Statistics stay smooth**:
+  - the river chart is split into a static canvas plus a hover-only canvas, so
+    moving the mouse no longer repaints every stacked curve;
+  - `Library.stats()` and `Library.yearReview()` are memoized per
+    period/year/month/language and invalidated when the library, the playtime
+    history or the language changes;
+  - `playtime.all_history()` caches the JSON by path and `mtime`, and cover URLs
+    are cached per game;
+  - switching to Stats defers the first aggregation one frame, so the view
+    paints immediately.
+- **PS5-inspired interface sounds**: short, original synthesized cues for
+  moving between games, opening/closing the detail modal, changing tabs,
+  filters and modes, toggling a favourite and launching a game. WAVs are
+  generated once in the local cache and played with `QSoundEffect`; no binary
+  assets ship with the repository.
+- **Sound settings**: new **Settings -> Sound -> Interface sounds** toggle,
+  persisted in `settings.json`. Headless/CI runs and machines without an audio
+  device silently disable the effects.
+- **Packaging**: the PyInstaller spec now collects `PySide6.QtMultimedia`.
+
 ## v0.20.1
 
 - **Stats gets its own top row**: the top header disappears in Statistics. The

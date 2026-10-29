@@ -3,7 +3,7 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.20.1** - Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
+> Estado: **v0.21.0** - Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 
@@ -71,6 +71,10 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   - Al pasar el puntero por el gráfico aparece una **guía vertical con puntos**
     sobre cada capa y un **tooltip** con la fecha, el total del día/mes y el
     desglose por juego (color y horas).
+  - El hover pinta **solo la guia y los puntos** en un canvas aparte, asi mover
+    el raton no reconstruye las curvas. `Library.stats()` y el historial se
+    memorizan y se invalidan al cambiar el historial, la biblioteca o el idioma,
+    de modo que cambiar de periodo o volver a Stats es inmediato.
   - El bloque de **Time Played** integra el **juego con más horas del periodo**
     (carátula, nombre y horas) junto a las horas, para no tapar el año gigante
     del fondo.
@@ -131,6 +135,15 @@ la muestra como una estantería y lanza los juegos con un doble clic.
     recorta al deslizarse.
   - Efecto visual moderno tipo consola: halo de acento, sombra en profundidad,
     brillo de cristal, pista del anillo y transiciones suaves entre modos.
+  - **Mas fluido**: la ventana del carrusel mantiene solo las tarjetas visibles,
+    las animaciones duran 170-190 ms (a juego con la repeticion del mando), las
+    caratulas se decodifican a un tamano acotado y solo la tarjeta enfocada pinta
+    halo y brillo. El cambio de juego reutiliza la cache de imagen del hero y del
+    fondo.
+  - **Sonidos de interfaz estilo PS5**: navegar entre juegos, abrir/cerrar la
+    ficha, cambiar de filtro/modo o de pestana en Stats e iniciar un juego tienen
+    cues cortos y originales, sintetizados en local. Se pueden silenciar en
+    **Ajustes -> Sonido**.
   - La navegación se adapta al modo: arriba/abajo o izquierda/derecha para
     moverse y para cambiar de filtro según el carrusel activo.
   - La salida con Start es directa; el botón **Exit** de la esquina mantiene

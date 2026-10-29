@@ -196,6 +196,11 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "Get a key at steamgriddb.com/profile/preferences/api": (
             "Consigue una clave en steamgriddb.com/profile/preferences/api"
         ),
+        "SOUND": "SONIDO",
+        "Interface sounds": "Sonidos de interfaz",
+        "Short cues for navigation, modals and launching games.": (
+            "Pitidos breves al navegar, abrir modales e iniciar juegos."
+        ),
         "UPDATES": "ACTUALIZACIONES",
         "Last checked: %1": "Última comprobación: %1",
         "Check automatically": "Comprobar automáticamente",
@@ -568,6 +573,11 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "Clear": "Effacer",
         "Get a key at steamgriddb.com/profile/preferences/api": (
             "Obtenez une clé sur steamgriddb.com/profile/preferences/api"
+        ),
+        "SOUND": "SON",
+        "Interface sounds": "Sons de l'interface",
+        "Short cues for navigation, modals and launching games.": (
+            "Signaux courts pour la navigation, les fenêtres et le lancement des jeux."
         ),
         "UPDATES": "MISES À JOUR",
         "Last checked: %1": "Dernière vérification : %1",
@@ -953,6 +963,11 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "Clear": "Löschen",
         "Get a key at steamgriddb.com/profile/preferences/api": (
             "Schlüssel unter steamgriddb.com/profile/preferences/api erhalten"
+        ),
+        "SOUND": "TON",
+        "Interface sounds": "Interface-Sounds",
+        "Short cues for navigation, modals and launching games.": (
+            "Kurze Signale beim Navigieren, Öffnen von Dialogen und Starten von Spielen."
         ),
         "UPDATES": "UPDATES",
         "Last checked: %1": "Zuletzt geprüft: %1",
@@ -1344,6 +1359,11 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "Get a key at steamgriddb.com/profile/preferences/api": (
             "Ottieni una chiave su steamgriddb.com/profile/preferences/api"
         ),
+        "SOUND": "AUDIO",
+        "Interface sounds": "Suoni dell'interfaccia",
+        "Short cues for navigation, modals and launching games.": (
+            "Segnali brevi per navigazione, finestre e avvio dei giochi."
+        ),
         "UPDATES": "AGGIORNAMENTI",
         "Last checked: %1": "Ultimo controllo: %1",
         "Check automatically": "Controlla automaticamente",
@@ -1726,6 +1746,11 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "Clear": "Limpar",
         "Get a key at steamgriddb.com/profile/preferences/api": (
             "Obtenha uma chave em steamgriddb.com/profile/preferences/api"
+        ),
+        "SOUND": "SOM",
+        "Interface sounds": "Sons da interface",
+        "Short cues for navigation, modals and launching games.": (
+            "Sons curtos para navegação, janelas e iniciar jogos."
         ),
         "UPDATES": "ATUALIZAÇÕES",
         "Last checked: %1": "Última verificação: %1",

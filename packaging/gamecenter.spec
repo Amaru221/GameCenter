@@ -21,7 +21,8 @@ a = Analysis(
     pathex=[str(ROOT)],
     binaries=[],
     datas=DATAS,
-    hiddenimports=collect_submodules("keyring.backends") + ["PySide6.QtQuick3D"],
+    hiddenimports=collect_submodules("keyring.backends")
+    + ["PySide6.QtQuick3D", "PySide6.QtMultimedia"],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

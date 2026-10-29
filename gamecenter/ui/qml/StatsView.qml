@@ -12,6 +12,7 @@ Rectangle {
     property int selectedYear: new Date().getFullYear()
     property int selectedMonth: -1
     property string currentView: "stats"
+    property bool refreshPending: false
     signal reviewRequested(int year)
     signal viewRequested(string view)
 
@@ -40,6 +41,22 @@ Rectangle {
         );
     }
 
+    // Let the view switch paint before rebuilding: on a cold cache the first
+    // aggregation is the only expensive frame left in Stats.
+    function scheduleRefresh() {
+        if (refreshPending) {
+            return;
+        }
+        refreshPending = true;
+        Qt.callLater(function() {
+            refreshPending = false;
+            if (visible) {
+                refresh();
+                focusStart();
+            }
+        });
+    }
+
     function focusStart() {
         Qt.callLater(function() {
             if (carousel.count > 0) {
@@ -57,6 +74,7 @@ Rectangle {
                             ? current.getMonth()
                             : 11;
         }
+        Sounds.tab();
         refresh();
         focusStart();
     }
@@ -72,6 +90,7 @@ Rectangle {
                 && selectedMonth > new Date().getMonth()) {
             selectedMonth = new Date().getMonth();
         }
+        Sounds.tab();
         refresh();
         page.contentY = 0;
         focusStart();
@@ -80,6 +99,7 @@ Rectangle {
     function openMonth(index) {
         period = "month";
         selectedMonth = index;
+        Sounds.tab();
         refresh();
         page.contentY = 0;
         focusStart();
@@ -147,14 +167,13 @@ Rectangle {
 
     onVisibleChanged: {
         if (visible) {
-            refresh();
-            focusStart();
+            scheduleRefresh();
         }
     }
 
     Component.onCompleted: {
         if (visible) {
-            refresh();
+            scheduleRefresh();
         }
     }
 
@@ -397,9 +416,11 @@ Rectangle {
                                     Image {
                                         anchors.fill: parent
                                         source: root.topGame.cover || ""
+                                        sourceSize.width: 160
                                         fillMode: Image.PreserveAspectCrop
                                         asynchronous: true
                                         cache: true
+                                        mipmap: true
                                     }
                                 }
                             }
@@ -630,6 +651,9 @@ Rectangle {
                     );
                 }
 
+                // Static chart: repaints only when the data or the size changes.
+                // The hover guide lives in its own canvas below, so moving the
+                // mouse never rebuilds the stacked curves.
                 Canvas {
                     id: riverChart
                     anchors.fill: parent
@@ -642,12 +666,10 @@ Rectangle {
                                          ? riverData.labels
                                          : ((riverData && riverData.months)
                                             ? riverData.months : [])
-                    property int hover: chartCard.hoverIndex
 
                     onRiverDataChanged: requestPaint()
                     onLayersChanged: requestPaint()
                     onLabelsChanged: requestPaint()
-                    onHoverChanged: requestPaint()
                     onWidthChanged: requestPaint()
                     onHeightChanged: requestPaint()
                     Component.onCompleted: requestPaint()
@@ -779,37 +801,100 @@ Rectangle {
                         ctx.font = "9px Sora";
                         ctx.textAlign = "center";
                         for (var label = 0; label < count; label++) {
-                            ctx.fillStyle = label === hover
-                                            ? "#dfe6f0" : "#64748b";
                             ctx.fillText(labels[label], px(label), h - 5);
                         }
+                    }
+                }
 
-                        // Hover guide: a dashed vertical line plus a dot on
-                        // every stack boundary, so the tooltip has context.
-                        if (hover >= 0 && hover < count) {
-                            var hx = px(hover);
-                            ctx.save();
-                            ctx.strokeStyle = "rgba(166, 190, 220, 0.35)";
-                            ctx.lineWidth = 1;
-                            ctx.setLineDash([3, 4]);
-                            ctx.beginPath();
-                            ctx.moveTo(hx, top - 6);
-                            ctx.lineTo(hx, h - bottom + 6);
-                            ctx.stroke();
-                            ctx.restore();
+                // Hover overlay: a dashed guide and one dot per stack boundary.
+                // Painting only this canvas keeps the mouse at 60 fps.
+                Canvas {
+                    id: riverHover
+                    anchors.fill: parent
+                    anchors.margins: 14
+                    visible: chartCard.hoverIndex >= 0
 
-                            var acc = 0;
-                            for (var li = 0; li < layers.length; li++) {
-                                acc += (layers[li].values[hover] || 0);
-                                var dy = py(acc);
-                                ctx.beginPath();
-                                ctx.arc(hx, dy, 3.4, 0, Math.PI * 2);
-                                ctx.fillStyle = layers[li].color;
-                                ctx.fill();
-                                ctx.lineWidth = 1.6;
-                                ctx.strokeStyle = "#0e1522";
-                                ctx.stroke();
+                    property var layers: {
+                        var data = root.river;
+                        return (data && data.layers) ? data.layers : [];
+                    }
+                    property var labels: {
+                        var data = root.river;
+                        if (!data) {
+                            return [];
+                        }
+                        return data.labels || data.months || [];
+                    }
+                    property int hover: chartCard.hoverIndex
+
+                    onLayersChanged: requestPaint()
+                    onLabelsChanged: requestPaint()
+                    onHoverChanged: requestPaint()
+                    onVisibleChanged: requestPaint()
+                    onWidthChanged: requestPaint()
+                    onHeightChanged: requestPaint()
+
+                    onPaint: {
+                        var ctx = getContext("2d");
+                        ctx.reset();
+                        var count = labels.length;
+                        if (hover < 0 || hover >= count || layers.length === 0) {
+                            return;
+                        }
+                        var w = width;
+                        var h = height;
+                        if (w <= 0 || h <= 0) {
+                            return;
+                        }
+
+                        var left = 8;
+                        var right = 8;
+                        var top = 14;
+                        var bottom = 22;
+                        var plotW = w - left - right;
+                        var plotH = h - top - bottom;
+
+                        var peak = 1;
+                        for (var i = 0; i < count; i++) {
+                            var sum = 0;
+                            for (var j = 0; j < layers.length; j++) {
+                                sum += (layers[j].values[i] || 0);
                             }
+                            peak = Math.max(peak, sum);
+                        }
+
+                        function px(index) {
+                            return count === 1
+                                   ? left + plotW / 2
+                                   : left + plotW * index / (count - 1);
+                        }
+
+                        function py(value) {
+                            return top + plotH - (value / peak) * plotH;
+                        }
+
+                        var hx = px(hover);
+                        ctx.save();
+                        ctx.strokeStyle = "rgba(166, 190, 220, 0.35)";
+                        ctx.lineWidth = 1;
+                        ctx.setLineDash([3, 4]);
+                        ctx.beginPath();
+                        ctx.moveTo(hx, top - 6);
+                        ctx.lineTo(hx, h - bottom + 6);
+                        ctx.stroke();
+                        ctx.restore();
+
+                        var acc = 0;
+                        for (var li = 0; li < layers.length; li++) {
+                            acc += (layers[li].values[hover] || 0);
+                            var dy = py(acc);
+                            ctx.beginPath();
+                            ctx.arc(hx, dy, 3.4, 0, Math.PI * 2);
+                            ctx.fillStyle = layers[li].color;
+                            ctx.fill();
+                            ctx.lineWidth = 1.6;
+                            ctx.strokeStyle = "#0e1522";
+                            ctx.stroke();
                         }
                     }
                 }
@@ -974,7 +1059,7 @@ Rectangle {
         target: Library
         function onPlaytimeChanged() {
             if (root.visible) {
-                root.refresh();
+                root.scheduleRefresh();
             }
         }
     }
@@ -983,7 +1068,7 @@ Rectangle {
         target: Tr
         function onLanguageChanged() {
             if (root.visible) {
-                root.refresh();
+                root.scheduleRefresh();
             }
         }
     }
@@ -1371,9 +1456,11 @@ Rectangle {
                             source: card.month.mostPlayed
                                     ? (card.month.mostPlayed.cover || "")
                                     : ""
+                            sourceSize.width: 96
                             fillMode: Image.PreserveAspectCrop
                             asynchronous: true
                             cache: true
+                            mipmap: true
                         }
                     }
 
@@ -1597,9 +1684,11 @@ Rectangle {
                                     Image {
                                         anchors.fill: parent
                                         source: modelData.cover || ""
+                                        sourceSize.width: 64
                                         fillMode: Image.PreserveAspectCrop
                                         asynchronous: true
                                         cache: true
+                                        mipmap: true
                                     }
                                 }
                             }
@@ -1784,7 +1873,10 @@ Rectangle {
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: root.viewRequested(modelData.value)
+                        onClicked: {
+                            Sounds.tab();
+                            root.viewRequested(modelData.value);
+                        }
                     }
                 }
             }

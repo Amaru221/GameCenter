@@ -711,6 +711,72 @@ Item {
                 }
 
                 Text {
+                    text: Tr.strings["SOUND"]
+                    color: "#8b95a5"
+                    font.family: "Chakra Petch"
+                    font.pixelSize: 11
+                    font.bold: true
+                    font.letterSpacing: 2.4
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+
+                    Column {
+                        Layout.fillWidth: true
+                        spacing: 2
+
+                        Text {
+                            text: Tr.strings["Interface sounds"]
+                            color: "#dfe6f0"
+                            font.family: "Sora"
+                            font.pixelSize: 12
+                        }
+
+                        Text {
+                            text: Tr.strings["Short cues for navigation, modals and launching games."]
+                            color: "#6f7887"
+                            font.family: "Sora"
+                            font.pixelSize: 10
+                            wrapMode: Text.WordWrap
+                        }
+                    }
+
+                    Rectangle {
+                        objectName: "soundToggle"
+                        width: 44
+                        height: 24
+                        radius: 12
+                        color: Sounds.enabled ? Library.accent : "#2a3140"
+                        Layout.alignment: Qt.AlignVCenter
+
+                        Rectangle {
+                            width: 18
+                            height: 18
+                            radius: 9
+                            color: "#ffffff"
+                            x: Sounds.enabled ? 23 : 3
+                            anchors.verticalCenter: parent.verticalCenter
+                            Behavior on x { NumberAnimation { duration: 140 } }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Sounds.setEnabled(!Sounds.enabled)
+                        }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+                    height: 1
+                    color: "#232936"
+                }
+
+                Text {
                     text: Tr.strings["UPDATES"]
                     color: "#8b95a5"
                     font.family: "Chakra Petch"

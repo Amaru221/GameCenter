@@ -37,8 +37,12 @@ Window {
 
     function switchView(view) {
         if (view === "store") {
+            Sounds.tab();
             toast.show(Tr.strings["Store coming in v0.2"]);
             return;
+        }
+        if (view !== currentView) {
+            Sounds.tab();
         }
         currentView = view;
     }

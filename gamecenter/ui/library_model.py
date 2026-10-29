@@ -205,6 +205,12 @@ class LibraryModel(QAbstractListModel):
         if self._prefs.check_updates and time.time() - self._prefs.last_update_check > 86400:
             QTimer.singleShot(6000, self.checkForUpdates)
         self._art_revision = 0
+        self._cover_urls: dict[str, str] = {}
+        self._stats_cache: dict[tuple, dict] = {}
+        self._year_review_cache: dict[tuple, dict] = {}
+        self.changed.connect(self._invalidate_stats)
+        self.playtimeChanged.connect(self._invalidate_stats)
+        self._i18n.languageChanged.connect(self._invalidate_stats)
         self._art_downloads = download_art and artwork.enabled()
         self._art_running = False
         self._art_lock = threading.Lock()
@@ -826,6 +832,7 @@ class LibraryModel(QAbstractListModel):
         return True
 
     def _notify_cover(self, game_id: str) -> None:
+        self._cover_urls.pop(game_id, None)
         for row, game in enumerate(self._visible):
             if game.id == game_id:
                 index = self.index(row, 0)
@@ -1005,6 +1012,7 @@ class LibraryModel(QAbstractListModel):
 
     @Slot()
     def refresh(self) -> None:
+        self._cover_urls.clear()
         self._all = [
             game for game in scan_all() if not self._prefs.is_hidden(game.id)
         ]
@@ -1030,6 +1038,7 @@ class LibraryModel(QAbstractListModel):
             return
 
         games = [game for game in games if not self._prefs.is_hidden(game.id)]
+        self._cover_urls.clear()
         self._all = [game for game in self._all if game.source != source] + games
         self._all.sort(key=lambda game: (not game.installed, game.title.casefold()))
         self._refresh_rows()
@@ -1086,6 +1095,7 @@ class LibraryModel(QAbstractListModel):
     @Slot(str)
     def _on_art_ready(self, game_id: str) -> None:
         self._art_revision += 1
+        self._cover_urls.pop(game_id, None)
         for row, game in enumerate(self._visible):
             if game.id == game_id:
                 index = self.index(row, 0)
@@ -1273,12 +1283,18 @@ class LibraryModel(QAbstractListModel):
         return "image://art/" + covers.art_key(str(file))
 
     def _cover_url(self, game: Game) -> str:
+        cached = self._cover_urls.get(game.id)
+        if cached is not None:
+            return cached
         override = self._prefs.cover_for(game.id)
         if override and Path(override).is_file():
-            return "image://art/" + covers.art_key(override)
-        return "image://cover/" + covers.cover_key(
-            game.title, game.app_id, self._art_revision
-        )
+            url = "image://art/" + covers.art_key(override)
+        else:
+            url = "image://cover/" + covers.cover_key(
+                game.title, game.app_id, self._art_revision
+            )
+        self._cover_urls[game.id] = url
+        return url
 
     def _art_image(self, game: Game) -> QImage:
         override = self._prefs.cover_for(game.id)
@@ -1837,11 +1853,20 @@ class LibraryModel(QAbstractListModel):
             "installed": game.installed,
         }
 
+    def _invalidate_stats(self) -> None:
+        """Drop the memoized statistics after library/playtime/language edits."""
+        self._stats_cache.clear()
+        self._year_review_cache.clear()
+
     @Slot(str, int, int, result="QVariantMap")
     def stats(self, period: str, year: int, month: int = -1) -> dict:
-        """Aggregated playtime data for the Statistics view."""
+        """Aggregated playtime data for the Statistics view (memoized)."""
+        key = (period or "", int(year), int(month), self._i18n.language)
+        cached = self._stats_cache.get(key)
+        if cached is not None:
+            return cached
         covers = {game.id: self._cover_url(game) for game in self._all}
-        return stats_module.build(
+        data = stats_module.build(
             self._all,
             period=period,
             year=year,
@@ -1849,14 +1874,26 @@ class LibraryModel(QAbstractListModel):
             month=month,
             covers=covers,
         )
+        if len(self._stats_cache) >= 12:
+            self._stats_cache.clear()
+        self._stats_cache[key] = data
+        return data
 
     @Slot(int, result="QVariantMap")
     def yearReview(self, year: int) -> dict:
-        """The story-style recap for one year of playtime."""
+        """The story-style recap for one year of playtime (memoized)."""
+        key = (int(year), self._i18n.language)
+        cached = self._year_review_cache.get(key)
+        if cached is not None:
+            return cached
         covers = {game.id: self._cover_url(game) for game in self._all}
-        return stats_module.year_review(
+        data = stats_module.year_review(
             self._all,
             year,
             language=self._i18n.language,
             covers=covers,
         )
+        if len(self._year_review_cache) >= 6:
+            self._year_review_cache.clear()
+        self._year_review_cache[key] = data
+        return data
