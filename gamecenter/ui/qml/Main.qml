@@ -35,6 +35,14 @@ Window {
         bigPicturePanelTimer.restart();
     }
 
+    function switchView(view) {
+        if (view === "store") {
+            toast.show(Tr.strings["Store coming in v0.2"]);
+            return;
+        }
+        currentView = view;
+    }
+
     onBigPictureOpenChanged: {
         if (bigPictureOpen) {
             bigPictureMounted = true;
@@ -147,13 +155,14 @@ Window {
             width: parent.width
             anchors.top: parent.top
             currentView: window.currentView
+            visible: window.currentView === "library"
             onToastRequested: (message) => toast.show(message)
             onSettingsRequested: settingsOpen = true
             onUpdateRequested: updateOpen = true
             onScanRequested: (source) => Library.scanStore(source)
             onRestoreHiddenRequested: Library.restoreHiddenGames()
             onAddRequested: addOpen = true
-            onViewRequested: (view) => window.currentView = view
+            onViewRequested: (view) => window.switchView(view)
             onBigPictureRequested: window.bigPictureOpen = true
         }
 
@@ -186,11 +195,13 @@ Window {
 
         StatsView {
             id: statsView
-            anchors.top: topBar.bottom
+            anchors.top: parent.top
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             visible: window.currentView === "stats"
+            currentView: window.currentView
+            onViewRequested: (view) => window.switchView(view)
             onReviewRequested: (year) => {
                 topBar.clearSearchFocus();
                 var data = Library.yearReview(year);

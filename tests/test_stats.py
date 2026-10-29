@@ -230,7 +230,7 @@ def test_card_banners_highlight_one_unique_stat(library, sessions) -> None:
     assert october["banner"]["detail"] == "2026"
     assert january["banner"]["label"] == "Longest streak"
     assert january["banner"]["value"] == "2 days"
-    assert february["banner"]["label"] == "Best day"
+    assert february["banner"]["label"] == "Playtime"
 
 
 def test_year_review_payload(library, sessions) -> None:
@@ -279,3 +279,51 @@ def test_year_review_without_data(library) -> None:
     assert data["bestDay"] == {}
     assert data["longestStreak"] == {}
     assert data["slides"] == []
+
+
+def test_period_highlights(library, sessions) -> None:
+    data = stats.build(library, period="year", year=2026, now=NOW)
+
+    labels = [item["label"] for item in data["highlights"]]
+    assert "Longest session" in labels
+    assert "Busiest month" in labels
+    assert "Average session" in labels
+    assert "Favorite day" in labels
+
+    assert data["longestSession"]["text"] == "2h 00m"
+    assert data["longestSession"]["dateText"] == "10/02"
+    assert data["longestSession"]["game"] == "Alpha"
+    assert data["busiestMonth"]["name"] == "October"
+    assert data["busiestMonth"]["sessions"] == 2
+    assert data["busiestDay"]["dateText"] == "26/10"
+    assert data["busiestDay"]["sessions"] == 2
+    assert data["averageSessionText"] == "1h 12m"
+    assert data["favoriteWeekday"]["name"] == "Monday"
+
+
+def test_week_period_highlights_the_busiest_day(library, sessions) -> None:
+    data = stats.build(library, period="week", year=2026, now=NOW)
+
+    labels = [item["label"] for item in data["highlights"]]
+    assert "Busiest day" in labels
+    assert data["busiestDay"]["dateText"] == "26/10"
+    assert data["longestSession"]["text"] == "1h 30m"
+
+
+def test_bucket_highlights(library, sessions) -> None:
+    data = stats.build(library, period="year", year=2026, now=NOW)
+
+    february = data["buckets"][1]
+    assert february["longestSessionText"] == "2h 00m"
+    assert february["longestSessionDateText"] == "10/02"
+    assert february["averageSessionText"] == "2h 00m"
+    assert february["highlights"][0]["label"] == "Longest session"
+    assert february["highlights"][0]["value"] == "2h 00m"
+
+    october = data["buckets"][9]
+    october_labels = [item["label"] for item in october["highlights"]]
+    assert "Busiest day" in october_labels
+    assert october["busiestDayDateText"] == "26/10"
+    assert october["busiestDaySessionsText"] == "2 sessions"
+    assert october["longestSessionText"] == "1h 30m"
+    assert october["gamesCount"] == 2

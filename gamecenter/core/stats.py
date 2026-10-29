@@ -199,6 +199,135 @@ def _longest_streak_range(
     return best, best_start, best_end
 
 
+def _sessions_text(catalog: dict[str, str], count: int) -> str:
+    if count == 1:
+        return catalog.get("1 session", "1 session")
+    return _fill(catalog.get("%1 sessions", "%1 sessions"), count)
+
+
+def _longest_session(sessions: list[dict]) -> dict:
+    if not sessions:
+        return {}
+    item = max(sessions, key=lambda entry: (entry["seconds"], entry["start"]))
+    day = item["date"]
+    return {
+        "seconds": int(item["seconds"]),
+        "text": _duration_detail(item["seconds"]),
+        "dateText": f"{day.day:02d}/{day.month:02d}",
+        "timestamp": int(item["start"]),
+        "game": item.get("title") or "",
+        "gameId": item.get("game_id") or "",
+    }
+
+
+def _busiest_day(sessions: list[dict]) -> dict:
+    """The day with the most sessions (ties: more time, then earlier date)."""
+    if not sessions:
+        return {}
+    counts: dict[date, int] = {}
+    totals: dict[date, int] = {}
+    for item in sessions:
+        day = item["date"]
+        counts[day] = counts.get(day, 0) + 1
+        totals[day] = totals.get(day, 0) + item["seconds"]
+    best = max(
+        counts,
+        key=lambda day: (counts[day], totals[day], -day.toordinal()),
+    )
+    return {
+        "dateText": f"{best.day:02d}/{best.month:02d}",
+        "timestamp": int(datetime(best.year, best.month, best.day).timestamp()),
+        "sessions": counts[best],
+        "seconds": totals[best],
+    }
+
+
+def _busiest_month(sessions: list[dict]) -> dict:
+    """The calendar month with the most sessions (ties: more time)."""
+    if not sessions:
+        return {}
+    counts: dict[int, int] = {}
+    totals: dict[int, int] = {}
+    for item in sessions:
+        month = item["date"].month
+        counts[month] = counts.get(month, 0) + 1
+        totals[month] = totals.get(month, 0) + item["seconds"]
+    best = max(counts, key=lambda month: (counts[month], totals[month], -month))
+    return {
+        "monthIndex": best - 1,
+        "sessions": counts[best],
+        "seconds": totals[best],
+    }
+
+
+def _favorite_weekday(sessions: list[dict], catalog: dict[str, str]) -> dict:
+    if not sessions:
+        return {}
+    counts: dict[int, int] = {}
+    for item in sessions:
+        weekday = item["date"].weekday()
+        counts[weekday] = counts.get(weekday, 0) + 1
+    best = max(counts, key=lambda weekday: (counts[weekday], -weekday))
+    name = catalog.get(WEEKDAY_KEYS[best], WEEKDAY_KEYS[best])
+    return {"name": name, "sessions": counts[best]}
+
+
+def _highlight(label: str, value: str, detail: str = "", tint: str = "#facc15") -> dict:
+    return {"label": label, "value": value, "detail": detail, "tint": tint}
+
+
+def _bucket_highlights(
+    kind: str,
+    longest: dict,
+    busiest: dict,
+    average: int,
+    games_count: int,
+    session_count: int,
+    catalog: dict[str, str],
+) -> list[dict]:
+    """Three contextual highlights for a day, week or month card."""
+    if not session_count:
+        return []
+    highlights: list[dict] = []
+    if longest:
+        detail = longest.get("game") if kind == "day" else longest.get("dateText")
+        highlights.append(
+            _highlight(
+                catalog.get("Longest session", "Longest session"),
+                longest.get("text", ""),
+                detail or "",
+                "#4cc9f0",
+            )
+        )
+    if kind in ("month", "week") and busiest.get("sessions", 0) > 1:
+        highlights.append(
+            _highlight(
+                catalog.get("Busiest day", "Busiest day"),
+                busiest.get("dateText", ""),
+                _sessions_text(catalog, busiest["sessions"]),
+                "#fb7185",
+            )
+        )
+    highlights.append(
+        _highlight(
+            catalog.get("Average session", "Average session"),
+            _duration_detail(average),
+            "",
+            "#a78bfa",
+        )
+    )
+    if kind == "day" and games_count > 1:
+        highlights.append(
+            _highlight(
+                catalog.get("Games played", "Games played"),
+                str(games_count),
+                "",
+                "#34d399",
+            )
+        )
+    return highlights[:3]
+
+
 def _days_in_period(period: str, start: date, end: date, today: date) -> int:
     if period == "week":
         return 7
@@ -313,6 +442,14 @@ def _bucket_payload(
     most_played = top_games[0] if top_games else {}
     streak = _longest_streak({item["date"] for item in current})
 
+    longest = _longest_session(current)
+    busiest = _busiest_day(current)
+    average = int(total / session_count) if session_count else 0
+    games_count = len({item["game_id"] for item in current})
+    highlights = _bucket_highlights(
+        kind, longest, busiest, average, games_count, session_count, catalog
+    )
+
     if session_count == 1:
         sessions_text = catalog.get("1 session", "1 session")
     else:
@@ -351,6 +488,20 @@ def _bucket_payload(
         "otherGamesText": catalog.get("Other games", "Other games"),
         "otherHoursText": _duration_detail(other_seconds) if other_seconds else "",
         "hasOtherGames": other_seconds > 0,
+        "longestSessionText": longest.get("text", ""),
+        "longestSessionDateText": longest.get("dateText", ""),
+        "longestSessionTimestamp": longest.get("timestamp", 0),
+        "longestSessionGame": longest.get("game", ""),
+        "busiestDayDateText": busiest.get("dateText", ""),
+        "busiestDaySessions": busiest.get("sessions", 0),
+        "busiestDaySessionsText": (
+            _sessions_text(catalog, busiest["sessions"])
+            if busiest.get("sessions")
+            else ""
+        ),
+        "averageSessionText": _duration_detail(average) if session_count else "",
+        "gamesCount": games_count,
+        "highlights": highlights,
         "daily": daily,
         "maxDaily": max(1, best_seconds),
     }
@@ -386,7 +537,7 @@ def _bucket_banner(
         }
     if item.get("bestDayText") and item["bestDayText"] != "—":
         return {
-            "label": catalog.get("Best day", "Best day"),
+            "label": catalog.get("Playtime", "Playtime"),
             "value": item["bestDayText"],
             "detail": item.get("bestDayDateText", ""),
             "tint": "#fb7185",
@@ -682,6 +833,79 @@ def build(
     days_total = _days_in_period(period, start, end, today)
     session_count = len(period_sessions)
 
+    longest_session = _longest_session(period_sessions)
+    busiest_day = _busiest_day(period_sessions)
+    busiest_month = _busiest_month(period_sessions)
+    favorite_weekday = _favorite_weekday(period_sessions, catalog)
+    average_session = int(total / session_count) if session_count else 0
+    if busiest_day:
+        busiest_day["sessionsText"] = _sessions_text(
+            catalog, busiest_day["sessions"]
+        )
+    if busiest_month:
+        busiest_month["name"] = _month_name(
+            catalog, busiest_month["monthIndex"] + 1
+        )
+        busiest_month["sessionsText"] = _sessions_text(
+            catalog, busiest_month["sessions"]
+        )
+
+    highlights: list[dict] = []
+    if longest_session:
+        detail = longest_session.get("dateText", "")
+        game_title = longest_session.get("game") or ""
+        if game_title:
+            detail = f"{detail} · {game_title}" if detail else game_title
+        highlights.append(
+            _highlight(
+                catalog.get("Longest session", "Longest session"),
+                longest_session.get("text", ""),
+                detail,
+                "#4cc9f0",
+            )
+        )
+    if (
+        period in ("year", "all")
+        and busiest_month
+        and busiest_month.get("sessions", 0) > 1
+    ):
+        month_name = _month_name(catalog, busiest_month["monthIndex"] + 1)
+        highlights.append(
+            _highlight(
+                catalog.get("Busiest month", "Busiest month"),
+                month_name,
+                busiest_month.get("sessionsText", ""),
+                "#facc15",
+            )
+        )
+    elif busiest_day and busiest_day.get("sessions", 0) > 1:
+        highlights.append(
+            _highlight(
+                catalog.get("Busiest day", "Busiest day"),
+                busiest_day.get("dateText", ""),
+                busiest_day.get("sessionsText", ""),
+                "#fb7185",
+            )
+        )
+    if session_count:
+        highlights.append(
+            _highlight(
+                catalog.get("Average session", "Average session"),
+                _duration_detail(average_session),
+                "",
+                "#a78bfa",
+            )
+        )
+    if favorite_weekday and favorite_weekday.get("sessions", 0) > 1:
+        highlights.append(
+            _highlight(
+                catalog.get("Favorite day", "Favorite day"),
+                favorite_weekday.get("name", ""),
+                _sessions_text(catalog, favorite_weekday["sessions"]),
+                "#34d399",
+            )
+        )
+
     if session_count == 1:
         sessions_text = catalog.get("1 session", "1 session")
     else:
@@ -795,6 +1019,14 @@ def build(
         "bucketsKind": buckets_kind,
         "topGame": top_game,
         "river": river,
+        "highlights": highlights,
+        "longestSession": longest_session,
+        "busiestDay": busiest_day,
+        "busiestMonth": busiest_month,
+        "favoriteWeekday": favorite_weekday,
+        "averageSessionText": (
+            _duration_detail(average_session) if session_count else ""
+        ),
     }
 
 

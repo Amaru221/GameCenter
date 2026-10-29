@@ -172,6 +172,30 @@ def test_history_ignores_empty_or_invalid_sessions(tmp_path) -> None:
     assert len(history) == 1
     assert history[0]["seconds"] == 1
 
+
+def test_short_sessions_are_saved(tmp_path) -> None:
+    """There is no five-minute (or any) minimum duration."""
+    game = _game(tmp_path)
+
+    playtime.record_session(game, 1_700_000_000, 90)
+    playtime.add_seconds(game, 90)
+
+    history = playtime.history_for(game)
+    assert len(history) == 1
+    assert history[0]["seconds"] == 90
+    assert playtime.seconds_for(game) == 90
+    assert playtime.summary_for(game)["sessions"] == 1
+
+
+def test_sub_second_sessions_round_up(tmp_path) -> None:
+    game = _game(tmp_path)
+
+    playtime.record_session(game, 1_700_000_000, 0.4)
+    playtime.add_seconds(game, 0.4)
+
+    assert playtime.history_for(game)[0]["seconds"] == 1
+    assert playtime.seconds_for(game) == 1
+
 def test_write_and_clear_summary(tmp_path) -> None:
     game = Game(id="epic:9", title="Test", source="epic")
 

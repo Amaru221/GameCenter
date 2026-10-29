@@ -23,7 +23,9 @@ from .preferences import config_dir
 
 FILENAME = ".gamecenter_playtime.json"
 HISTORY_FILENAME = "history.json"
-MAX_HISTORY = 200
+# Keep a long timeline: statistics are derived from it, so trimming too early
+# silently loses history. The cap is only a guardrail against a runaway file.
+MAX_HISTORY = 5000
 
 
 def _fallback_path() -> Path:
@@ -141,9 +143,15 @@ def minutes_for(game: Game) -> int:
 
 
 def add_seconds(game: Game, seconds: float) -> None:
-    """Add one finished session to the game's playtime."""
-    if game.source == "steam" or seconds < 1:
+    """Add one finished session to the game's playtime.
+
+    There is deliberately no minimum duration: a two-minute session counts as
+    much as a two-hour one. Sub-second sessions are rounded up to 1 s instead of
+    being truncated away.
+    """
+    if game.source == "steam" or seconds <= 0:
         return
+    total = max(1, int(round(seconds)))
 
     path = file_for(game)
     root_entry = _read(path) if path is not None else {}
@@ -151,7 +159,7 @@ def add_seconds(game: Game, seconds: float) -> None:
     base = root_entry or fallback_entry
 
     entry = {
-        "seconds": int(base.get("seconds") or 0) + int(seconds),
+        "seconds": int(base.get("seconds") or 0) + total,
         "sessions": int(base.get("sessions") or 0) + 1,
         "last_played": int(time.time()),
         "title": game.title,
@@ -278,9 +286,14 @@ def add_history_entry(
 
 
 def record_session(game: Game, started_at: float, seconds: float) -> None:
-    """Append one session to the global, per-game timeline."""
-    if seconds < 1:
+    """Append one session to the global, per-game timeline.
+
+    Every positive duration is stored: short sessions are real playtime too and
+    the statistics view must be able to show them.
+    """
+    if seconds <= 0:
         return
+    total = max(1, int(round(seconds)))
 
     path = history_path()
     data = _read(path)
@@ -290,8 +303,8 @@ def record_session(game: Game, started_at: float, seconds: float) -> None:
 
     entries.append(
         {
-            "start": int(started_at or time.time() - int(seconds)),
-            "seconds": int(seconds),
+            "start": int(started_at or time.time() - total),
+            "seconds": total,
             "title": game.title,
             "source": game.source,
         }
