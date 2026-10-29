@@ -923,6 +923,86 @@ def test_qml_stats_cards_show_cover_and_highlights(app, model) -> None:
     assert "monthPlayedCover" in names
 
 
+def test_qml_stats_bottom_navbar_and_rearranged_hero(app, model) -> None:
+    from PySide6.QtCore import QObject
+
+    from gamecenter.ui.app import create_engine
+
+    game = model._all[0]
+    now = int(time.time())
+    library_model.playtime.record_session(game, now, 90)
+    library_model.playtime.record_session(game, now - 86400, 5400)
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.resize(1180, 800)
+    root.show()
+    root.setProperty("currentView", "stats")
+    app.processEvents()
+
+    top = root.findChild(QObject, "topBar")
+    stats = root.findChild(QObject, "statsView")
+    periods = root.findChild(QObject, "statsPeriodTabs")
+    tabs = root.findChild(QObject, "statsViewTabs")
+    year = root.findChild(QObject, "statsYearPicker")
+    review = root.findChild(QObject, "statsReviewBanner")
+    assert top is not None and stats is not None
+    assert periods is not None and tabs is not None
+    assert year is not None and review is not None
+    assert top.property("visible") is False
+
+    # Tabs and year sit in the top row, between the period selector and the
+    # yearly review banner.
+    positions = [
+        item.mapToItem(root.contentItem(), 0, 0).x()
+        for item in (periods, tabs, year, review)
+    ]
+    assert positions == sorted(positions)
+    assert year.mapToItem(root.contentItem(), 0, 0).y() < 100
+    assert review.property("width") == 340
+    assert periods.mapToItem(root.contentItem(), 0, 0).x() < 40
+    review_right = review.mapToItem(
+        root.contentItem(), review.property("width"), 0
+    ).x()
+    assert review_right > root.property("width") - 80
+
+    highlights = root.findChild(QObject, "statsHighlights")
+    assert highlights is not None
+    assert highlights.property("visible") is True
+
+    panel = root.findChild(QObject, "topGamePanel")
+    watermark = root.findChild(QObject, "statsYearWatermark")
+    assert panel is not None and watermark is not None
+    assert panel.property("visible") is True
+    panel_right = panel.mapToItem(
+        root.contentItem(), panel.property("width"), 0
+    ).x()
+    watermark_left = watermark.mapToItem(root.contentItem(), 0, 0).x()
+    assert panel_right < watermark_left
+
+    carousel = root.findChild(QObject, "monthCarousel")
+    assert carousel is not None
+
+    def walk(item):
+        yield item
+        for child in item.childItems():
+            yield from walk(child)
+
+    content = carousel.property("contentItem")
+    cards = [
+        item
+        for item in walk(content)
+        if item.objectName() == "cardHighlights"
+        and item.property("visible") is True
+    ]
+    assert cards
+
+    root.setProperty("currentView", "library")
+    app.processEvents()
+    assert top.property("visible") is True
+    assert stats.property("visible") is False
+
+
 def test_qml_stats_period_changes_bucket_granularity(app, model) -> None:
     from PySide6.QtCore import QMetaObject, QObject
 

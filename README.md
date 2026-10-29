@@ -3,7 +3,7 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.20.0** - Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
+> Estado: **v0.20.1** - Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 
@@ -57,6 +57,11 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   escritura. Stats es una ventana dedicada: no muestra el dock inferior
   (Ready, reloj ni cartucho insertado) ni el aviso de actualización, y usa todo
   el alto de la ventana.
+- **Barra propia de Stats**: al entrar en Stats desaparece la barra superior
+  completa. El selector de periodo queda a la izquierda; a la derecha se alinean
+  las píldoras **Library / Stats / Store**, el **selector de año** (`‹ 2026 ›`)
+  y el **botón de resumen anual** con su tamaño original. Al volver a la
+  biblioteca, el navbar superior reaparece tal y como estaba.
 - La sección de desglose adapta su granularidad al filtro: **Week → días**,
   **Month → semanas** y **Year → meses** (All time conserva el desglose mensual
   del año seleccionado). Incluye un gráfico de áreas apiladas (“a river”) con
@@ -66,8 +71,9 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   - Al pasar el puntero por el gráfico aparece una **guía vertical con puntos**
     sobre cada capa y un **tooltip** con la fecha, el total del día/mes y el
     desglose por juego (color y horas).
-  - El banner superior muestra el **juego con más horas del periodo** (con
-    carátula y horas) además del tiempo total.
+  - El bloque de **Time Played** integra el **juego con más horas del periodo**
+    (carátula, nombre y horas) junto a las horas, para no tapar el año gigante
+    del fondo.
   - Cada tarjeta muestra la **carátula del juego más jugado** junto a su nombre
     (con tooltip de título y horas).
   - La lista de juegos es un **top 3** con numeración, carátula, horas
@@ -75,9 +81,16 @@ la muestra como una estantería y lanza los juegos con un doble clic.
     **Other games** con las horas resumidas y sin barra.
   - Las métricas líderes del periodo muestran un **rombo con su número en el
     mismo contenedor** (horas, días jugados y sesiones), sin insignias sueltas
-    en la parte superior.
+    en la parte superior. La fila está alineada y la etiqueta *Mejor día* pasa a
+    **Tiempo de juego**, manteniendo debajo la fecha del mejor día.
   - Cada tarjeta tiene un **banner único** con el dato más destacado:
-    *Busiest month/week/day*, *Longest streak* o *Best day*.
+    *Busiest month/week/day*, *Longest streak* o *Playtime*.
+  - Cada tarjeta añade una fila de **destacados** que se recalcula al refrescar:
+    **sesión más larga** (con fecha o juego), **día con más sesiones** (o
+    **juegos jugados** en tarjetas diarias) y **media por sesión**.
+  - Bajo el banner, una fila de **destacados del periodo** muestra la sesión más
+    larga, el **mes/día con más sesiones**, la media por sesión y el **día
+    favorito** de la semana.
   - El botón **Review year** abre una **presentación inmersiva estilo
     Instagram Stories** a pantalla completa: barras de progreso segmentadas,
     avance automático, pausa, navegación con teclado/mando/ratón y diapositivas
@@ -86,6 +99,9 @@ la muestra como una estantería y lanza los juegos con un doble clic.
 - Las estadísticas se calculan con las sesiones registradas por GameCenter; el
   tiempo anterior sin fecha no se inventa y sigue disponible como total
   histórico en la ficha de cada juego.
+- **Todas las sesiones cuentan**: no hay duración mínima, así que una partida de
+  dos minutos también aparece en el timeline y en las estadísticas (las de menos
+  de un segundo se redondean a 1 s en lugar de descartarse).
 - **Big Picture**: modo de sofá **a pantalla completa** (sin barra de título ni
   barra de tareas), con portada grande, información del juego y un carrusel
   cinematográfico con **cuatro modos de visualización**: **Arco**, **Plano**,

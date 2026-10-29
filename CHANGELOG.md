@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.20.1
+
+- **Stats gets its own top row**: the top header disappears in Statistics. The
+  period selector stays on the left; **Library / Stats / Store**, the **year
+  picker** and the **year-review button** (at its original size) are aligned to
+  the right. The regular top navbar comes back unchanged when you return to the
+  library.
+- **Most played inside Time Played**: the card with the period's top game now
+  lives in the time-played block next to the hours, so the giant year watermark
+  is never covered.
+- **Playtime label and aligned metrics**: the *Best day* metric label is now
+  **Playtime** (the value is still the best day's time, with its date below), and
+  the days/time/sessions row shares one baseline.
+- **Highlight stats everywhere**:
+  - every day/week/month card shows **Longest session** (with date or game),
+    **Busiest day** (or **Games played** on day cards) and **Average session**;
+  - the period gets a highlight strip with **Longest session**, **Busiest
+    day/month**, **Average session** and **Favourite weekday**.
+  - everything is recomputed from the recorded history on every refresh.
+- **Every session is saved**: there is no minimum duration, so sessions shorter
+  than five minutes appear in the timeline and in the statistics. Sub-second
+  sessions are rounded up to 1 s instead of being dropped, and the timeline keeps
+  up to 5,000 sessions per game.
+
 ## v0.20.0
 
 - **Custom screenshot shortcuts**:

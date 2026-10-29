@@ -11,9 +11,15 @@ Rectangle {
     property string period: "year"
     property int selectedYear: new Date().getFullYear()
     property int selectedMonth: -1
+    property string currentView: "stats"
     signal reviewRequested(int year)
+    signal viewRequested(string view)
 
     readonly property bool narrow: width < 1080
+    // The header row needs a little more room than the rest of the view: with
+    // the period tabs, the view switch, the year and the 340 px review banner
+    // the full row only fits above this width.
+    readonly property bool compactHeader: width < 1170
     // Newest bucket first: months, weeks or days depending on the period.
     readonly property var months: {
         var list = (statsData.buckets || statsData.months || []).slice();
@@ -24,6 +30,7 @@ Rectangle {
     readonly property bool canOpenBucket: bucketsKind === "month"
     readonly property var river: statsData.river || ({})
     readonly property var topGame: statsData.topGame || ({})
+    readonly property var highlights: statsData.highlights || []
 
     function refresh() {
         statsData = Library.stats(
@@ -66,6 +73,7 @@ Rectangle {
             selectedMonth = new Date().getMonth();
         }
         refresh();
+        page.contentY = 0;
         focusStart();
     }
 
@@ -198,23 +206,26 @@ Rectangle {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 12
+                    spacing: 10
 
                     PeriodTabs {}
 
                     Item { Layout.fillWidth: true }
 
+                    ViewTabs {}
+
                     YearPicker {}
 
                     ReviewBanner {
-                        visible: !root.narrow
+                        objectName: "statsReviewBanner"
+                        visible: !root.compactHeader
                         Layout.preferredWidth: 340
                         Layout.preferredHeight: 54
                     }
                 }
 
                 ReviewBanner {
-                    visible: root.narrow
+                    visible: root.compactHeader
                     Layout.fillWidth: true
                     Layout.preferredHeight: 54
                 }
@@ -222,7 +233,7 @@ Rectangle {
 
             Rectangle {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 206
+                Layout.preferredHeight: 286
                 radius: 24
                 border.width: 1
                 border.color: "#243044"
@@ -280,6 +291,7 @@ Rectangle {
                 }
 
                 Text {
+                    objectName: "statsYearWatermark"
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.rightMargin: 30
@@ -291,134 +303,14 @@ Rectangle {
                     font.bold: true
                 }
 
-                // Game with the most hours in the selected period.
-                Rectangle {
-                    id: topGamePanel
-                    objectName: "topGamePanel"
-                    visible: !root.narrow && root.topGame
-                             && (root.topGame.name || "") !== ""
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    anchors.rightMargin: 26
-                    width: 286
-                    height: 142
-                    radius: 16
-                    color: "#0b111b"
-                    border.width: 1
-                    border.color: "#26374d"
-                    clip: true
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: 16
-                        gradient: Gradient {
-                            GradientStop {
-                                position: 0.0
-                                color: Qt.rgba(
-                                    Library.accent.r,
-                                    Library.accent.g,
-                                    Library.accent.b,
-                                    0.10
-                                )
-                            }
-                            GradientStop { position: 1.0; color: "#0b111b" }
-                        }
-                    }
-
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.margins: 12
-                        spacing: 12
-
-                        Item {
-                            Layout.preferredWidth: 64
-                            Layout.preferredHeight: 88
-
-                            Rectangle {
-                                anchors.fill: parent
-                                radius: 8
-                                color: "#070a10"
-                                border.width: 1
-                                border.color: "#2b3b53"
-                            }
-
-                            Rectangle {
-                                anchors.fill: parent
-                                anchors.margins: 2
-                                radius: 6
-                                color: "#182234"
-                                clip: true
-
-                                Image {
-                                    anchors.fill: parent
-                                    source: root.topGame.cover || ""
-                                    fillMode: Image.PreserveAspectCrop
-                                    asynchronous: true
-                                    cache: true
-                                }
-                            }
-                        }
-
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            spacing: 3
-
-                            Text {
-                                text: Tr.strings["Most played"]
-                                color: Library.accent
-                                font.family: "Chakra Petch"
-                                font.pixelSize: 9
-                                font.bold: true
-                                font.letterSpacing: 1.4
-                            }
-
-                            Text {
-                                Layout.fillWidth: true
-                                text: root.topGame.name || ""
-                                color: "#f2f5fa"
-                                font.family: "Sora"
-                                font.pixelSize: 15
-                                font.bold: true
-                                wrapMode: Text.WordWrap
-                                maximumLineCount: 2
-                                elide: Text.ElideRight
-                            }
-
-                            Item { Layout.fillHeight: true }
-
-                            Row {
-                                spacing: 8
-
-                                Text {
-                                    text: root.topGame.hoursText || ""
-                                    color: "#facc15"
-                                    font.family: "Sora"
-                                    font.pixelSize: 13
-                                    font.bold: true
-                                }
-
-                                Text {
-                                    text: root.statsData.periodLabel || ""
-                                    color: "#7d8798"
-                                    font.family: "Sora"
-                                    font.pixelSize: 9
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                            }
-                        }
-                    }
-                }
-
+                // The most played game lives inside the time-played block, next
+                // to the hours, so it never covers the year watermark.
                 ColumnLayout {
                     anchors.left: parent.left
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
-                    anchors.right: topGamePanel.visible
-                                  ? topGamePanel.left
-                                  : parent.right
+                    anchors.right: parent.right
                     anchors.margins: 24
-                    anchors.rightMargin: topGamePanel.visible ? 16 : 24
                     spacing: 6
 
                     Text {
@@ -448,36 +340,118 @@ Rectangle {
                         font.letterSpacing: 0.3
                     }
 
-                    RowLayout {
-                        visible: root.narrow && (root.topGame.name || "") !== ""
-                        Layout.fillWidth: true
-                        spacing: 8
+                    Rectangle {
+                        id: topGamePanel
+                        objectName: "topGamePanel"
+                        visible: root.topGame
+                                 && (root.topGame.name || "") !== ""
+                        Layout.preferredWidth: root.narrow ? 240 : 300
+                        Layout.preferredHeight: 84
+                        radius: 14
+                        color: "#0b111b"
+                        border.width: 1
+                        border.color: "#26374d"
+                        clip: true
 
-                        Text {
-                            text: Tr.strings["Most played"]
-                            color: Library.accent
-                            font.family: "Chakra Petch"
-                            font.pixelSize: 9
-                            font.bold: true
-                            font.letterSpacing: 1.0
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: 14
+                            gradient: Gradient {
+                                GradientStop {
+                                    position: 0.0
+                                    color: Qt.rgba(
+                                        Library.accent.r,
+                                        Library.accent.g,
+                                        Library.accent.b,
+                                        0.10
+                                    )
+                                }
+                                GradientStop { position: 1.0; color: "#0b111b" }
+                            }
                         }
 
-                        Text {
-                            Layout.fillWidth: true
-                            text: root.topGame.name || ""
-                            color: "#f2f5fa"
-                            font.family: "Sora"
-                            font.pixelSize: 11
-                            font.bold: true
-                            elide: Text.ElideRight
-                        }
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: 10
+                            spacing: 10
 
-                        Text {
-                            text: root.topGame.hoursText || ""
-                            color: "#facc15"
-                            font.family: "Sora"
-                            font.pixelSize: 11
-                            font.bold: true
+                            Item {
+                                Layout.preferredWidth: 44
+                                Layout.preferredHeight: 62
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: 7
+                                    color: "#070a10"
+                                    border.width: 1
+                                    border.color: "#2b3b53"
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    anchors.margins: 2
+                                    radius: 5
+                                    color: "#182234"
+                                    clip: true
+
+                                    Image {
+                                        anchors.fill: parent
+                                        source: root.topGame.cover || ""
+                                        fillMode: Image.PreserveAspectCrop
+                                        asynchronous: true
+                                        cache: true
+                                    }
+                                }
+                            }
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                spacing: 2
+
+                                Text {
+                                    text: Tr.strings["Most played"]
+                                    color: Library.accent
+                                    font.family: "Chakra Petch"
+                                    font.pixelSize: 8
+                                    font.bold: true
+                                    font.letterSpacing: 1.2
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: root.topGame.name || ""
+                                    color: "#f2f5fa"
+                                    font.family: "Sora"
+                                    font.pixelSize: 13
+                                    font.bold: true
+                                    wrapMode: Text.WordWrap
+                                    maximumLineCount: 2
+                                    elide: Text.ElideRight
+                                }
+
+                                Item { Layout.fillHeight: true }
+
+                                Row {
+                                    spacing: 8
+
+                                    Text {
+                                        text: root.topGame.hoursText || ""
+                                        color: "#facc15"
+                                        font.family: "Sora"
+                                        font.pixelSize: 12
+                                        font.bold: true
+                                    }
+
+                                    Text {
+                                        text: root.statsData.periodLabel || ""
+                                        color: "#7d8798"
+                                        font.family: "Sora"
+                                        font.pixelSize: 8
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -520,6 +494,25 @@ Rectangle {
                         color: "#6f7887"
                         font.family: "Sora"
                         font.pixelSize: 11
+                    }
+                }
+            }
+
+            // Period highlights: longest session, busiest day/month, average
+            // and favourite weekday. They are recomputed on every refresh.
+            RowLayout {
+                objectName: "statsHighlights"
+                Layout.fillWidth: true
+                visible: root.highlights.length > 0
+                spacing: 12
+
+                Repeater {
+                    model: root.highlights
+
+                    delegate: HighlightTile {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 76
+                        item: modelData
                     }
                 }
             }
@@ -944,7 +937,7 @@ Rectangle {
                 id: carousel
                 objectName: "monthCarousel"
                 Layout.fillWidth: true
-                Layout.preferredHeight: 480
+                Layout.preferredHeight: 540
                 orientation: ListView.Horizontal
                 spacing: 14
                 clip: true
@@ -996,7 +989,8 @@ Rectangle {
     }
 
     component PeriodTabs: Rectangle {
-        width: 360
+        objectName: "statsPeriodTabs"
+        width: 340
         height: 40
         radius: 20
         color: "#101827"
@@ -1045,6 +1039,7 @@ Rectangle {
     }
 
     component YearPicker: Row {
+        objectName: "statsYearPicker"
         readonly property bool canNext: root.selectedYear < new Date().getFullYear()
         height: 40
         spacing: 4
@@ -1514,109 +1509,44 @@ Rectangle {
                 Layout.fillWidth: true
                 spacing: 12
 
-                Column {
+                MetricColumn {
                     Layout.fillWidth: true
-                    spacing: 2
-
-                    Text {
-                        text: Tr.strings["Days played"]
-                        color: "#7d8798"
-                        font.family: "Sora"
-                        font.pixelSize: 9
-                        font.letterSpacing: 0.35
-                    }
-
-                    Item {
-                        width: parent.width
-                        height: 22
-
-                        HighlightPill {
-                            objectName: "topDaysPill"
-                            visible: card.month.topDays === true
-                            anchors.left: parent.left
-                            anchors.verticalCenter: parent.verticalCenter
-                            valueText: String(card.month.daysPlayed || 0)
-                            tint: "#34d399"
-                            valueSize: 12
-                        }
-
-                        Text {
-                            visible: card.month.topDays !== true
-                            anchors.left: parent.left
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: card.month.daysPlayed || 0
-                            color: "#dfe6f0"
-                            font.family: "Sora"
-                            font.pixelSize: 13
-                            font.bold: true
-                        }
-                    }
+                    label: Tr.strings["Days played"]
+                    value: String(card.month.daysPlayed || 0)
+                    highlighted: card.month.topDays === true
+                    pillObjectName: "topDaysPill"
+                    tint: "#34d399"
                 }
 
-                Column {
+                MetricColumn {
                     Layout.fillWidth: true
-                    spacing: 2
-
-                    Text {
-                        text: Tr.strings["Best day"]
-                        color: "#7d8798"
-                        font.family: "Sora"
-                        font.pixelSize: 9
-                        font.letterSpacing: 0.35
-                    }
-
-                    Text {
-                        text: card.month.bestDayText || "—"
-                        color: "#dfe6f0"
-                        font.family: "Sora"
-                        font.pixelSize: 13
-                        font.bold: true
-                    }
-
-                    Text {
-                        text: root.formatDay(card.month.bestDayTimestamp)
-                        color: "#64748b"
-                        font.family: "Sora"
-                        font.pixelSize: 8
-                    }
+                    label: Tr.strings["Playtime"]
+                    value: card.month.bestDayText || "—"
+                    detail: root.formatDay(card.month.bestDayTimestamp)
                 }
 
-                Column {
+                MetricColumn {
                     Layout.fillWidth: true
-                    spacing: 2
+                    label: Tr.strings["Sessions"]
+                    value: String(card.month.sessionsCount || 0)
+                    highlighted: card.month.topSessions === true
+                    pillObjectName: "topSessionsPill"
+                    tint: "#a78bfa"
+                }
+            }
 
-                    Text {
-                        text: Tr.strings["Sessions"]
-                        color: "#7d8798"
-                        font.family: "Sora"
-                        font.pixelSize: 9
-                        font.letterSpacing: 0.35
-                    }
+            RowLayout {
+                objectName: "cardHighlights"
+                Layout.fillWidth: true
+                visible: (card.month.highlights || []).length > 0
+                spacing: 10
 
-                    Item {
-                        width: parent.width
-                        height: 22
+                Repeater {
+                    model: card.month.highlights || []
 
-                        HighlightPill {
-                            objectName: "topSessionsPill"
-                            visible: card.month.topSessions === true
-                            anchors.left: parent.left
-                            anchors.verticalCenter: parent.verticalCenter
-                            valueText: String(card.month.sessionsCount || 0)
-                            tint: "#a78bfa"
-                            valueSize: 12
-                        }
-
-                        Text {
-                            visible: card.month.topSessions !== true
-                            anchors.left: parent.left
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: card.month.sessionsCount || 0
-                            color: "#dfe6f0"
-                            font.family: "Sora"
-                            font.pixelSize: 13
-                            font.bold: true
-                        }
+                    delegate: MiniStat {
+                        Layout.fillWidth: true
+                        item: modelData
                     }
                 }
             }
@@ -1810,6 +1740,191 @@ Rectangle {
                     }
                 }
             }
+        }
+    }
+
+    component ViewTabs: Rectangle {
+        objectName: "statsViewTabs"
+        width: 270
+        height: 38
+        radius: 19
+        color: "#0d0f14"
+        border.width: 1
+        border.color: "#232833"
+
+        Row {
+            anchors.fill: parent
+            anchors.margins: 4
+            spacing: 2
+
+            Repeater {
+                model: [
+                    { label: "LIBRARY", value: "library" },
+                    { label: "STATS", value: "stats" },
+                    { label: "STORE", value: "store" }
+                ]
+
+                delegate: Rectangle {
+                    readonly property bool selected: root.currentView === modelData.value
+                    width: (parent.width - 4) / 3
+                    height: 30
+                    radius: 15
+                    color: selected ? "#232936" : "transparent"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: Tr.strings[modelData.label]
+                        color: selected ? "#f2f5fa" : "#7b8494"
+                        font.family: "Chakra Petch"
+                        font.pixelSize: 11
+                        font.bold: true
+                        font.letterSpacing: 1.4
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.viewRequested(modelData.value)
+                    }
+                }
+            }
+        }
+    }
+
+    component HighlightTile: Rectangle {
+        id: tile
+        property var item: ({})
+
+        radius: 14
+        color: root.tintColor(tile.item.tint, 0.08)
+        border.width: 1
+        border.color: root.tintColor(tile.item.tint, 0.28)
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 12
+            spacing: 2
+
+            Text {
+                Layout.fillWidth: true
+                text: tile.item.label || ""
+                color: tile.item.tint || "#8b95a5"
+                font.family: "Chakra Petch"
+                font.pixelSize: 9
+                font.bold: true
+                font.letterSpacing: 0.9
+                elide: Text.ElideRight
+            }
+
+            Text {
+                Layout.fillWidth: true
+                text: tile.item.value || "—"
+                color: "#f8fafc"
+                font.family: "Sora"
+                font.pixelSize: 18
+                font.bold: true
+                elide: Text.ElideRight
+            }
+
+            Text {
+                Layout.fillWidth: true
+                text: tile.item.detail || ""
+                color: "#8b95a5"
+                font.family: "Sora"
+                font.pixelSize: 9
+                elide: Text.ElideRight
+            }
+        }
+    }
+
+    component MetricColumn: Column {
+        id: metric
+        property string label: ""
+        property string value: ""
+        property string detail: ""
+        property bool highlighted: false
+        property string pillObjectName: ""
+        property color tint: "#facc15"
+
+        spacing: 2
+
+        Text {
+            text: metric.label
+            color: "#7d8798"
+            font.family: "Sora"
+            font.pixelSize: 9
+            font.letterSpacing: 0.35
+        }
+
+        Item {
+            width: parent.width
+            height: 22
+
+            HighlightPill {
+                objectName: metric.pillObjectName
+                visible: metric.highlighted
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                valueText: metric.value
+                tint: metric.tint
+                valueSize: 12
+            }
+
+            Text {
+                visible: !metric.highlighted
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                text: metric.value
+                color: "#dfe6f0"
+                font.family: "Sora"
+                font.pixelSize: 13
+                font.bold: true
+            }
+        }
+
+        Text {
+            text: metric.detail
+            color: "#64748b"
+            font.family: "Sora"
+            font.pixelSize: 8
+            height: 11
+        }
+    }
+
+    component MiniStat: ColumnLayout {
+        id: mini
+        property var item: ({})
+
+        spacing: 1
+
+        Text {
+            Layout.fillWidth: true
+            text: mini.item.label || ""
+            color: mini.item.tint || "#7d8798"
+            font.family: "Chakra Petch"
+            font.pixelSize: 8
+            font.bold: true
+            font.letterSpacing: 0.7
+            elide: Text.ElideRight
+        }
+
+        Text {
+            Layout.fillWidth: true
+            text: mini.item.value || "—"
+            color: "#f2f5fa"
+            font.family: "Sora"
+            font.pixelSize: 12
+            font.bold: true
+            elide: Text.ElideRight
+        }
+
+        Text {
+            Layout.fillWidth: true
+            text: mini.item.detail || ""
+            color: "#64748b"
+            font.family: "Sora"
+            font.pixelSize: 8
+            elide: Text.ElideRight
         }
     }
 }

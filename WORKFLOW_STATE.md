@@ -1,5 +1,112 @@
 # WORKFLOW STATE — Atajos personalizados, carátulas locales y pulido de UI
 
+## Feature 0.20.1 — Stats sin header, navbar superior y estadísticas destacadas
+
+### Descripción funcional
+
+1. **Sesiones cortas**: ninguna sesión se descarta por duración. Se guardan
+   también las de menos de 5 minutos (y las de menos de 1 s se redondean a 1 s
+   en vez de perderse por el truncado a entero). El historial conserva hasta
+   5.000 sesiones por juego para que las estadísticas sigan creciendo con el uso.
+2. **Estadísticas sin header**: al entrar en Stats desaparece la barra superior
+   completa (logo, buscador, píldoras, ajustes y menú). La vista ocupa todo el
+   alto de la ventana.
+3. **Píldoras y año en la fila superior de Stats**: el selector de periodo
+   (Week/Month/Year/All time) queda a la izquierda; a la derecha se alinean las
+   píldoras **Biblioteca / Stats / Tienda**, el selector de año (`‹ 2026 ›`) y
+   el botón de resumen anual con su tamaño original (340 px). Al volver a
+   Biblioteca reaparece el navbar superior de siempre.
+   *Tienda* mantiene el aviso de “próximamente”.
+4. **Más jugado dentro de Tiempo jugado**: la tarjeta de *Most played* deja de
+   estar anclada a la derecha y pasa a vivir junto a las horas, dentro del mismo
+   bloque, para no tapar el año gigante del banner.
+5. **Etiqueta “Mejor día” → “Tiempo de juego”** en la fila de métricas de cada
+   tarjeta (el valor sigue siendo el tiempo del mejor día y debajo su fecha).
+6. **Fila de métricas alineada**: días jugados, tiempo de juego y sesiones
+   comparten altura de etiqueta, valor y detalle; los tres quedan alineados.
+7. **Estadísticas destacadas por tarjeta** (día, semana o mes), calculadas
+   siempre desde el historial y actualizadas al refrescar:
+   - **Sesión más larga** (`2h 15m`) con fecha (o juego, en tarjetas de día).
+   - **Día con más sesiones** (fecha + `N sesiones`) en tarjetas de semana/mes;
+     en tarjetas de día se sustituye por **Juegos jugados**.
+   - **Media por sesión**.
+8. **Estadísticas destacadas del periodo** (fila bajo el banner):
+   - **Sesión más larga** (duración + fecha + juego).
+   - **Día / mes con más sesiones** (según el periodo: mes en Year/All time,
+     día en Week/Month).
+   - **Media por sesión**.
+   - **Día favorito** (día de la semana con más sesiones).
+
+### Decisiones de arquitectura
+
+- `playtime.record_session()` y `playtime.add_seconds()` aceptan cualquier
+  duración positiva; se redondea al segundo más cercano con mínimo 1 s. No hay
+  umbral de 5 minutos en ningún punto del flujo (tracker → `_session_ended` →
+  historial → resumen → stats).
+- `MAX_HISTORY` sube de 200 a 5.000 para no tirar sesiones antiguas cuando el
+  usuario acumula historial; el recorte sigue existiendo como guardarraíl.
+- `stats.py` gana helpers puros (`_longest_session`, `_busiest_day`,
+  `_busiest_month`, `_favorite_weekday`, `_highlights`) reutilizados por el
+  resumen del periodo y por `_bucket_payload()`. Todo se recalcula en cada
+  `build()`, sin caché, así los datos se actualizan solos.
+- `StatsView.qml` coloca las píldoras (`statsViewTabs`) y el `YearPicker` en la
+  fila superior, entre `PeriodTabs` y `ReviewBanner`; `Main.qml` oculta `TopBar`
+  en Stats y estira `StatsView` hasta los bordes.
+- El panel de *Most played* se convierte en una fila dentro del bloque de
+  tiempo jugado; conserva `objectName: "topGamePanel"` para no romper los tests
+  existentes.
+- Las tarjetas renderizan `month.highlights` con un componente `MiniStat`; el
+  resumen del periodo renderiza `statsData.highlights` con `HighlightTile`.
+
+### Contrato de API
+
+| Elemento | Tipo | Descripción |
+| --- | --- | --- |
+| `stats.highlights` | `list` | Hasta 4 destacados del periodo: `{label, value, detail, tint}`. |
+| `stats.longestSession` | `object` | `{seconds, text, dateText, timestamp, game, gameId}` o `{}`. |
+| `stats.busiestDay` | `object` | `{dateText, timestamp, sessions, sessionsText}` o `{}`. |
+| `stats.busiestMonth` | `object` | `{monthIndex, name, sessions, sessionsText}` o `{}`. |
+| `stats.favoriteWeekday` | `object` | `{name, sessions, sessionsText}` o `{}`. |
+| `stats.averageSessionText` | `string` | Duración media por sesión del periodo. |
+| `buckets[].longestSessionText` | `string` | Duración de la sesión más larga del bucket. |
+| `buckets[].longestSessionDateText` | `string` | Fecha `dd/mm` de esa sesión. |
+| `buckets[].longestSessionGame` | `string` | Juego de esa sesión. |
+| `buckets[].busiestDayDateText` | `string` | Día con más sesiones dentro del bucket. |
+| `buckets[].busiestDaySessionsText` | `string` | `1 session` / `N sessions`. |
+| `buckets[].averageSessionText` | `string` | Media por sesión del bucket. |
+| `buckets[].gamesCount` | `int` | Juegos distintos jugados en el bucket. |
+| `buckets[].highlights` | `list` | 3 destacados listos para pintar. |
+| `StatsView.currentView` | `string` | Vista activa (Stats). |
+| `StatsView.viewRequested(view)` | `signal` | Biblioteca / Stats / Tienda desde el navbar inferior. |
+| `StatsView.highlights` | `list` | Atajo a `statsData.highlights`. |
+| `statsViewTabs` | QML | Píldoras Biblioteca/Stats/Tienda de la fila superior. |
+| `statsPeriodTabs` | QML | Selector Week/Month/Year/All time. |
+| `statsYearPicker` | QML | Selector de año de la fila superior. |
+
+### Checklist
+
+#### Backend
+- [x] `playtime.py`: sin mínimo de duración, redondeo a 1 s y `MAX_HISTORY = 5000`.
+- [x] `stats.py`: helpers de sesión más larga, día/mes con más sesiones, día favorito y media.
+- [x] `stats.py`: `highlights` del periodo y por bucket; campos nuevos en `build()`.
+- [x] Traducciones ES/FR/DE/IT/PT de las etiquetas nuevas.
+- [x] Tests de sesiones cortas, destacados por bucket y destacados del periodo.
+
+#### Frontend
+- [x] `StatsView.qml`: píldoras Biblioteca/Stats/Tienda + año en la fila superior, entre periodo y resumen.
+- [x] `Main.qml`: ocultar `TopBar` en Stats, `StatsView` a pantalla completa y puente `viewRequested`.
+- [x] `StatsView.qml`: *Most played* dentro del bloque de tiempo jugado y año visible.
+- [x] `StatsView.qml`: fila de métricas alineada y etiqueta “Tiempo de juego”.
+- [x] `StatsView.qml`: `HighlightTile` del periodo y `MiniStat` en cada tarjeta.
+- [x] Tests QML del navbar inferior, `topGamePanel` reubicado y destacados.
+- [x] README/CHANGELOG actualizados y verificación visual.
+
+### Verificación
+
+- [x] `python -m pytest -q` → **189 passed**.
+- [x] Capturas de Stats (Week/Month/Year) con píldoras y año arriba, año visible y destacados.
+- [x] Comprobar que Biblioteca recupera el navbar superior y que una sesión de 90 s aparece en Stats.
+
 ## Ajuste fino 0.20.0 — Modal de Big Picture, gatillos y filtros
 
 ### Descripción funcional
