@@ -16,6 +16,7 @@ os.environ.setdefault("QT_QUICK_BACKEND", "software")
 os.environ.setdefault("GC_NO_GAMEPAD", "1")
 os.environ.setdefault("GC_NO_HOTKEYS", "1")
 os.environ.setdefault("GC_NO_OVERLAY", "1")
+os.environ.setdefault("GC_NO_STARTUP_MOVIE", "1")
 
 from gamecenter.core.models import Game  # noqa: E402
 from gamecenter.ui import covers, library_model  # noqa: E402
@@ -103,7 +104,9 @@ def model(app, monkeypatch, games, tmp_path):
     from gamecenter.core import sources
 
     monkeypatch.setattr(
-        library_model, "scan_all", lambda: sources._with_playtime(games)
+        library_model,
+        "scan_all",
+        lambda progress=None: sources._with_playtime(games),
     )
     monkeypatch.setattr(library_model.credentials, "get_key", lambda: "")
     monkeypatch.setattr(
@@ -122,9 +125,13 @@ def model(app, monkeypatch, games, tmp_path):
     monkeypatch.setattr(
         library_model.metadata, "cache_path", lambda: tmp_path / "metadata.json"
     )
-    return library_model.LibraryModel(
-        download_art=False, settings_path=tmp_path / "settings.json"
+    model = library_model.LibraryModel(
+        download_art=False,
+        settings_path=tmp_path / "settings.json",
+        cache_path=tmp_path / "library_cache.json",
     )
+    assert model.waitForScan(10)
+    return model
 
 
 def test_model_lists_and_filters(model) -> None:
@@ -464,9 +471,11 @@ def test_remove_store_game_and_restore(model) -> None:
     assert model.hiddenCount == 1
 
     model.refresh()
+    assert model.waitForScan(10)
     assert model.rowCount() == 0
 
     model.restoreHiddenGames()
+    assert model.waitForScan(10)
     assert model.rowCount() == 1
     assert model.hiddenCount == 0
 
@@ -480,11 +489,116 @@ def test_scan_store_replaces_only_that_source(model, monkeypatch) -> None:
     )
 
     model.scanStore("steam")
+    assert model.waitForScan(10)
 
     ids = {game.id for game in model._visible}
     assert "steam:9" in ids
     assert "steam:1" not in ids
     assert "epic:3" in ids
+
+
+def _model_with_scan(monkeypatch, tmp_path, scan_all, cache_path=None):
+    """Build a model with isolated paths and a custom background scan."""
+    monkeypatch.setattr(library_model, "scan_all", scan_all)
+    monkeypatch.setattr(library_model.credentials, "get_key", lambda: "")
+    monkeypatch.setattr(
+        library_model.playtime, "_fallback_path", lambda: tmp_path / "playtime.json"
+    )
+    monkeypatch.setattr(
+        library_model.playtime, "history_path", lambda: tmp_path / "history.json"
+    )
+    monkeypatch.setattr(library_model.artwork, "CACHE", tmp_path / "art")
+    monkeypatch.setattr(
+        library_model.metadata, "cache_path", lambda: tmp_path / "metadata.json"
+    )
+    return library_model.LibraryModel(
+        download_art=False,
+        settings_path=tmp_path / "settings.json",
+        cache_path=cache_path or (tmp_path / "library_cache.json"),
+    )
+
+
+def test_model_paints_cache_before_scan_finishes(
+    app, monkeypatch, tmp_path
+) -> None:
+    import threading
+
+    from gamecenter.core import library_cache
+
+    cache_path = tmp_path / "library_cache.json"
+    cached = [Game(id="steam:1", title="Cached", source="steam")]
+    assert library_cache.save(cached, cache_path)
+
+    started = threading.Event()
+    release = threading.Event()
+
+    def slow_scan(progress=None):
+        started.set()
+        release.wait(10)
+        return []
+
+    model = _model_with_scan(monkeypatch, tmp_path, slow_scan, cache_path)
+    try:
+        assert started.wait(5)
+        assert model.scanning is True
+        assert model.rowCount() == 1
+        assert (
+            model.data(model.index(0, 0), library_model.ROLE_TITLE) == "Cached"
+        )
+    finally:
+        release.set()
+        assert model.waitForScan(10)
+
+    # The real result always wins over the bootstrap cache.
+    assert model.rowCount() == 0
+
+
+def test_scan_runs_off_the_ui_thread(app, monkeypatch, tmp_path) -> None:
+    import threading
+
+    from gamecenter.core import sources
+
+    games = [Game(id="steam:1", title="Alpha", source="steam")]
+    thread_names = []
+
+    def scan(progress=None):
+        thread_names.append(threading.current_thread().name)
+        return sources._with_playtime(games)
+
+    model = _model_with_scan(monkeypatch, tmp_path, scan)
+    assert model.waitForScan(10)
+
+    assert thread_names
+    assert thread_names[0] != threading.main_thread().name
+    assert model.rowCount() == 1
+    assert model.scanning is False
+
+
+def test_second_scan_is_reported_while_one_is_running(
+    app, monkeypatch, tmp_path
+) -> None:
+    import threading
+
+    started = threading.Event()
+    release = threading.Event()
+
+    def slow_scan(progress=None):
+        started.set()
+        release.wait(10)
+        return []
+
+    model = _model_with_scan(monkeypatch, tmp_path, slow_scan)
+    try:
+        assert started.wait(5)
+        notices = []
+        model.notice.connect(notices.append)
+
+        model.scanStore("steam")
+
+        assert notices == ["A scan is already running."]
+    finally:
+        release.set()
+        assert model.waitForScan(10)
 
 
 def test_art_pagination_reveals_batches(model) -> None:
@@ -586,6 +700,20 @@ def test_qml_window_loads(app, model) -> None:
     roots = engine.rootObjects()
     assert roots, "Main.qml failed to load"
     assert roots[0].property("title") == "GameCenter"
+
+
+def test_qml_has_scan_indicators(app, model) -> None:
+    from PySide6.QtCore import QObject
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+
+    assert root.findChild(QObject, "scanProgressLine") is not None
+    indicator = root.findChild(QObject, "scanIndicator")
+    assert indicator is not None
+    assert indicator.property("visible") is False
 
 
 def test_qml_reacts_to_language_change(app, model) -> None:
@@ -1346,6 +1474,97 @@ def test_qml_detail_is_fullscreen_with_a_pinned_rotatable_cartridge(app, model) 
     assert card.property("y") == 72
 
 
+def test_qml_screenshot_preview_is_capped_and_gallery_is_virtualized(
+    app, model, tmp_path
+) -> None:
+    from PySide6.QtCore import QMetaObject, QObject, QUrl
+    from PySide6.QtGui import QColor, QImage
+    from PySide6.QtTest import QTest
+
+    from gamecenter.ui.app import create_engine
+
+    image_path = tmp_path / "shot.png"
+    image = QImage(320, 180, QImage.Format_RGB32)
+    image.fill(QColor("#1f6f8b"))
+    assert image.save(str(image_path), "PNG")
+    url = QUrl.fromLocalFile(str(image_path)).toString()
+    shots = [
+        {"url": url, "dateText": f"0{index + 1}/01/2026", "path": str(image_path)}
+        for index in range(12)
+    ]
+
+    detail_game = dict(model.gameAt(0))
+    detail_game["screenshots"] = shots
+    detail_game["screenshotCount"] = len(shots)
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.resize(1180, 800)
+    root.show()
+    root.setProperty("detailIndex", 0)
+    root.setProperty("detailGame", detail_game)
+    root.setProperty("detailOpen", True)
+    app.processEvents()
+    QTest.qWait(260)
+
+    detail = root.findChild(QObject, "gameDetail")
+    assert detail is not None
+    preview = detail.property("previewScreenshots")
+    if hasattr(preview, "toVariant"):
+        preview = preview.toVariant()
+    assert len(preview) == 5
+    view_all = detail.findChild(QObject, "screenshotViewAll")
+    assert view_all is not None and view_all.property("visible") is True
+
+    assert detail.property("galleryOpen") is False
+    QMetaObject.invokeMethod(detail, "openGallery")
+    app.processEvents()
+    assert detail.property("galleryOpen") is True
+
+    grid = detail.findChild(QObject, "screenshotGrid")
+    assert grid is not None
+    assert grid.property("count") == 12
+
+    QMetaObject.invokeMethod(detail, "closeGallery")
+    app.processEvents()
+    assert detail.property("galleryOpen") is False
+
+
+def test_qml_settings_close_stays_outside_the_scroller(app, model) -> None:
+    from PySide6.QtCore import QObject
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.show()
+    root.setProperty("settingsOpen", True)
+    app.processEvents()
+
+    close = root.findChild(QObject, "settingsClose")
+    scroll = root.findChild(QObject, "settingsScroll")
+    assert close is not None and scroll is not None
+    # The close button lives in the panel, not inside the scrolling content.
+    assert close.parent() is not scroll
+    assert close.parent() is scroll.parent()
+
+
+def test_stats_view_tab_click_does_not_play_a_second_cue() -> None:
+    from pathlib import Path
+
+    text = (
+        Path(__file__).resolve().parents[1]
+        / "gamecenter"
+        / "ui"
+        / "qml"
+        / "StatsView.qml"
+    ).read_text(encoding="utf-8")
+    marker = text.index("root.viewRequested(modelData.value)")
+    around = text[max(0, marker - 260) : marker]
+
+    assert "Sounds.tab()" not in around
+
+
 def test_qml_search_hides_in_stats_and_clears_focus_outside(app, model) -> None:
     from PySide6.QtCore import QMetaObject, QObject, QPoint, Qt
     from PySide6.QtTest import QTest
@@ -1501,6 +1720,37 @@ def test_qml_settings_has_a_sound_toggle(app, model) -> None:
     app.processEvents()
     assert sound.property("enabled") is True
     assert model._prefs.sound_enabled is True
+
+
+def test_qml_settings_has_startup_movie_controls(app, model) -> None:
+    from PySide6.QtCore import QObject
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.show()
+    root.setProperty("settingsOpen", True)
+    app.processEvents()
+
+    assert root.findChild(QObject, "startupMovieToggle") is not None
+    assert root.findChild(QObject, "startupMovieCombo") is not None
+    assert root.findChild(QObject, "startupMovieBrowse") is not None
+
+    startup = engine.rootContext().contextProperty("StartupMovies")
+    assert startup is not None
+    assert startup.property("enabled") is True
+    assert len(startup.property("options")) >= 2
+
+    startup.setEnabled(False)
+    app.processEvents()
+    assert startup.property("enabled") is False
+    assert model._prefs.startup_movie_enabled is False
+
+    startup.setEnabled(True)
+    app.processEvents()
+    assert startup.property("enabled") is True
+    assert model._prefs.startup_movie_enabled is True
 
 
 def test_qml_big_picture_detail_profile_and_screenshots(app, model) -> None:

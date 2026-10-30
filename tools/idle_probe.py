@@ -51,6 +51,7 @@ def main() -> int:
     process = psutil.Process()
 
     library = LibraryModel(download_art=args.with_art)
+    library.waitForScan()
     engine = create_engine(library)
     roots = engine.rootObjects()
     if not roots:

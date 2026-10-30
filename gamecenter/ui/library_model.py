@@ -30,6 +30,7 @@ from .. import __version__
 from ..core import (
     credentials,
     i18n,
+    library_cache,
     manual,
     metadata,
     playtime,
@@ -50,7 +51,7 @@ from ..core.preferences import (
     Preferences,
 )
 from ..core.sessions import SessionTracker
-from ..core.sources import scan_all, scan_source
+from ..core.sources import scan_all, scan_source, with_playtime
 from . import artwork, covers
 
 ROLE_TITLE = Qt.UserRole + 1
@@ -134,6 +135,13 @@ class LibraryModel(QAbstractListModel):
     updatesChanged = Signal()
     playtimeChanged = Signal()
     detailsChanged = Signal()
+    scanStateChanged = Signal()
+    scanStarted = Signal()
+    scanCompleted = Signal(int)
+    scanFailed = Signal(str)
+    _scanProgress = Signal(str, int, int, int)
+    _scanFinished = Signal(object, str)
+    _scanFailed = Signal(str)
     _artOptionsReady = Signal(object, int, str, bool)
     _artDownloaded = Signal(str, str)
     _artFailed = Signal(str, str)
@@ -144,7 +152,10 @@ class LibraryModel(QAbstractListModel):
     _updateFailed = Signal(str)
 
     def __init__(
-        self, download_art: bool = True, settings_path: Path | None = None
+        self,
+        download_art: bool = True,
+        settings_path: Path | None = None,
+        cache_path: Path | None = None,
     ) -> None:
         super().__init__()
         self._all: list[Game] = []
@@ -156,8 +167,23 @@ class LibraryModel(QAbstractListModel):
         self._i18n = Translator(self._prefs)
         i18n.set_active(self._i18n)
         self._i18n.languageChanged.connect(self._on_language_changed)
+        self._cache_path = (
+            Path(cache_path) if cache_path is not None else library_cache.cache_path()
+        )
+        self._scanning = False
+        self._scan_source = ""
+        self._scan_notify = False
+        self._scan_status = ""
+        self._scan_progress_value = 0.0
+        self._scanProgress.connect(self._on_scan_progress, Qt.QueuedConnection)
+        self._scanFinished.connect(self._on_scan_finished, Qt.QueuedConnection)
+        self._scanFailed.connect(self._on_scan_failed, Qt.QueuedConnection)
+        # Paint the last successful scan immediately; the background scan below
+        # replaces it as soon as the real stores answer.
         self._all = [
-            game for game in scan_all() if not self._prefs.is_hidden(game.id)
+            game
+            for game in library_cache.load(self._cache_path)
+            if not self._prefs.is_hidden(game.id)
         ]
         self._favorites_only = False
         self._art_options_all: list[dict] = []
@@ -217,6 +243,7 @@ class LibraryModel(QAbstractListModel):
         self.artReady.connect(self._on_art_ready, Qt.QueuedConnection)
         self._refresh_rows()
         self._start_art()
+        self.startScan()
 
     # -- Qt model ---------------------------------------------------------
 
@@ -294,6 +321,18 @@ class LibraryModel(QAbstractListModel):
     @Property(bool, notify=changed)
     def favoritesOnly(self) -> bool:
         return self._favorites_only
+
+    @Property(bool, notify=scanStateChanged)
+    def scanning(self) -> bool:
+        return self._scanning
+
+    @Property(str, notify=scanStateChanged)
+    def scanStatus(self) -> str:
+        return self._scan_status
+
+    @Property(float, notify=scanStateChanged)
+    def scanProgress(self) -> float:
+        return self._scan_progress_value
 
     @Property(str, notify=appearanceChanged)
     def accent(self) -> str:
@@ -1012,40 +1051,149 @@ class LibraryModel(QAbstractListModel):
 
     @Slot()
     def refresh(self) -> None:
-        self._cover_urls.clear()
-        self._all = [
-            game for game in scan_all() if not self._prefs.is_hidden(game.id)
-        ]
-        self._refresh_rows()
-        self._start_art()
+        """Rescan the whole library in the background."""
+        self._begin_scan("", notify=False)
+
+    @Slot()
+    def startScan(self) -> None:
+        """Start a full background scan unless one is already running."""
+        self._begin_scan("", notify=False)
 
     @Slot(str)
     def scanStore(self, source: str) -> None:
-        if not source:
-            self.refresh()
-            self.notice.emit(
-                tr("Library rescanned: {count} game(s).", count=len(self._all))
-            )
+        self._begin_scan(source or "", notify=True)
+
+    def _begin_scan(self, source: str, notify: bool = False) -> None:
+        if self._scanning:
+            self.notice.emit(tr("A scan is already running."))
             return
 
-        label = SOURCE_LABELS.get(source, source.title())
+        self._scanning = True
+        self._scan_source = source
+        self._scan_notify = notify
+        self._scan_status = tr("Scanning...")
+        self._scan_progress_value = 0.0
+        self.scanStateChanged.emit()
+        self.scanStarted.emit()
+
+        def work() -> None:
+            try:
+                if source:
+                    games = scan_source(source)
+                else:
+                    games = scan_all(progress=self._report_progress)
+            except Exception as exc:  # noqa: BLE001 - reported by the UI
+                self._safe_emit(self._scanFailed, str(exc))
+                return
+            self._safe_emit(self._scanFinished, games, source)
+
+        threading.Thread(target=work, daemon=True).start()
+
+    @staticmethod
+    def _safe_emit(signal, *args) -> None:
+        """Emit from a worker even if the model was already torn down."""
         try:
-            games = scan_source(source)
-        except Exception as exc:  # noqa: BLE001 - reported as a toast
-            self.failed.emit(
-                tr("Couldn't scan {label}: {error}", label=label, error=exc)
-            )
+            signal.emit(*args)
+        except RuntimeError:
+            pass
+
+    @staticmethod
+    def _scan_label(source: str) -> str:
+        if source == "local":
+            return tr("Local")
+        return SOURCE_LABELS.get(source, source.replace("_", " ").title())
+
+    def _report_progress(
+        self, source: str, found: int, index: int, total: int
+    ) -> None:
+        """Called from the scan thread; only emits, never touches state."""
+        self._safe_emit(self._scanProgress, source, found, index, total)
+
+    @Slot(str, int, int, int)
+    def _on_scan_progress(
+        self, source: str, _found: int, index: int, total: int
+    ) -> None:
+        if not self._scanning:
             return
+        self._scan_status = tr(
+            "Scanning {label}...", label=self._scan_label(source)
+        )
+        self._scan_progress_value = (
+            min(1.0, max(0.0, index / total)) if total else 0.0
+        )
+        self.scanStateChanged.emit()
+
+    @Slot(object, str)
+    def _on_scan_finished(self, games: list[Game], source: str) -> None:
+        self._scanning = False
+        self._scan_status = ""
+        self._scan_progress_value = 0.0
+        self.scanStateChanged.emit()
 
         games = [game for game in games if not self._prefs.is_hidden(game.id)]
         self._cover_urls.clear()
-        self._all = [game for game in self._all if game.source != source] + games
-        self._all.sort(key=lambda game: (not game.installed, game.title.casefold()))
+
+        if source:
+            self._all = [
+                game for game in self._all if game.source != source
+            ] + games
+            self._all.sort(
+                key=lambda game: (not game.installed, game.title.casefold())
+            )
+            if self._scan_notify:
+                self.notice.emit(
+                    tr(
+                        "{label}: {count} game(s) found.",
+                        label=self._scan_label(source),
+                        count=len(games),
+                    )
+                )
+        else:
+            self._all = games
+            if self._scan_notify:
+                self.notice.emit(
+                    tr(
+                        "Library rescanned: {count} game(s).",
+                        count=len(games),
+                    )
+                )
+
+        # Keep the bootstrap cache in sync after full and per-store scans alike.
+        library_cache.save(self._all, self._cache_path)
         self._refresh_rows()
         self._start_art()
-        self.notice.emit(
-            tr("{label}: {count} game(s) found.", label=label, count=len(games))
-        )
+        self.scanCompleted.emit(len(self._all))
+
+    @Slot(str)
+    def _on_scan_failed(self, message: str) -> None:
+        was_source = self._scan_source
+        self._scanning = False
+        self._scan_status = ""
+        self._scan_progress_value = 0.0
+        self.scanStateChanged.emit()
+
+        if was_source:
+            self.failed.emit(
+                tr(
+                    "Couldn't scan {label}: {error}",
+                    label=self._scan_label(was_source),
+                    error=message,
+                )
+            )
+        else:
+            self.failed.emit(message)
+        self.scanFailed.emit(message)
+
+    def waitForScan(self, timeout: float = 15.0) -> bool:
+        """Wait for the background scan to finish (tests and CLI tools)."""
+        deadline = time.monotonic() + max(0.0, timeout)
+        app = QCoreApplication.instance()
+        while self._scanning and time.monotonic() < deadline:
+            if app is not None:
+                app.processEvents()
+            else:
+                time.sleep(0.005)
+        return not self._scanning
 
     @Slot()
     def restoreHiddenGames(self) -> None:
@@ -1599,11 +1747,26 @@ class LibraryModel(QAbstractListModel):
         except Exception as exc:  # noqa: BLE001 - reported as a toast
             self.failed.emit(str(exc))
             return {"ok": False, "message": tr("Couldn't unify the data.")}
+        # Reflect the moved time immediately; the background scan confirms it.
+        self._apply_merge_to_library(source.id, target.id, hide_source)
         self.refresh()
         self.playtimeChanged.emit()
         self.changed.emit()
         self.notice.emit(message)
         return {"ok": True, "message": message, "targetId": target.id}
+
+    def _apply_merge_to_library(
+        self, source_id: str, target_id: str, hide_source: bool
+    ) -> None:
+        if hide_source:
+            self._all = [game for game in self._all if game.id != source_id]
+        target = next((game for game in self._all if game.id == target_id), None)
+        if target is not None:
+            updated = with_playtime([target])[0]
+            self._all = [
+                updated if game.id == target_id else game for game in self._all
+            ]
+        self._refresh_rows()
 
     def _merge_game_data(
         self, source: Game, target: Game, hide_source: bool

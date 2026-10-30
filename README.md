@@ -3,7 +3,7 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.20.2** - Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
+> Estado: **v0.22.0** - Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 
@@ -11,6 +11,11 @@ la muestra como una estantería y lanza los juegos con un doble clic.
 
 - Detecta **Steam, Epic Games, GOG, Battle.net y Riot** leyendo sus archivos
   locales (manifiestos, registro de Windows y `libraryfolders.vdf`).
+- **Arranque instantáneo**: la ventana aparece con la última biblioteca escaneada
+  (`library_cache.json`) y el escaneo real corre en segundo plano, con una
+  píldora de progreso por tienda en la barra superior y una línea fina en el
+  borde de la ventana. La interfaz no se congela aunque haya cientos de juegos o
+  unidades de red lentas.
 - Lista los juegos como cartuchos con inclinación 3D al pasar el ratón.
 - Usa la carátula oficial de Steam (CDN público) y la cachea; sin conexión dibuja
   una portada generada.
@@ -37,9 +42,12 @@ la muestra como una estantería y lanza los juegos con un doble clic.
     siguiente con un contador **+N**.
   - El timeline tiene **scroll vertical propio** cuando hay muchas sesiones,
     con las líneas y los puntos separados para leer mejor cada partida.
-  - La ficha incluye una sección **SCREENSHOTS** con todas las capturas del
-    juego. Al pulsar cualquier miniatura se abre un visor a pantalla completa
-    con navegación anterior/siguiente, contador y fecha.
+  - La ficha incluye una sección **SCREENSHOTS** con una vista previa de hasta
+    cinco capturas y un botón **View all** que abre una galería modal. La
+    galería usa un `GridView` virtualizado, así que solo crea las miniaturas
+    visibles aunque haya cientos de capturas. Al pulsar una miniatura se abre
+    el visor a pantalla completa con navegación anterior/siguiente, contador y
+    fecha.
 - **Capturas superpuestas al juego**: al guardar una captura se muestra un
   flash breve y una tarjeta con la miniatura en la esquina inferior derecha,
   por encima del juego en ventana o borderless, sin robarle el foco ni bloquear
@@ -110,6 +118,12 @@ la muestra como una estantería y lanza los juegos con un doble clic.
   barra de tareas), con portada grande, información del juego y un carrusel
   cinematográfico con **cuatro modos de visualización**: **Arco**, **Plano**,
   **Anillo 3D** y **Rueda vertical**.
+  - **Película de inicio**: al entrar se reproduce una intro corta. Incluye dos
+    WebM (**Cyberpunk 2077** y **Star Wars**), se puede activar/desactivar y
+    elegir en Ajustes → **Startup movie**, o importar un vídeo propio (se copia
+    a `%APPDATA%\GameCenter\startup_movies`). Un clic, cualquier tecla,
+    **A/B/Start** o **Esc** saltan la intro; si el códec falla, Big Picture
+    abre igualmente.
   - Se entra desde el menú → **Big Picture**, con `Ctrl+B` o con **Start** del
     mando.
   - Mando Xbox compatible (XInput): D-pad/stick para moverse, **A** jugar,
@@ -178,6 +192,11 @@ la muestra como una estantería y lanza los juegos con un doble clic.
 - **Ajustes** (engranaje o `Ctrl+,`): color de acento entre 24 opciones,
   **color de superficie** para la barra superior, el dock Ready y la estantería,
   **color de los cartuchos** y tres estilos: clásico, **Nintendo DS** y **PS2**.
+  - **Película de inicio de Big Picture**: activar/desactivar, elegir entre los
+    dos vídeos incluidos o importar uno propio con **Browse…**. Los vídeos
+    personalizados se copian a `%APPDATA%\GameCenter\startup_movies` y se
+    pueden quitar desde el mismo selector. El botón de cerrar de Ajustes queda
+    **fijo** aunque se desplace el contenido.
   - **Capturas de pantalla del juego**: elige el atajo de teclado con el botón
     **Record** (pulsa la combinación que quieras; por defecto **Ctrl + Av Pág**)
     y consulta la carpeta donde se guardan. Con mando, **Record** captura los
@@ -281,8 +300,14 @@ El asistente del instalador está disponible en **inglés, español, francés,
 alemán, italiano, portugués, portugués de Brasil, neerlandés, polaco, ruso y
 japonés**.
 
-El workflow `.github/workflows/release.yml` compila y publica el instalador al
-empujar un tag `v*`.
+El workflow `.github/workflows/release.yml` compila el instalador, genera las
+notas de la versión desde `CHANGELOG.md` (cambios reales, assets, SHA-256,
+licencia y enlace al tag exacto) y publica el release al empujar un tag `v*`.
+Las notas se pueden revisar antes con:
+
+```powershell
+python packaging\release_notes.py v0.22.0 --output dist\release_notes.md
+```
 
 ## Ejecutar
 
@@ -312,6 +337,8 @@ gamecenter/
   cli.py                entrada: GUI o --scan
   core/
     models.py           modelo Game
+    library_cache.py    última biblioteca escaneada para el arranque instantáneo
+    startup_movies.py   catálogo e importación de películas de inicio
     shortcuts.py        atajos canónicos (validación, captura y VK de Windows)
     i18n.py             catálogo de idiomas y traductor de la interfaz
     metadata.py         descripciones de Steam Store con caché local
@@ -339,6 +366,7 @@ gamecenter/
     fonts/              Sora y Chakra Petch (SIL OFL 1.1)
 tools/screenshot.py     render de la ventana a PNG (desarrollo)
 tools/idle_probe.py      mide fps y CPU en reposo (desarrollo)
+startup-movies/         intros WebM incluidas (Cyberpunk 2077 y Star Wars)
 packaging/              PyInstaller, Inno Setup, icono y build de Windows
 tests/                  parser, escáner, modelo y carga del QML
 docs/CLEANROOM.md       política de reimplementación limpia
@@ -468,6 +496,12 @@ con `--max-fps` (2 fps por defecto) y la ventana de medida con `--seconds`.
 `tests/test_idle_animations.py` vigila además que ningún
 `loops: Animation.Infinite` quede sin su `running:` y que Big Picture no exista
 mientras está cerrado.
+
+El **escaneo de tiendas** también se ejecuta en un hilo daemon: la ventana se
+pinta primero con `library_cache.json` y el resultado real reemplaza la lista al
+terminar. `sources.scan_all(progress=...)` informa después de cada tienda y la
+barra superior muestra qué se está escaneando; un segundo escaneo mientras hay
+uno activo se rechaza con un aviso en lugar de duplicar trabajo.
 
 ## Licencia
 

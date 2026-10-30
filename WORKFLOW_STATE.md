@@ -1,3 +1,292 @@
+# WORKFLOW STATE - Startup movies, galeria de capturas y pulido de modales
+
+## Feature 0.22.0 - Intros de Big Picture y galeria virtualizada
+
+### Descripcion funcional
+
+1. **Startup movies en Big Picture**
+   - Al entrar en Big Picture se reproduce una intro corta antes de montar el
+     carrusel. La ventana ya esta a pantalla completa durante la intro.
+   - Se incluyen dos WebM en `startup-movies/` (Cyberpunk 2077 y Star Wars).
+   - Ajuste **STARTUP MOVIE** para activar/desactivar, elegir entre los videos
+     incluidos o importar uno propio con **Browse...**.
+   - Los videos importados se copian a `%APPDATA%/GameCenter/startup_movies`;
+     se pueden quitar desde el selector.
+   - Clic, cualquier tecla, **A/B/Start** o **Esc** saltan la intro. Un error
+     de codec, archivo ausente o el guard de 20 s montan Big Picture igualmente.
+   - El audio de la intro sigue el ajuste **Interface sounds** (muted cuando
+     esta desactivado).
+
+2. **Galeria de capturas**
+   - La ficha del juego pinta como maximo 5 miniaturas (`galleryPreviewCount`)
+     y una tarjeta **+N** / boton **View all**.
+   - El modal de galeria usa un `GridView` virtualizado: solo crea los
+     delegados visibles aunque haya cientos de capturas.
+   - Al pulsar una miniatura se abre el visor a pantalla completa existente;
+     al cerrarlo se vuelve a la galeria.
+
+3. **Modales y sonido**
+   - La X de Ajustes queda fuera del `ScrollView`, anclada al panel: no se
+     mueve al hacer scroll (y se reserva espacio a la derecha del scroller).
+   - Se elimina el `Sounds.tab()` duplicado del navbar de Stats: el cue lo
+     emite solo `Main.switchView()`.
+
+4. **Proporcion del dock**
+   - La pletina oscura, la boca de la ranura y el riel superior pasan de
+     174/150 px a **84 px**, el ancho del cartucho insertado (unos 71 px con
+     `cardScale = 0.34`) mas un margen minimo.
+   - Todo sigue centrado respecto al dock y la animacion de insercion no
+     cambia de destino.
+
+### Decisiones de arquitectura
+
+- `core/startup_movies.py` separa catalogo/importacion (puro) del manager QML.
+  `bundle_dir()` usa `sys._MEIPASS` en PyInstaller y la raiz del repo en
+  desarrollo; `custom_dir()` vive en `config_dir()`.
+- El manager persiste `startupMovieEnabled` y `startupMovie` en `settings.json`.
+  Si el id guardado ya no existe, cae al primer video disponible.
+- `StartupMovie.qml` usa `Video` de QtMultimedia con `AudioOutput` implicito;
+  `muted` sigue a `Sounds.enabled`. `onPlaybackStateChanged` detecta el final y
+  `active` lo controla `Main`, que monta Big Picture al terminar.
+- Mientras la intro corre, Big Picture **no esta montado**: sus handlers de
+  teclado/mando no compiten con el skip. Las conexiones de Gamepad de Main
+  cierran la intro con A/B/Start/LB/RB.
+- La galeria reutiliza `root.screenshots` y `openViewer`; el `GridView` evita
+  instanciar cientos de `ShotThumb` en el scroll de la ficha.
+- `StartupMovieManager.suppressed` desactiva la reproduccion en tests
+  (`GC_NO_STARTUP_MOVIE=1` u offscreen) sin cambiar el resto del flujo.
+
+### Contrato de API
+
+| Elemento | Tipo | Descripcion |
+| --- | --- | --- |
+| `startup_movies.bundle_dir()` | funcion | Carpeta de los videos incluidos (repo o `_MEIPASS`). |
+| `startup_movies.custom_dir()` | funcion | `config_dir()/startup_movies`. |
+| `startup_movies.list_movies()` | funcion | Lista de `{id,name,url,path,custom}`. |
+| `startup_movies.import_movie(path)` | funcion -> dict | Valida, copia y devuelve la entrada. |
+| `startup_movies.remove_movie(id)` | funcion -> bool | Borra solo videos personalizados. |
+| `StartupMovies.enabled` | bool (notify `changed`) | Ajuste persistido. |
+| `StartupMovies.options` | list | `{text,value}` para el `PillCombo`. |
+| `StartupMovies.selected` | str | Id seleccionado. |
+| `StartupMovies.currentUrl` | str | URL `file://` del video activo. |
+| `StartupMovies.currentName` | str | Nombre legible. |
+| `StartupMovies.selectedIsCustom` | bool | Habilita el boton Remove. |
+| `StartupMovies.ready` | bool | Hay video, esta activo y no esta suprimido. |
+| `StartupMovies.setEnabled(bool)` | Slot | Persiste el toggle. |
+| `StartupMovies.setSelected(id)` | Slot | Cambia el video. |
+| `StartupMovies.importMovie(url)` | Slot -> bool | Importa un video. |
+| `StartupMovies.removeSelected()` | Slot | Borra el video personalizado activo. |
+| `Main.startupMovieActive` | bool | La intro esta en curso. |
+| `Main.bigPictureMounted` | bool | Big Picture creado (solo tras la intro). |
+| `StartupMovie.active` | bool | Reproduce/detiene el video. |
+| `StartupMovie.finished()` | signal | Fin natural, skip o error. |
+| `GameDetail.galleryOpen` | bool | Modal de galeria abierto. |
+| `GameDetail.previewScreenshots` | list | Como maximo 5 capturas. |
+| `GameDetail.openGallery/closeGallery()` | funciones | Abrir/cerrar la galeria. |
+| `GameDetail.galleryPreviewCount` | int | 5. |
+
+### Checklist
+
+#### Backend
+- [x] `core/startup_movies.py`: catalogo, importacion, borrado y manager QML.
+- [x] `preferences.py`: `startupMovieEnabled` y `startupMovie` persistentes.
+- [x] `ui/app.py`: exponer `StartupMovies` como context property.
+- [x] `packaging/gamecenter.spec`: incluir `startup-movies/` en el build.
+- [x] Traducciones ES/FR/DE/IT/PT.
+
+#### Frontend
+- [x] `StartupMovie.qml`: Video, audio, skip, guard y estados.
+- [x] `Main.qml`: intro antes de montar Big Picture, skip con teclado/mando.
+- [x] `SettingsPanel.qml`: seccion STARTUP MOVIE, toggle, selector, Browse y Remove.
+- [x] `SettingsPanel.qml`: X fija fuera del ScrollView.
+- [x] `GameDetail.qml`: preview de 5 + View all + galeria `GridView` virtualizada.
+- [x] `StatsView.qml`: eliminar el cue duplicado del navbar.
+- [x] `BigPicture.qml`: la galeria bloquea input de fondo y B la cierra.
+- [x] `Dock.qml` / `Main.qml`: pletina, boca y riel del dock a 84 px.
+
+#### Tests y docs
+- [x] Tests de catalogo/importacion/manager y preferencias.
+- [x] Tests QML de ajustes, galeria, X fija y guardrail del doble pitido.
+- [x] README/CHANGELOG/WORKFLOW actualizados.
+- [x] `python -m pytest -q` en verde.
+
+### Verificacion
+
+- [x] `python -m pytest -q` -> **229 passed**.
+- [x] Reproduccion real del WebM Cyberpunk con QtMultimedia: VP9 + Opus,
+      6,54 s, `PlaybackState.PlayingState`, sin error.
+- [x] Flujo real: al abrir Big Picture `startupMovieActive=True` y
+      `bigPictureMounted=False`; al terminar la intro (8 s) se monta Big Picture.
+- [x] Captura de la galeria con 12 screenshots: preview de 5, `GridView` con
+      `count=12`.
+- [x] X de Ajustes fuera del scroller (test estructural).
+- [x] Guardrail estatico: el navbar de Stats no llama a `Sounds.tab()`.
+- [x] Captura del dock con un cartucho insertado (`GC_SESSION=1`): la pletina
+      y el riel quedan a escala del cartucho, sin la desproporcion anterior.
+- [x] `python -m pytest -q` -> **229 passed** tras el ajuste.
+
+---
+
+# WORKFLOW STATE - Notas de release con cambios reales
+
+## Tooling 0.21.0 - CHANGELOG -> GitHub Release
+
+### Descripcion
+
+- GitHub dejaba de generar notas utiles (`Full Changelog` + enlace) porque el
+  repositorio no usa pull requests. Cada release debe publicar los cambios
+  reales de su version, como en AuraEngine.
+- `packaging/release_notes.py` extrae la seccion `## vX.Y.Z` de `CHANGELOG.md`,
+  le pone fecha, añade la lista de assets con SHA-256, la licencia MIT, el
+  enlace al tag exacto y el aviso de build sin firmar.
+- El workflow de release usa `body_path` en lugar de `generate_release_notes`.
+  Si falta la seccion en el CHANGELOG, el script falla y la release no se
+  publica.
+- Las instrucciones del agente (`.opencode/agents/developer.md`) incluyen el
+  Paso 5 de release y la prohibicion explicita de publicar solo con
+  "Full Changelog".
+
+### Checklist
+
+- [x] `packaging/release_notes.py` (extraccion, fecha, assets, checksum, licencia).
+- [x] `.github/workflows/release.yml` con `body_path` y SHA-256 del instalador.
+- [x] `tests/test_release_notes.py` (seccion, version ausente, assets y checksum).
+- [x] `.opencode/agents/developer.md` actualizado con el Paso 5.
+- [x] `CHANGELOG.md` de 0.21.0 agrupado por Added/Changed.
+
+### Verificacion
+
+- [x] `python packaging/release_notes.py v0.21.0 --date 2026-10-30 --output dist/release_notes.md`
+      genera el cuerpo con los cambios reales.
+- [x] Con un instalador de prueba genera `<installer>.sha256` y lo incrusta en el body.
+- [x] Una version sin seccion en el CHANGELOG devuelve codigo 1.
+- [x] `python -m pytest -q` -> **216 passed**.
+
+---
+
+# WORKFLOW STATE - Escaneo de biblioteca en segundo plano
+
+## Feature 0.21.0 - Arranque instantaneo y escaneo asincrono
+
+### Descripcion funcional
+
+1. **Arranque sin bloqueo**
+   - `LibraryModel` ya no ejecuta `scan_all()` en el hilo de UI antes de
+     construir la ventana. La primera pintura ocurre con la cache del ultimo
+     escaneo correcto (`library_cache.json`).
+   - El escaneo real corre en un hilo daemon y actualiza el modelo cuando
+     termina, sin congelar la interfaz.
+   - Si no hay cache, la ventana aparece con la biblioteca vacia y el estado
+     "Scanning..." visible hasta que llegan los juegos.
+
+2. **Progreso visible**
+   - `Library.scanning`, `Library.scanStatus` y `Library.scanProgress` exponen
+     el estado a QML.
+   - La barra superior muestra una pildora con la tienda que se esta escaneando
+     y una linea fina de progreso en el borde superior de la ventana (visible
+     tambien en Stats, donde la barra superior esta oculta).
+   - Al terminar, la pildora desaparece y se mantiene el aviso de "N games
+     found" para escaneos manuales.
+
+3. **Escaneo por tienda y completo**
+   - `Library.scanStore("steam")` escanea solo esa tienda y reemplaza solo sus
+     juegos, igual que antes, pero en segundo plano.
+   - `Library.scanStore("")` y `Library.refresh()` relanzan el escaneo completo.
+   - Un escaneo en curso no se duplica: el segundo intento avisa con
+     "A scan is already running.".
+
+4. **Cache de arranque**
+   - El ultimo escaneo completo correcto se guarda de forma atomica en
+     `%APPDATA%/GameCenter/library_cache.json` (o el equivalente por plataforma).
+   - La cache guarda los campos del modelo `Game` (incluidas rutas y argumentos)
+     y se ignora si esta corrupta o pertenece a una version desconocida.
+   - La cache nunca sustituye a un escaneo: al terminar, el resultado real
+     reemplaza la lista y se reescribe la cache.
+
+### Decisiones de arquitectura
+
+- **Hilo daemon + senales privadas**: se sigue el patron ya usado por
+  `checkForUpdates()` y `downloadUpdate()` (`threading.Thread` + `Signal` con
+  `Qt.QueuedConnection`). El hilo solo emite; toda mutacion de `_all`,
+  `_visible` y `_prefs` ocurre en el hilo de UI dentro de los slots.
+- **Progreso desde el core**: `sources.scan_all(progress=...)` invoca el callback
+  tras cada tienda con `(source, found, index, total)`. El callback del modelo
+  solo emite una senal; no toca estado compartido.
+- **Cache separada**: `core/library_cache.py` no conoce Qt. Serializa `Game`
+  (Path -> str, tuple -> list) y escribe con `os.replace`. `LibraryModel` puede
+  recibir una ruta de cache explicita (tests y herramientas).
+- **Sin animaciones infinitas**: el indicador es estatico; la linea de progreso
+  es un binding a `Library.scanProgress`. No se reintroduce el coste de idle
+  que vigila `tests/test_idle_animations.py`.
+- **`waitForScan()`**: helper para tests y herramientas (`tools/screenshot.py`,
+  `tools/idle_probe.py`) que necesita el resultado sincrono sin bloquear la UI.
+- **Unificar sigue siendo inmediato**: `mergeGameData()` aplica el tiempo movido
+  a la entrada destino en memoria (`sources.with_playtime`) y retira el origen
+  oculto antes de lanzar el escaneo de fondo, para que `GameDetail` no muestre
+  datos antiguos durante la ventana de escaneo.
+- **Emisiones seguras**: el hilo de escaneo usa `_safe_emit()` y descarta
+  `RuntimeError` si el modelo ya se destruyo (cierre de la app o tests).
+
+### Contrato de API
+
+| Elemento | Tipo | Descripcion |
+| --- | --- | --- |
+| `sources.scan_all(progress=None)` | funcion | Mismo resultado; `progress(source, found, index, total)` tras cada tienda. |
+| `sources.scan_source(source, progress=None)` | funcion | Escanea una tienda; `progress` opcional con `index=1, total=1`. |
+| `sources.with_playtime(games)` | funcion | Reaplica el tiempo guardado a juegos ya escaneados (usado al unificar). |
+| `library_cache.cache_path()` | funcion | Ruta por defecto de `library_cache.json`. |
+| `library_cache.load(path=None)` | funcion -> `list[Game]` | Cache valida o lista vacia. |
+| `library_cache.save(games, path=None)` | funcion -> `bool` | Escritura atomica. |
+| `LibraryModel(..., cache_path=...)` | parametro | Ruta de cache explicita (opcional). |
+| `Library.startScan()` | Slot | Lanza el escaneo completo si no hay uno en curso. |
+| `Library.scanStore(source)` | Slot | Escaneo completo (`""`) o de una tienda. |
+| `Library.scanning` | bool (notify `scanStateChanged`) | Hay un escaneo en curso. |
+| `Library.scanStatus` | str (notify `scanStateChanged`) | Texto traducido ("Scanning Steam..."). |
+| `Library.scanProgress` | float (notify `scanStateChanged`) | 0.0 - 1.0. |
+| `Library.scanStarted` | signal | Comienza un escaneo. |
+| `Library.scanCompleted(int)` | signal | Termina; numero total de juegos. |
+| `Library.scanFailed(str)` | signal | El escaneo completo fallo. |
+| `Library.waitForScan(timeout)` | metodo -> bool | Bloquea hasta terminar (tests/herramientas). |
+
+### Checklist
+
+#### Backend
+- [x] `core/sources/__init__.py`: callback de progreso en `scan_all` / `scan_source`.
+- [x] `core/library_cache.py`: serializacion de `Game`, carga tolerante y escritura atomica.
+- [x] `ui/library_model.py`: hilo de escaneo, senales, propiedades y cache de arranque.
+- [x] `ui/library_model.py`: `refresh()` y `scanStore()` asincronos sin duplicar escaneos.
+- [x] `ui/library_model.py`: actualizacion inmediata de la ficha tras unificar juegos.
+- [x] `tools/screenshot.py` y `tools/idle_probe.py`: esperar al escaneo.
+- [x] Traducciones ES/FR/DE/IT/PT de los textos nuevos.
+
+#### Frontend
+- [x] `Toolbar.qml`: pildora de escaneo con estado y progreso.
+- [x] `Main.qml`: linea de progreso superior visible en cualquier vista.
+- [x] Tests QML del indicador.
+
+#### Tests y docs
+- [x] Tests de progreso de `scan_all` y tolerancia a callbacks rotos.
+- [x] Tests de `library_cache` (round-trip, corrupcion, entradas invalidas).
+- [x] Tests de UI: escaneo en hilo distinto, cache pintada antes de terminar y `scanStore`.
+- [x] README/CHANGELOG/WORKFLOW actualizados.
+- [x] `python -m pytest -q` en verde.
+
+### Verificacion
+
+- [x] `python -m pytest -q` -> **212 passed** (incluye 1 test QML nuevo).
+- [x] Arranque: la cache se pinta antes de que termine el escaneo (test con
+      escaneo bloqueado a proposito).
+- [x] Stats y biblioteca comparten la linea superior de progreso; la pildora
+      desaparece al terminar.
+- [x] `python tools/idle_probe.py --seconds 4 --settle 3` -> **0 frames en 4 s,
+      CPU 0.80 %, RESULT ok**. El escaneo termina antes de la ventana de medida
+      y el indicador no anima.
+- [x] Un segundo escaneo durante uno activo se rechaza con aviso.
+- [x] Aplicacion real abierta (`python -m gamecenter`) al terminar la
+      implementacion, a la espera de revision del usuario.
+
+---
+
 # WORKFLOW STATE - Fluidez de Big Picture, Stats y sonidos de interfaz
 
 ## Feature 0.20.2 - Rendimiento, UX y sonidos estilo PS5

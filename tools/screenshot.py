@@ -17,7 +17,7 @@ from gamecenter.ui.app import _load_fonts, create_engine  # noqa: E402
 from gamecenter.ui.library_model import LibraryModel  # noqa: E402
 
 
-def _demo_games():
+def _demo_games(progress=None):
     """A fictional library, so the public preview doesn't show a real one."""
     from gamecenter.core.models import Game
 
@@ -104,6 +104,7 @@ def main() -> int:
         download_art=not demo,
         settings_path=Path(os.environ.get("TEMP", ".")) / "gamecenter-preview.json",
     )
+    library.waitForScan()
 
     if demo and os.environ.get("GC_SHOTS"):
         from PySide6.QtGui import QColor, QImage, QPainter

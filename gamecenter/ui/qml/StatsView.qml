@@ -1873,10 +1873,9 @@ Rectangle {
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            Sounds.tab();
-                            root.viewRequested(modelData.value);
-                        }
+                        // Main.switchView() owns the tab cue; playing it here
+                        // too caused the occasional double beep.
+                        onClicked: root.viewRequested(modelData.value)
                     }
                 }
             }

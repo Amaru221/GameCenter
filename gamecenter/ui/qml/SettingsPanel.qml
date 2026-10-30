@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Dialogs
 import QtQuick.Layouts
 
 Item {
@@ -75,7 +76,11 @@ Item {
             id: scroll
             objectName: "settingsScroll"
             anchors.fill: parent
-            anchors.margins: 30
+            anchors.leftMargin: 30
+            anchors.topMargin: 30
+            anchors.bottomMargin: 30
+            // Leave room for the pinned close button on the right edge.
+            anchors.rightMargin: 70
             clip: true
             ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
             ScrollBar.vertical.policy: ScrollBar.AlwaysOn
@@ -96,27 +101,8 @@ Item {
                         font.bold: true
                     }
 
-                    Rectangle {
-                        width: 30
-                        height: 30
-                        radius: 15
-                        color: closeArea.containsMouse ? "#232936" : "transparent"
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "✕"
-                            color: "#aeb8c7"
-                            font.pixelSize: 14
-                        }
-
-                        MouseArea {
-                            id: closeArea
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.closeRequested()
-                        }
-                    }
+                    // Space for the pinned close button outside the scroller.
+                    Item { width: 34; height: 1 }
                 }
 
                 Text {
@@ -776,6 +762,172 @@ Item {
                     color: "#232936"
                 }
 
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+                    height: 1
+                    color: "#232936"
+                }
+
+                Text {
+                    text: Tr.strings["STARTUP MOVIE"]
+                    color: "#8b95a5"
+                    font.family: "Chakra Petch"
+                    font.pixelSize: 11
+                    font.bold: true
+                    font.letterSpacing: 2.4
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+
+                    Column {
+                        Layout.fillWidth: true
+                        spacing: 2
+
+                        Text {
+                            text: Tr.strings["Startup movie in Big Picture"]
+                            color: "#dfe6f0"
+                            font.family: "Sora"
+                            font.pixelSize: 12
+                        }
+
+                        Text {
+                            text: Tr.strings["Play a short intro when Big Picture opens."]
+                            color: "#6f7887"
+                            font.family: "Sora"
+                            font.pixelSize: 10
+                            wrapMode: Text.WordWrap
+                        }
+                    }
+
+                    Rectangle {
+                        objectName: "startupMovieToggle"
+                        width: 44
+                        height: 24
+                        radius: 12
+                        color: StartupMovies.enabled ? Library.accent : "#2a3140"
+                        Layout.alignment: Qt.AlignVCenter
+
+                        Rectangle {
+                            width: 18
+                            height: 18
+                            radius: 9
+                            color: "#ffffff"
+                            x: StartupMovies.enabled ? 23 : 3
+                            anchors.verticalCenter: parent.verticalCenter
+                            Behavior on x { NumberAnimation { duration: 140 } }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: StartupMovies.setEnabled(!StartupMovies.enabled)
+                        }
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    visible: StartupMovies.enabled
+                    spacing: 10
+
+                    Text {
+                        text: Tr.strings["Movie"]
+                        color: "#dfe6f0"
+                        font.family: "Sora"
+                        font.pixelSize: 13
+                    }
+
+                    PillCombo {
+                        objectName: "startupMovieCombo"
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 160
+                        value: StartupMovies.selected
+                        entries: StartupMovies.options
+                        enabled: StartupMovies.options.length > 0
+                        onSelected: (chosen) => StartupMovies.setSelected(chosen)
+                    }
+
+                    Rectangle {
+                        objectName: "startupMovieBrowse"
+                        width: 104
+                        height: 34
+                        radius: 9
+                        color: browseMovieArea.containsMouse ? "#1e2c42" : "#171b23"
+                        border.width: 1
+                        border.color: browseMovieArea.containsMouse
+                                      ? Library.accent
+                                      : "#2a3140"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: Tr.strings["Browse..."]
+                            color: "#cfd6e2"
+                            font.family: "Sora"
+                            font.pixelSize: 11
+                        }
+
+                        MouseArea {
+                            id: browseMovieArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: movieDialog.open()
+                        }
+                    }
+
+                    Rectangle {
+                        objectName: "startupMovieRemove"
+                        visible: StartupMovies.selectedIsCustom
+                        width: 88
+                        height: 34
+                        radius: 9
+                        color: removeMovieArea.containsMouse ? "#3a2028" : "transparent"
+                        border.width: 1
+                        border.color: removeMovieArea.containsMouse
+                                      ? "#a24a5c"
+                                      : "#2a3140"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: Tr.strings["Remove"]
+                            color: "#e0a5ae"
+                            font.family: "Sora"
+                            font.pixelSize: 11
+                        }
+
+                        MouseArea {
+                            id: removeMovieArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: StartupMovies.removeSelected()
+                        }
+                    }
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    visible: StartupMovies.error !== ""
+                    text: StartupMovies.error
+                    color: "#ff8a8a"
+                    font.family: "Sora"
+                    font.pixelSize: 11
+                    wrapMode: Text.WordWrap
+                }
+
+                FileDialog {
+                    id: movieDialog
+                    title: Tr.strings["Choose a startup movie"]
+                    nameFilters: [
+                        Tr.strings["Video files (*.webm *.mp4 *.m4v *.mov *.mkv)"],
+                        Tr.strings["All files (*)"]
+                    ]
+                    onAccepted: StartupMovies.importMovie(selectedFile)
+                }
+
                 Text {
                     text: Tr.strings["UPDATES"]
                     color: "#8b95a5"
@@ -919,6 +1071,36 @@ Item {
                     font.family: "Sora"
                     font.pixelSize: 11
                 }
+            }
+        }
+
+        // Pinned outside the ScrollView: the close button never scrolls away.
+        Rectangle {
+            id: closeButton
+            objectName: "settingsClose"
+            z: 3
+            width: 30
+            height: 30
+            radius: 15
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.topMargin: 18
+            anchors.rightMargin: 18
+            color: closeArea.containsMouse ? "#232936" : "transparent"
+
+            Text {
+                anchors.centerIn: parent
+                text: "✕"
+                color: "#aeb8c7"
+                font.pixelSize: 14
+            }
+
+            MouseArea {
+                id: closeArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.closeRequested()
             }
         }
     }

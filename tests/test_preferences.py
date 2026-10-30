@@ -15,6 +15,21 @@ def test_favorites_round_trip(tmp_path) -> None:
     assert not Preferences(path).is_favorite("steam:1")
 
 
+def test_startup_movie_round_trip(tmp_path) -> None:
+    path = tmp_path / "settings.json"
+
+    prefs = Preferences(path)
+    assert prefs.startup_movie_enabled is True
+    assert prefs.startup_movie == ""
+
+    prefs.startup_movie_enabled = False
+    prefs.startup_movie = "default:cyberpunk.webm"
+
+    again = Preferences(path)
+    assert again.startup_movie_enabled is False
+    assert again.startup_movie == "default:cyberpunk.webm"
+
+
 def test_appearance_round_trip(tmp_path) -> None:
     path = tmp_path / "settings.json"
 

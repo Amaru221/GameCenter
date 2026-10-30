@@ -27,6 +27,7 @@ os.environ.setdefault("QT_QUICK_BACKEND", "software")
 os.environ.setdefault("GC_NO_GAMEPAD", "1")
 os.environ.setdefault("GC_NO_HOTKEYS", "1")
 os.environ.setdefault("GC_NO_OVERLAY", "1")
+os.environ.setdefault("GC_NO_STARTUP_MOVIE", "1")
 
 QML_DIR = Path(__file__).resolve().parents[1] / "gamecenter" / "ui" / "qml"
 
@@ -89,7 +90,9 @@ def model(app, monkeypatch, tmp_path):
         Game(id="steam:2", title="Beta Racer", source="steam", app_id="456"),
     ]
     monkeypatch.setattr(
-        library_model, "scan_all", lambda: sources._with_playtime(games)
+        library_model,
+        "scan_all",
+        lambda progress=None: sources._with_playtime(games),
     )
     monkeypatch.setattr(library_model.credentials, "get_key", lambda: "")
     monkeypatch.setattr(
@@ -108,9 +111,13 @@ def model(app, monkeypatch, tmp_path):
     monkeypatch.setattr(
         library_model.metadata, "cache_path", lambda: tmp_path / "metadata.json"
     )
-    return library_model.LibraryModel(
-        download_art=False, settings_path=tmp_path / "settings.json"
+    model = library_model.LibraryModel(
+        download_art=False,
+        settings_path=tmp_path / "settings.json",
+        cache_path=tmp_path / "library_cache.json",
     )
+    assert model.waitForScan(10)
+    return model
 
 
 def test_big_picture_is_created_only_while_open(app, model) -> None:

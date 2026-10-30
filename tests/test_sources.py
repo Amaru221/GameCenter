@@ -263,3 +263,77 @@ def test_scan_all_survives_a_broken_source(monkeypatch) -> None:
 
     monkeypatch.setattr(sources, "SOURCES", (Broken,))
     assert sources.scan_all() == []
+
+
+def test_scan_all_reports_progress_per_store(monkeypatch) -> None:
+    from gamecenter.core import sources
+    from gamecenter.core.models import Game
+
+    class Steam:
+        SOURCE = "steam"
+
+        @staticmethod
+        def scan():
+            return [
+                Game(id="steam:1", title="Alpha", source="steam"),
+                Game(id="steam:2", title="Beta", source="steam"),
+            ]
+
+    class Broken:
+        SOURCE = "broken"
+
+        @staticmethod
+        def scan():
+            raise RuntimeError("boom")
+
+    calls = []
+    monkeypatch.setattr(sources, "SOURCES", (Steam, Broken))
+
+    games = sources.scan_all(progress=lambda *args: calls.append(args))
+
+    assert [game.id for game in games] == ["steam:1", "steam:2"]
+    # A failed store still reports progress (0 games) so the UI never stalls.
+    assert calls == [("steam", 2, 1, 2), ("broken", 0, 2, 2)]
+
+
+def test_scan_source_reports_progress(monkeypatch) -> None:
+    from gamecenter.core import sources
+    from gamecenter.core.models import Game
+
+    class Steam:
+        SOURCE = "steam"
+
+        @staticmethod
+        def scan():
+            return [Game(id="steam:1", title="Alpha", source="steam")]
+
+    calls = []
+    monkeypatch.setattr(sources, "SOURCES", (Steam,))
+
+    games = sources.scan_source(
+        "steam", progress=lambda *args: calls.append(args)
+    )
+
+    assert [game.id for game in games] == ["steam:1"]
+    assert calls == [("steam", 1, 1, 1)]
+
+
+def test_scan_all_survives_a_broken_progress_callback(monkeypatch) -> None:
+    from gamecenter.core import sources
+    from gamecenter.core.models import Game
+
+    class Steam:
+        SOURCE = "steam"
+
+        @staticmethod
+        def scan():
+            return [Game(id="steam:1", title="Alpha", source="steam")]
+
+    def boom(*_args):
+        raise RuntimeError("observer failed")
+
+    monkeypatch.setattr(sources, "SOURCES", (Steam,))
+
+    games = sources.scan_all(progress=boom)
+
+    assert [game.id for game in games] == ["steam:1"]

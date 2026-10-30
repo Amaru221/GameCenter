@@ -23,9 +23,10 @@ Rectangle {
     Rectangle {
         x: (dock.width - width) / 2
         y: -1
-        width: 150
-        height: 11
-        radius: 5.5
+        // The slot mouth matches the cartridge width instead of the old 150.
+        width: 84
+        height: 10
+        radius: 5
         color: "#10141b"
         border.width: 1
         border.color: Qt.darker(Library.surfaceColor, 2.1)
@@ -34,18 +35,18 @@ Rectangle {
     Rectangle {
         x: (dock.width - width) / 2
         y: 0
-        width: 150
-        height: 7
-        radius: 3.5
+        width: 84
+        height: 6
+        radius: 3
         color: Library.accent
         opacity: dock.inserting ? 0.9 : 0
         Behavior on opacity { NumberAnimation { duration: 140 } }
     }
 
     Rectangle {
-        x: 18
+        x: (dock.width - width) / 2
         y: 1.5
-        width: dock.width - 36
+        width: 84
         height: 1
         radius: 1
         color: "#ffffff"
