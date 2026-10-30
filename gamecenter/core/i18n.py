@@ -2315,6 +2315,43 @@ TRANSLATIONS["pt"].update(
     }
 )
 
+# 0.21.0 — background library scanning.
+TRANSLATIONS["es"].update(
+    {
+        "Scanning...": "Escaneando...",
+        "Scanning {label}...": "Escaneando {label}...",
+        "A scan is already running.": "Ya hay un escaneo en curso.",
+    }
+)
+TRANSLATIONS["fr"].update(
+    {
+        "Scanning...": "Analyse...",
+        "Scanning {label}...": "Analyse de {label}...",
+        "A scan is already running.": "Une analyse est déjà en cours.",
+    }
+)
+TRANSLATIONS["de"].update(
+    {
+        "Scanning...": "Scannen...",
+        "Scanning {label}...": "Scanne {label}...",
+        "A scan is already running.": "Ein Scan läuft bereits.",
+    }
+)
+TRANSLATIONS["it"].update(
+    {
+        "Scanning...": "Scansione...",
+        "Scanning {label}...": "Scansione di {label}...",
+        "A scan is already running.": "Una scansione è già in corso.",
+    }
+)
+TRANSLATIONS["pt"].update(
+    {
+        "Scanning...": "Verificando...",
+        "Scanning {label}...": "Verificando {label}...",
+        "A scan is already running.": "Já existe uma verificação em andamento.",
+    }
+)
+
 _EXTRA_KEYS = ("Nintendo DS", "PS2", "STEAMGRIDDB")
 _KEYS = frozenset(_EXTRA_KEYS).union(
     *(catalog.keys() for catalog in TRANSLATIONS.values())

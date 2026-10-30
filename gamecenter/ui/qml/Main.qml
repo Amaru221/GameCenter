@@ -651,4 +651,17 @@ Window {
                  && !Screenshots.recording
         onActivated: topBar.focusSearch()
     }
+
+    // Thin progress line shown over every view (Stats hides the top bar) while
+    // the library is being scanned in the background.
+    Rectangle {
+        objectName: "scanProgressLine"
+        anchors.top: parent.top
+        anchors.left: parent.left
+        height: 2
+        z: 100
+        visible: Library.scanning
+        width: Math.max(2, window.width * Library.scanProgress)
+        color: Library.accent
+    }
 }

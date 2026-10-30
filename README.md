@@ -3,7 +3,7 @@
 Launcher de juegos **local-first** para Windows y Linux: reúne tu biblioteca,
 la muestra como una estantería y lanza los juegos con un doble clic.
 
-> Estado: **v0.20.2** - Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
+> Estado: **v0.21.0** - Steam, Epic, GOG, Battle.net, Riot y juegos locales. Sin cuentas, sin telemetría.
 
 ![Vista de GameCenter](docs/preview.png)
 
@@ -11,6 +11,11 @@ la muestra como una estantería y lanza los juegos con un doble clic.
 
 - Detecta **Steam, Epic Games, GOG, Battle.net y Riot** leyendo sus archivos
   locales (manifiestos, registro de Windows y `libraryfolders.vdf`).
+- **Arranque instantáneo**: la ventana aparece con la última biblioteca escaneada
+  (`library_cache.json`) y el escaneo real corre en segundo plano, con una
+  píldora de progreso por tienda en la barra superior y una línea fina en el
+  borde de la ventana. La interfaz no se congela aunque haya cientos de juegos o
+  unidades de red lentas.
 - Lista los juegos como cartuchos con inclinación 3D al pasar el ratón.
 - Usa la carátula oficial de Steam (CDN público) y la cachea; sin conexión dibuja
   una portada generada.
@@ -281,8 +286,14 @@ El asistente del instalador está disponible en **inglés, español, francés,
 alemán, italiano, portugués, portugués de Brasil, neerlandés, polaco, ruso y
 japonés**.
 
-El workflow `.github/workflows/release.yml` compila y publica el instalador al
-empujar un tag `v*`.
+El workflow `.github/workflows/release.yml` compila el instalador, genera las
+notas de la versión desde `CHANGELOG.md` (cambios reales, assets, SHA-256,
+licencia y enlace al tag exacto) y publica el release al empujar un tag `v*`.
+Las notas se pueden revisar antes con:
+
+```powershell
+python packaging\release_notes.py v0.21.0 --output dist\release_notes.md
+```
 
 ## Ejecutar
 
@@ -312,6 +323,7 @@ gamecenter/
   cli.py                entrada: GUI o --scan
   core/
     models.py           modelo Game
+    library_cache.py    última biblioteca escaneada para el arranque instantáneo
     shortcuts.py        atajos canónicos (validación, captura y VK de Windows)
     i18n.py             catálogo de idiomas y traductor de la interfaz
     metadata.py         descripciones de Steam Store con caché local
@@ -468,6 +480,12 @@ con `--max-fps` (2 fps por defecto) y la ventana de medida con `--seconds`.
 `tests/test_idle_animations.py` vigila además que ningún
 `loops: Animation.Infinite` quede sin su `running:` y que Big Picture no exista
 mientras está cerrado.
+
+El **escaneo de tiendas** también se ejecuta en un hilo daemon: la ventana se
+pinta primero con `library_cache.json` y el resultado real reemplaza la lista al
+terminar. `sources.scan_all(progress=...)` informa después de cada tienda y la
+barra superior muestra qué se está escaneando; un segundo escaneo mientras hay
+uno activo se rechaza con un aviso en lugar de duplicar trabajo.
 
 ## Licencia
 

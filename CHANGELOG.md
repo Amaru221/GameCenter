@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.21.0
+
+### Added
+
+- **Instant startup**: the window paints the last successful scan from
+  `library_cache.json` while the real store scan runs in a background thread.
+  Large libraries, slow disks and network drives no longer freeze the UI before
+  the first frame.
+- **Visible scan progress**: a pill in the top bar shows the store being scanned
+  and a thin accent line at the top edge tracks overall progress (also visible
+  in Stats, where the top bar is hidden). Both disappear when the scan ends.
+- **Bootstrap cache**: the cache stores every `Game` field (paths and launch
+  arguments included), is written atomically, ignores corrupt or future-version
+  files and is always replaced by the next real scan.
+
+### Changed
+
+- **Per-store and full scans are asynchronous**: `Scan Steam games`, `Scan all
+  stores` and `F5` keep the same behavior, but no longer block the UI. A second
+  scan request while one is running is reported instead of duplicated.
+- **Unifying games stays immediate**: moving playtime between two entries
+  updates the detail panel at once (and removes a hidden source), while the
+  background scan confirms the rest.
+- **Tests**: 216 passing, including new coverage for scan progress, cache
+  round-trips/corruption, non-blocking startup and cached first paint.
+
 ## v0.20.2
 
 - **Big Picture feels faster**:

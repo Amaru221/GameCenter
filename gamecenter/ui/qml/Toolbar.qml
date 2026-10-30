@@ -86,6 +86,53 @@ Item {
 
         Item { Layout.fillWidth: true }
 
+        Rectangle {
+            objectName: "scanIndicator"
+            visible: Library.scanning
+            Layout.preferredWidth: Math.min(240, scanRow.implicitWidth + 20)
+            Layout.maximumWidth: 240
+            height: 30
+            radius: 15
+            color: "#0d0f14"
+            border.width: 1
+            border.color: Library.accent
+            clip: true
+
+            RowLayout {
+                id: scanRow
+                anchors.centerIn: parent
+                width: Math.min(parent.width - 20, implicitWidth)
+                spacing: 8
+
+                Rectangle {
+                    width: 8
+                    height: 8
+                    radius: 4
+                    color: Library.accent
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: Library.scanStatus
+                    elide: Text.ElideRight
+                    color: "#c9d2e0"
+                    font.family: "Sora"
+                    font.pixelSize: 11
+                }
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.bottom: parent.bottom
+                anchors.leftMargin: 8
+                anchors.bottomMargin: 3
+                height: 2
+                radius: 1
+                width: Math.max(0, (parent.width - 16) * Library.scanProgress)
+                color: Library.accent
+            }
+        }
+
         PillCombo {
             id: sourceCombo
             Layout.preferredWidth: 150

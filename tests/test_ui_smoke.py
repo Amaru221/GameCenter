@@ -103,7 +103,9 @@ def model(app, monkeypatch, games, tmp_path):
     from gamecenter.core import sources
 
     monkeypatch.setattr(
-        library_model, "scan_all", lambda: sources._with_playtime(games)
+        library_model,
+        "scan_all",
+        lambda progress=None: sources._with_playtime(games),
     )
     monkeypatch.setattr(library_model.credentials, "get_key", lambda: "")
     monkeypatch.setattr(
@@ -122,9 +124,13 @@ def model(app, monkeypatch, games, tmp_path):
     monkeypatch.setattr(
         library_model.metadata, "cache_path", lambda: tmp_path / "metadata.json"
     )
-    return library_model.LibraryModel(
-        download_art=False, settings_path=tmp_path / "settings.json"
+    model = library_model.LibraryModel(
+        download_art=False,
+        settings_path=tmp_path / "settings.json",
+        cache_path=tmp_path / "library_cache.json",
     )
+    assert model.waitForScan(10)
+    return model
 
 
 def test_model_lists_and_filters(model) -> None:
@@ -464,9 +470,11 @@ def test_remove_store_game_and_restore(model) -> None:
     assert model.hiddenCount == 1
 
     model.refresh()
+    assert model.waitForScan(10)
     assert model.rowCount() == 0
 
     model.restoreHiddenGames()
+    assert model.waitForScan(10)
     assert model.rowCount() == 1
     assert model.hiddenCount == 0
 
@@ -480,11 +488,116 @@ def test_scan_store_replaces_only_that_source(model, monkeypatch) -> None:
     )
 
     model.scanStore("steam")
+    assert model.waitForScan(10)
 
     ids = {game.id for game in model._visible}
     assert "steam:9" in ids
     assert "steam:1" not in ids
     assert "epic:3" in ids
+
+
+def _model_with_scan(monkeypatch, tmp_path, scan_all, cache_path=None):
+    """Build a model with isolated paths and a custom background scan."""
+    monkeypatch.setattr(library_model, "scan_all", scan_all)
+    monkeypatch.setattr(library_model.credentials, "get_key", lambda: "")
+    monkeypatch.setattr(
+        library_model.playtime, "_fallback_path", lambda: tmp_path / "playtime.json"
+    )
+    monkeypatch.setattr(
+        library_model.playtime, "history_path", lambda: tmp_path / "history.json"
+    )
+    monkeypatch.setattr(library_model.artwork, "CACHE", tmp_path / "art")
+    monkeypatch.setattr(
+        library_model.metadata, "cache_path", lambda: tmp_path / "metadata.json"
+    )
+    return library_model.LibraryModel(
+        download_art=False,
+        settings_path=tmp_path / "settings.json",
+        cache_path=cache_path or (tmp_path / "library_cache.json"),
+    )
+
+
+def test_model_paints_cache_before_scan_finishes(
+    app, monkeypatch, tmp_path
+) -> None:
+    import threading
+
+    from gamecenter.core import library_cache
+
+    cache_path = tmp_path / "library_cache.json"
+    cached = [Game(id="steam:1", title="Cached", source="steam")]
+    assert library_cache.save(cached, cache_path)
+
+    started = threading.Event()
+    release = threading.Event()
+
+    def slow_scan(progress=None):
+        started.set()
+        release.wait(10)
+        return []
+
+    model = _model_with_scan(monkeypatch, tmp_path, slow_scan, cache_path)
+    try:
+        assert started.wait(5)
+        assert model.scanning is True
+        assert model.rowCount() == 1
+        assert (
+            model.data(model.index(0, 0), library_model.ROLE_TITLE) == "Cached"
+        )
+    finally:
+        release.set()
+        assert model.waitForScan(10)
+
+    # The real result always wins over the bootstrap cache.
+    assert model.rowCount() == 0
+
+
+def test_scan_runs_off_the_ui_thread(app, monkeypatch, tmp_path) -> None:
+    import threading
+
+    from gamecenter.core import sources
+
+    games = [Game(id="steam:1", title="Alpha", source="steam")]
+    thread_names = []
+
+    def scan(progress=None):
+        thread_names.append(threading.current_thread().name)
+        return sources._with_playtime(games)
+
+    model = _model_with_scan(monkeypatch, tmp_path, scan)
+    assert model.waitForScan(10)
+
+    assert thread_names
+    assert thread_names[0] != threading.main_thread().name
+    assert model.rowCount() == 1
+    assert model.scanning is False
+
+
+def test_second_scan_is_reported_while_one_is_running(
+    app, monkeypatch, tmp_path
+) -> None:
+    import threading
+
+    started = threading.Event()
+    release = threading.Event()
+
+    def slow_scan(progress=None):
+        started.set()
+        release.wait(10)
+        return []
+
+    model = _model_with_scan(monkeypatch, tmp_path, slow_scan)
+    try:
+        assert started.wait(5)
+        notices = []
+        model.notice.connect(notices.append)
+
+        model.scanStore("steam")
+
+        assert notices == ["A scan is already running."]
+    finally:
+        release.set()
+        assert model.waitForScan(10)
 
 
 def test_art_pagination_reveals_batches(model) -> None:
@@ -586,6 +699,20 @@ def test_qml_window_loads(app, model) -> None:
     roots = engine.rootObjects()
     assert roots, "Main.qml failed to load"
     assert roots[0].property("title") == "GameCenter"
+
+
+def test_qml_has_scan_indicators(app, model) -> None:
+    from PySide6.QtCore import QObject
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+
+    assert root.findChild(QObject, "scanProgressLine") is not None
+    indicator = root.findChild(QObject, "scanIndicator")
+    assert indicator is not None
+    assert indicator.property("visible") is False
 
 
 def test_qml_reacts_to_language_change(app, model) -> None:

@@ -1,3 +1,163 @@
+# WORKFLOW STATE - Notas de release con cambios reales
+
+## Tooling 0.21.0 - CHANGELOG -> GitHub Release
+
+### Descripcion
+
+- GitHub dejaba de generar notas utiles (`Full Changelog` + enlace) porque el
+  repositorio no usa pull requests. Cada release debe publicar los cambios
+  reales de su version, como en AuraEngine.
+- `packaging/release_notes.py` extrae la seccion `## vX.Y.Z` de `CHANGELOG.md`,
+  le pone fecha, añade la lista de assets con SHA-256, la licencia MIT, el
+  enlace al tag exacto y el aviso de build sin firmar.
+- El workflow de release usa `body_path` en lugar de `generate_release_notes`.
+  Si falta la seccion en el CHANGELOG, el script falla y la release no se
+  publica.
+- Las instrucciones del agente (`.opencode/agents/developer.md`) incluyen el
+  Paso 5 de release y la prohibicion explicita de publicar solo con
+  "Full Changelog".
+
+### Checklist
+
+- [x] `packaging/release_notes.py` (extraccion, fecha, assets, checksum, licencia).
+- [x] `.github/workflows/release.yml` con `body_path` y SHA-256 del instalador.
+- [x] `tests/test_release_notes.py` (seccion, version ausente, assets y checksum).
+- [x] `.opencode/agents/developer.md` actualizado con el Paso 5.
+- [x] `CHANGELOG.md` de 0.21.0 agrupado por Added/Changed.
+
+### Verificacion
+
+- [x] `python packaging/release_notes.py v0.21.0 --date 2026-10-30 --output dist/release_notes.md`
+      genera el cuerpo con los cambios reales.
+- [x] Con un instalador de prueba genera `<installer>.sha256` y lo incrusta en el body.
+- [x] Una version sin seccion en el CHANGELOG devuelve codigo 1.
+- [x] `python -m pytest -q` -> **216 passed**.
+
+---
+
+# WORKFLOW STATE - Escaneo de biblioteca en segundo plano
+
+## Feature 0.21.0 - Arranque instantaneo y escaneo asincrono
+
+### Descripcion funcional
+
+1. **Arranque sin bloqueo**
+   - `LibraryModel` ya no ejecuta `scan_all()` en el hilo de UI antes de
+     construir la ventana. La primera pintura ocurre con la cache del ultimo
+     escaneo correcto (`library_cache.json`).
+   - El escaneo real corre en un hilo daemon y actualiza el modelo cuando
+     termina, sin congelar la interfaz.
+   - Si no hay cache, la ventana aparece con la biblioteca vacia y el estado
+     "Scanning..." visible hasta que llegan los juegos.
+
+2. **Progreso visible**
+   - `Library.scanning`, `Library.scanStatus` y `Library.scanProgress` exponen
+     el estado a QML.
+   - La barra superior muestra una pildora con la tienda que se esta escaneando
+     y una linea fina de progreso en el borde superior de la ventana (visible
+     tambien en Stats, donde la barra superior esta oculta).
+   - Al terminar, la pildora desaparece y se mantiene el aviso de "N games
+     found" para escaneos manuales.
+
+3. **Escaneo por tienda y completo**
+   - `Library.scanStore("steam")` escanea solo esa tienda y reemplaza solo sus
+     juegos, igual que antes, pero en segundo plano.
+   - `Library.scanStore("")` y `Library.refresh()` relanzan el escaneo completo.
+   - Un escaneo en curso no se duplica: el segundo intento avisa con
+     "A scan is already running.".
+
+4. **Cache de arranque**
+   - El ultimo escaneo completo correcto se guarda de forma atomica en
+     `%APPDATA%/GameCenter/library_cache.json` (o el equivalente por plataforma).
+   - La cache guarda los campos del modelo `Game` (incluidas rutas y argumentos)
+     y se ignora si esta corrupta o pertenece a una version desconocida.
+   - La cache nunca sustituye a un escaneo: al terminar, el resultado real
+     reemplaza la lista y se reescribe la cache.
+
+### Decisiones de arquitectura
+
+- **Hilo daemon + senales privadas**: se sigue el patron ya usado por
+  `checkForUpdates()` y `downloadUpdate()` (`threading.Thread` + `Signal` con
+  `Qt.QueuedConnection`). El hilo solo emite; toda mutacion de `_all`,
+  `_visible` y `_prefs` ocurre en el hilo de UI dentro de los slots.
+- **Progreso desde el core**: `sources.scan_all(progress=...)` invoca el callback
+  tras cada tienda con `(source, found, index, total)`. El callback del modelo
+  solo emite una senal; no toca estado compartido.
+- **Cache separada**: `core/library_cache.py` no conoce Qt. Serializa `Game`
+  (Path -> str, tuple -> list) y escribe con `os.replace`. `LibraryModel` puede
+  recibir una ruta de cache explicita (tests y herramientas).
+- **Sin animaciones infinitas**: el indicador es estatico; la linea de progreso
+  es un binding a `Library.scanProgress`. No se reintroduce el coste de idle
+  que vigila `tests/test_idle_animations.py`.
+- **`waitForScan()`**: helper para tests y herramientas (`tools/screenshot.py`,
+  `tools/idle_probe.py`) que necesita el resultado sincrono sin bloquear la UI.
+- **Unificar sigue siendo inmediato**: `mergeGameData()` aplica el tiempo movido
+  a la entrada destino en memoria (`sources.with_playtime`) y retira el origen
+  oculto antes de lanzar el escaneo de fondo, para que `GameDetail` no muestre
+  datos antiguos durante la ventana de escaneo.
+- **Emisiones seguras**: el hilo de escaneo usa `_safe_emit()` y descarta
+  `RuntimeError` si el modelo ya se destruyo (cierre de la app o tests).
+
+### Contrato de API
+
+| Elemento | Tipo | Descripcion |
+| --- | --- | --- |
+| `sources.scan_all(progress=None)` | funcion | Mismo resultado; `progress(source, found, index, total)` tras cada tienda. |
+| `sources.scan_source(source, progress=None)` | funcion | Escanea una tienda; `progress` opcional con `index=1, total=1`. |
+| `sources.with_playtime(games)` | funcion | Reaplica el tiempo guardado a juegos ya escaneados (usado al unificar). |
+| `library_cache.cache_path()` | funcion | Ruta por defecto de `library_cache.json`. |
+| `library_cache.load(path=None)` | funcion -> `list[Game]` | Cache valida o lista vacia. |
+| `library_cache.save(games, path=None)` | funcion -> `bool` | Escritura atomica. |
+| `LibraryModel(..., cache_path=...)` | parametro | Ruta de cache explicita (opcional). |
+| `Library.startScan()` | Slot | Lanza el escaneo completo si no hay uno en curso. |
+| `Library.scanStore(source)` | Slot | Escaneo completo (`""`) o de una tienda. |
+| `Library.scanning` | bool (notify `scanStateChanged`) | Hay un escaneo en curso. |
+| `Library.scanStatus` | str (notify `scanStateChanged`) | Texto traducido ("Scanning Steam..."). |
+| `Library.scanProgress` | float (notify `scanStateChanged`) | 0.0 - 1.0. |
+| `Library.scanStarted` | signal | Comienza un escaneo. |
+| `Library.scanCompleted(int)` | signal | Termina; numero total de juegos. |
+| `Library.scanFailed(str)` | signal | El escaneo completo fallo. |
+| `Library.waitForScan(timeout)` | metodo -> bool | Bloquea hasta terminar (tests/herramientas). |
+
+### Checklist
+
+#### Backend
+- [x] `core/sources/__init__.py`: callback de progreso en `scan_all` / `scan_source`.
+- [x] `core/library_cache.py`: serializacion de `Game`, carga tolerante y escritura atomica.
+- [x] `ui/library_model.py`: hilo de escaneo, senales, propiedades y cache de arranque.
+- [x] `ui/library_model.py`: `refresh()` y `scanStore()` asincronos sin duplicar escaneos.
+- [x] `ui/library_model.py`: actualizacion inmediata de la ficha tras unificar juegos.
+- [x] `tools/screenshot.py` y `tools/idle_probe.py`: esperar al escaneo.
+- [x] Traducciones ES/FR/DE/IT/PT de los textos nuevos.
+
+#### Frontend
+- [x] `Toolbar.qml`: pildora de escaneo con estado y progreso.
+- [x] `Main.qml`: linea de progreso superior visible en cualquier vista.
+- [x] Tests QML del indicador.
+
+#### Tests y docs
+- [x] Tests de progreso de `scan_all` y tolerancia a callbacks rotos.
+- [x] Tests de `library_cache` (round-trip, corrupcion, entradas invalidas).
+- [x] Tests de UI: escaneo en hilo distinto, cache pintada antes de terminar y `scanStore`.
+- [x] README/CHANGELOG/WORKFLOW actualizados.
+- [x] `python -m pytest -q` en verde.
+
+### Verificacion
+
+- [x] `python -m pytest -q` -> **212 passed** (incluye 1 test QML nuevo).
+- [x] Arranque: la cache se pinta antes de que termine el escaneo (test con
+      escaneo bloqueado a proposito).
+- [x] Stats y biblioteca comparten la linea superior de progreso; la pildora
+      desaparece al terminar.
+- [x] `python tools/idle_probe.py --seconds 4 --settle 3` -> **0 frames en 4 s,
+      CPU 0.80 %, RESULT ok**. El escaneo termina antes de la ventana de medida
+      y el indicador no anima.
+- [x] Un segundo escaneo durante uno activo se rechaza con aviso.
+- [x] Aplicacion real abierta (`python -m gamecenter`) al terminar la
+      implementacion, a la espera de revision del usuario.
+
+---
+
 # WORKFLOW STATE - Fluidez de Big Picture, Stats y sonidos de interfaz
 
 ## Feature 0.20.2 - Rendimiento, UX y sonidos estilo PS5
