@@ -1,3 +1,132 @@
+# WORKFLOW STATE - Startup movies, galeria de capturas y pulido de modales
+
+## Feature 0.22.0 - Intros de Big Picture y galeria virtualizada
+
+### Descripcion funcional
+
+1. **Startup movies en Big Picture**
+   - Al entrar en Big Picture se reproduce una intro corta antes de montar el
+     carrusel. La ventana ya esta a pantalla completa durante la intro.
+   - Se incluyen dos WebM en `startup-movies/` (Cyberpunk 2077 y Star Wars).
+   - Ajuste **STARTUP MOVIE** para activar/desactivar, elegir entre los videos
+     incluidos o importar uno propio con **Browse...**.
+   - Los videos importados se copian a `%APPDATA%/GameCenter/startup_movies`;
+     se pueden quitar desde el selector.
+   - Clic, cualquier tecla, **A/B/Start** o **Esc** saltan la intro. Un error
+     de codec, archivo ausente o el guard de 20 s montan Big Picture igualmente.
+   - El audio de la intro sigue el ajuste **Interface sounds** (muted cuando
+     esta desactivado).
+
+2. **Galeria de capturas**
+   - La ficha del juego pinta como maximo 5 miniaturas (`galleryPreviewCount`)
+     y una tarjeta **+N** / boton **View all**.
+   - El modal de galeria usa un `GridView` virtualizado: solo crea los
+     delegados visibles aunque haya cientos de capturas.
+   - Al pulsar una miniatura se abre el visor a pantalla completa existente;
+     al cerrarlo se vuelve a la galeria.
+
+3. **Modales y sonido**
+   - La X de Ajustes queda fuera del `ScrollView`, anclada al panel: no se
+     mueve al hacer scroll (y se reserva espacio a la derecha del scroller).
+   - Se elimina el `Sounds.tab()` duplicado del navbar de Stats: el cue lo
+     emite solo `Main.switchView()`.
+
+4. **Proporcion del dock**
+   - La pletina oscura, la boca de la ranura y el riel superior pasan de
+     174/150 px a **84 px**, el ancho del cartucho insertado (unos 71 px con
+     `cardScale = 0.34`) mas un margen minimo.
+   - Todo sigue centrado respecto al dock y la animacion de insercion no
+     cambia de destino.
+
+### Decisiones de arquitectura
+
+- `core/startup_movies.py` separa catalogo/importacion (puro) del manager QML.
+  `bundle_dir()` usa `sys._MEIPASS` en PyInstaller y la raiz del repo en
+  desarrollo; `custom_dir()` vive en `config_dir()`.
+- El manager persiste `startupMovieEnabled` y `startupMovie` en `settings.json`.
+  Si el id guardado ya no existe, cae al primer video disponible.
+- `StartupMovie.qml` usa `Video` de QtMultimedia con `AudioOutput` implicito;
+  `muted` sigue a `Sounds.enabled`. `onPlaybackStateChanged` detecta el final y
+  `active` lo controla `Main`, que monta Big Picture al terminar.
+- Mientras la intro corre, Big Picture **no esta montado**: sus handlers de
+  teclado/mando no compiten con el skip. Las conexiones de Gamepad de Main
+  cierran la intro con A/B/Start/LB/RB.
+- La galeria reutiliza `root.screenshots` y `openViewer`; el `GridView` evita
+  instanciar cientos de `ShotThumb` en el scroll de la ficha.
+- `StartupMovieManager.suppressed` desactiva la reproduccion en tests
+  (`GC_NO_STARTUP_MOVIE=1` u offscreen) sin cambiar el resto del flujo.
+
+### Contrato de API
+
+| Elemento | Tipo | Descripcion |
+| --- | --- | --- |
+| `startup_movies.bundle_dir()` | funcion | Carpeta de los videos incluidos (repo o `_MEIPASS`). |
+| `startup_movies.custom_dir()` | funcion | `config_dir()/startup_movies`. |
+| `startup_movies.list_movies()` | funcion | Lista de `{id,name,url,path,custom}`. |
+| `startup_movies.import_movie(path)` | funcion -> dict | Valida, copia y devuelve la entrada. |
+| `startup_movies.remove_movie(id)` | funcion -> bool | Borra solo videos personalizados. |
+| `StartupMovies.enabled` | bool (notify `changed`) | Ajuste persistido. |
+| `StartupMovies.options` | list | `{text,value}` para el `PillCombo`. |
+| `StartupMovies.selected` | str | Id seleccionado. |
+| `StartupMovies.currentUrl` | str | URL `file://` del video activo. |
+| `StartupMovies.currentName` | str | Nombre legible. |
+| `StartupMovies.selectedIsCustom` | bool | Habilita el boton Remove. |
+| `StartupMovies.ready` | bool | Hay video, esta activo y no esta suprimido. |
+| `StartupMovies.setEnabled(bool)` | Slot | Persiste el toggle. |
+| `StartupMovies.setSelected(id)` | Slot | Cambia el video. |
+| `StartupMovies.importMovie(url)` | Slot -> bool | Importa un video. |
+| `StartupMovies.removeSelected()` | Slot | Borra el video personalizado activo. |
+| `Main.startupMovieActive` | bool | La intro esta en curso. |
+| `Main.bigPictureMounted` | bool | Big Picture creado (solo tras la intro). |
+| `StartupMovie.active` | bool | Reproduce/detiene el video. |
+| `StartupMovie.finished()` | signal | Fin natural, skip o error. |
+| `GameDetail.galleryOpen` | bool | Modal de galeria abierto. |
+| `GameDetail.previewScreenshots` | list | Como maximo 5 capturas. |
+| `GameDetail.openGallery/closeGallery()` | funciones | Abrir/cerrar la galeria. |
+| `GameDetail.galleryPreviewCount` | int | 5. |
+
+### Checklist
+
+#### Backend
+- [x] `core/startup_movies.py`: catalogo, importacion, borrado y manager QML.
+- [x] `preferences.py`: `startupMovieEnabled` y `startupMovie` persistentes.
+- [x] `ui/app.py`: exponer `StartupMovies` como context property.
+- [x] `packaging/gamecenter.spec`: incluir `startup-movies/` en el build.
+- [x] Traducciones ES/FR/DE/IT/PT.
+
+#### Frontend
+- [x] `StartupMovie.qml`: Video, audio, skip, guard y estados.
+- [x] `Main.qml`: intro antes de montar Big Picture, skip con teclado/mando.
+- [x] `SettingsPanel.qml`: seccion STARTUP MOVIE, toggle, selector, Browse y Remove.
+- [x] `SettingsPanel.qml`: X fija fuera del ScrollView.
+- [x] `GameDetail.qml`: preview de 5 + View all + galeria `GridView` virtualizada.
+- [x] `StatsView.qml`: eliminar el cue duplicado del navbar.
+- [x] `BigPicture.qml`: la galeria bloquea input de fondo y B la cierra.
+- [x] `Dock.qml` / `Main.qml`: pletina, boca y riel del dock a 84 px.
+
+#### Tests y docs
+- [x] Tests de catalogo/importacion/manager y preferencias.
+- [x] Tests QML de ajustes, galeria, X fija y guardrail del doble pitido.
+- [x] README/CHANGELOG/WORKFLOW actualizados.
+- [x] `python -m pytest -q` en verde.
+
+### Verificacion
+
+- [x] `python -m pytest -q` -> **229 passed**.
+- [x] Reproduccion real del WebM Cyberpunk con QtMultimedia: VP9 + Opus,
+      6,54 s, `PlaybackState.PlayingState`, sin error.
+- [x] Flujo real: al abrir Big Picture `startupMovieActive=True` y
+      `bigPictureMounted=False`; al terminar la intro (8 s) se monta Big Picture.
+- [x] Captura de la galeria con 12 screenshots: preview de 5, `GridView` con
+      `count=12`.
+- [x] X de Ajustes fuera del scroller (test estructural).
+- [x] Guardrail estatico: el navbar de Stats no llama a `Sounds.tab()`.
+- [x] Captura del dock con un cartucho insertado (`GC_SESSION=1`): la pletina
+      y el riel quedan a escala del cartucho, sin la desproporcion anterior.
+- [x] `python -m pytest -q` -> **229 passed** tras el ajuste.
+
+---
+
 # WORKFLOW STATE - Notas de release con cambios reales
 
 ## Tooling 0.21.0 - CHANGELOG -> GitHub Release

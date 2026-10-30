@@ -27,6 +27,7 @@ os.environ.setdefault("QT_QUICK_BACKEND", "software")
 os.environ.setdefault("GC_NO_GAMEPAD", "1")
 os.environ.setdefault("GC_NO_HOTKEYS", "1")
 os.environ.setdefault("GC_NO_OVERLAY", "1")
+os.environ.setdefault("GC_NO_STARTUP_MOVIE", "1")
 
 QML_DIR = Path(__file__).resolve().parents[1] / "gamecenter" / "ui" / "qml"
 

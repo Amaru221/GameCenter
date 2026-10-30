@@ -33,6 +33,13 @@ Item {
     property bool viewerOpen: false
     property var viewerShots: []
     property int viewerIndex: 0
+    // The detail only paints a handful of thumbnails; the rest live in a
+    // virtualized GridView inside the gallery modal.
+    property bool galleryOpen: false
+    readonly property int galleryPreviewCount: 5
+    readonly property var previewScreenshots: (
+        root.screenshots.slice(0, root.galleryPreviewCount)
+    )
 
     readonly property var viewerShot: (
         viewerOpen
@@ -92,6 +99,21 @@ Item {
 
     function closeViewer() {
         viewerOpen = false;
+    }
+
+    function openGallery() {
+        if (root.screenshots.length === 0) {
+            return;
+        }
+        galleryOpen = true;
+    }
+
+    function closeGallery() {
+        galleryOpen = false;
+    }
+
+    function openGalleryShot(index) {
+        root.openViewer(root.screenshots, index);
     }
 
     function nextViewer() {
@@ -188,6 +210,7 @@ Item {
             descriptionExpanded = false;
             profileOpen = false;
             viewerOpen = false;
+            galleryOpen = false;
             scroller.contentY = 0;
             Qt.callLater(function() {
                 scroller.contentY = 0;
@@ -195,6 +218,7 @@ Item {
             });
         } else {
             viewerOpen = false;
+            galleryOpen = false;
         }
     }
 
@@ -1086,6 +1110,37 @@ Item {
 
                         Item { Layout.fillWidth: true }
 
+                        Rectangle {
+                            objectName: "screenshotViewAll"
+                            visible: root.screenshots.length
+                                     > root.galleryPreviewCount
+                            width: 76
+                            height: 24
+                            radius: 12
+                            color: viewAllArea.containsMouse
+                                   ? "#1e2c42" : "#10141b"
+                            border.width: 1
+                            border.color: viewAllArea.containsMouse
+                                          ? Library.accent
+                                          : "#2a3140"
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: Tr.strings["View all"]
+                                color: "#cfd6e2"
+                                font.family: "Sora"
+                                font.pixelSize: 10
+                            }
+
+                            MouseArea {
+                                id: viewAllArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.openGallery()
+                            }
+                        }
+
                         Text {
                             text: root.screenshots.length === 1
                                   ? Tr.strings["1 screenshot"]
@@ -1104,7 +1159,7 @@ Item {
                         spacing: 8
 
                         Repeater {
-                            model: root.screenshots
+                            model: root.previewScreenshots
 
                             ShotThumb {
                                 thumbWidth: 96
@@ -1112,6 +1167,24 @@ Item {
                                 shot: modelData
                                 onClicked: root.openViewer(root.screenshots, index)
                             }
+                        }
+
+                        // Do not instantiate hundreds of thumbnails in the
+                        // detail panel: the last tile opens the virtualized
+                        // gallery instead.
+                        ShotThumb {
+                            visible: root.screenshots.length
+                                     > root.galleryPreviewCount
+                            thumbWidth: 96
+                            thumbHeight: 54
+                            shot: root.screenshots.length
+                                  > root.galleryPreviewCount
+                                  ? root.screenshots[root.galleryPreviewCount]
+                                  : ({})
+                            more: true
+                            moreCount: root.screenshots.length
+                                       - root.galleryPreviewCount
+                            onClicked: root.openGallery()
                         }
                     }
                 }
@@ -1210,6 +1283,178 @@ Item {
             }
 
             MouseArea { anchors.fill: parent }
+        }
+    }
+
+    // --- Screenshot gallery (virtualized) ---------------------------------
+    Rectangle {
+        id: shotGallery
+        objectName: "screenshotGallery"
+        anchors.fill: parent
+        z: 18
+        visible: opacity > 0
+        opacity: root.galleryOpen ? 1 : 0
+        color: "#05070b"
+        Behavior on opacity { NumberAnimation { duration: 180 } }
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: root.closeGallery()
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: root.compact ? 16 : 40
+            radius: 18
+            color: "#0b0f19"
+            border.width: 1
+            border.color: "#2a3140"
+
+            MouseArea { anchors.fill: parent }
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 20
+                spacing: 12
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+
+                    Column {
+                        Layout.fillWidth: true
+                        spacing: 1
+
+                        Text {
+                            text: Tr.strings["SCREENSHOTS"]
+                            color: Library.accent
+                            font.family: "Chakra Petch"
+                            font.pixelSize: 10
+                            font.bold: true
+                            font.letterSpacing: 2.2
+                        }
+
+                        Text {
+                            width: parent.width
+                            text: root.game.title || ""
+                            color: "#f2f5fa"
+                            font.family: "Sora"
+                            font.pixelSize: 16
+                            font.bold: true
+                            elide: Text.ElideRight
+                        }
+                    }
+
+                    Text {
+                        text: root.screenshots.length === 1
+                              ? Tr.strings["1 screenshot"]
+                              : Tr.strings["%1 screenshots"].arg(
+                                    root.screenshots.length
+                                )
+                        color: "#8b95a5"
+                        font.family: "Sora"
+                        font.pixelSize: 11
+                    }
+
+                    Rectangle {
+                        width: 30
+                        height: 30
+                        radius: 15
+                        color: closeGalleryArea.containsMouse
+                               ? "#232936" : "#171b23"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "×"
+                            color: "#dfe6f0"
+                            font.pixelSize: 16
+                        }
+
+                        MouseArea {
+                            id: closeGalleryArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.closeGallery()
+                        }
+                    }
+                }
+
+                GridView {
+                    id: shotGrid
+                    objectName: "screenshotGrid"
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    model: root.screenshots
+                    readonly property int columns: Math.max(
+                        2, Math.floor(width / 190)
+                    )
+                    cellWidth: width / columns
+                    cellHeight: cellWidth * 9 / 16 + 28
+                    boundsBehavior: Flickable.StopAtBounds
+                    ScrollBar.vertical: ScrollBar {
+                        policy: ScrollBar.AsNeeded
+                    }
+
+                    delegate: Item {
+                        width: shotGrid.cellWidth
+                        height: shotGrid.cellHeight
+
+                        Rectangle {
+                            id: galleryFrame
+                            anchors.fill: parent
+                            anchors.margins: 5
+                            radius: 8
+                            color: "#070b12"
+                            border.width: 1
+                            border.color: galleryHover.containsMouse
+                                          ? Library.accent
+                                          : "#2a3a52"
+                            Behavior on border.color {
+                                ColorAnimation { duration: 120 }
+                            }
+
+                            Image {
+                                anchors.fill: parent
+                                anchors.margins: 2
+                                source: modelData.url || ""
+                                sourceSize.width: Math.round(
+                                    galleryFrame.width * 1.6
+                                )
+                                sourceSize.height: Math.round(
+                                    galleryFrame.height * 1.6
+                                )
+                                fillMode: Image.PreserveAspectCrop
+                                asynchronous: true
+                                cache: true
+                            }
+                        }
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            anchors.leftMargin: 9
+                            anchors.rightMargin: 9
+                            anchors.bottomMargin: 9
+                            text: modelData.dateText || ""
+                            color: "#cfd6e2"
+                            font.family: "Sora"
+                            font.pixelSize: 9
+                            elide: Text.ElideRight
+                        }
+
+                        MouseArea {
+                            id: galleryHover
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.openGalleryShot(index)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -1374,6 +1619,12 @@ Item {
                 onClicked: root.nextViewer()
             }
         }
+    }
+
+    Shortcut {
+        sequence: "Escape"
+        enabled: root.galleryOpen && !root.viewerOpen
+        onActivated: root.closeGallery()
     }
 
     Shortcut {

@@ -17,6 +17,7 @@ from .. import __version__
 from ..core.gamepad import GamepadManager
 from ..core.screenshots import ScreenshotManager
 from ..core.sounds import SoundManager
+from ..core.startup_movies import StartupMovieManager
 from . import covers
 from .library_model import LibraryModel
 
@@ -98,6 +99,10 @@ def create_engine(library: LibraryModel) -> QQmlApplicationEngine:
     sounds = SoundManager(library._prefs)
     sounds.setParent(engine)
     engine.rootContext().setContextProperty("Sounds", sounds)
+
+    movies = StartupMovieManager(library._prefs)
+    movies.setParent(engine)
+    engine.rootContext().setContextProperty("StartupMovies", movies)
 
     engine.load(QUrl.fromLocalFile(str(QML_DIR / "Main.qml")))
     # Generate/load the cues just after the first frame so opening the window

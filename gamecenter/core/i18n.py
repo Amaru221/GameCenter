@@ -2352,6 +2352,145 @@ TRANSLATIONS["pt"].update(
     }
 )
 
+# 0.22.0 — startup movies and the screenshot gallery.
+TRANSLATIONS["es"].update(
+    {
+        "STARTUP MOVIE": "PELÍCULA DE INICIO",
+        "Startup movie in Big Picture": "Película de inicio en Big Picture",
+        "Play a short intro when Big Picture opens.": (
+            "Reproduce una intro corta al abrir Big Picture."
+        ),
+        "Movie": "Película",
+        "Choose a startup movie": "Elige una película de inicio",
+        "Video files (*.webm *.mp4 *.m4v *.mov *.mkv)": (
+            "Archivos de vídeo (*.webm *.mp4 *.m4v *.mov *.mkv)"
+        ),
+        "All files (*)": "Todos los archivos (*)",
+        "Remove": "Quitar",
+        "Click or press any key to skip": (
+            "Haz clic o pulsa cualquier tecla para saltar"
+        ),
+        "Couldn't read that movie.": "No se pudo leer esa película.",
+        "That movie format is not supported.": (
+            "Ese formato de vídeo no es compatible."
+        ),
+        "Couldn't copy that movie.": "No se pudo copiar esa película.",
+        "Couldn't remove that movie.": "No se pudo quitar esa película.",
+        "View all": "Ver todas",
+        "All screenshots": "Todas las capturas",
+    }
+)
+TRANSLATIONS["fr"].update(
+    {
+        "STARTUP MOVIE": "FILM DE DÉMARRAGE",
+        "Startup movie in Big Picture": "Film de démarrage dans Big Picture",
+        "Play a short intro when Big Picture opens.": (
+            "Lire une courte intro à l'ouverture de Big Picture."
+        ),
+        "Movie": "Film",
+        "Choose a startup movie": "Choisir un film de démarrage",
+        "Video files (*.webm *.mp4 *.m4v *.mov *.mkv)": (
+            "Fichiers vidéo (*.webm *.mp4 *.m4v *.mov *.mkv)"
+        ),
+        "All files (*)": "Tous les fichiers (*)",
+        "Remove": "Retirer",
+        "Click or press any key to skip": (
+            "Cliquez ou appuyez sur une touche pour passer"
+        ),
+        "Couldn't read that movie.": "Impossible de lire ce film.",
+        "That movie format is not supported.": (
+            "Ce format vidéo n'est pas pris en charge."
+        ),
+        "Couldn't copy that movie.": "Impossible de copier ce film.",
+        "Couldn't remove that movie.": "Impossible de retirer ce film.",
+        "View all": "Tout voir",
+        "All screenshots": "Toutes les captures",
+    }
+)
+TRANSLATIONS["de"].update(
+    {
+        "STARTUP MOVIE": "STARTFILM",
+        "Startup movie in Big Picture": "Startfilm in Big Picture",
+        "Play a short intro when Big Picture opens.": (
+            "Spielt beim Öffnen von Big Picture einen kurzen Vorspann."
+        ),
+        "Movie": "Film",
+        "Choose a startup movie": "Startfilm auswählen",
+        "Video files (*.webm *.mp4 *.m4v *.mov *.mkv)": (
+            "Videodateien (*.webm *.mp4 *.m4v *.mov *.mkv)"
+        ),
+        "All files (*)": "Alle Dateien (*)",
+        "Remove": "Entfernen",
+        "Click or press any key to skip": (
+            "Klicken oder eine Taste drücken zum Überspringen"
+        ),
+        "Couldn't read that movie.": "Dieser Film konnte nicht gelesen werden.",
+        "That movie format is not supported.": (
+            "Dieses Videoformat wird nicht unterstützt."
+        ),
+        "Couldn't copy that movie.": "Dieser Film konnte nicht kopiert werden.",
+        "Couldn't remove that movie.": (
+            "Dieser Film konnte nicht entfernt werden."
+        ),
+        "View all": "Alle anzeigen",
+        "All screenshots": "Alle Screenshots",
+    }
+)
+TRANSLATIONS["it"].update(
+    {
+        "STARTUP MOVIE": "FILMATO DI AVVIO",
+        "Startup movie in Big Picture": "Filmato di avvio in Big Picture",
+        "Play a short intro when Big Picture opens.": (
+            "Riproduce una breve intro all'apertura di Big Picture."
+        ),
+        "Movie": "Filmato",
+        "Choose a startup movie": "Scegli un filmato di avvio",
+        "Video files (*.webm *.mp4 *.m4v *.mov *.mkv)": (
+            "File video (*.webm *.mp4 *.m4v *.mov *.mkv)"
+        ),
+        "All files (*)": "Tutti i file (*)",
+        "Remove": "Rimuovi",
+        "Click or press any key to skip": (
+            "Fai clic o premi un tasto per saltare"
+        ),
+        "Couldn't read that movie.": "Impossibile leggere il filmato.",
+        "That movie format is not supported.": (
+            "Questo formato video non è supportato."
+        ),
+        "Couldn't copy that movie.": "Impossibile copiare il filmato.",
+        "Couldn't remove that movie.": "Impossibile rimuovere il filmato.",
+        "View all": "Vedi tutto",
+        "All screenshots": "Tutte le catture",
+    }
+)
+TRANSLATIONS["pt"].update(
+    {
+        "STARTUP MOVIE": "FILME DE ARRANQUE",
+        "Startup movie in Big Picture": "Filme de arranque no Big Picture",
+        "Play a short intro when Big Picture opens.": (
+            "Reproduz uma introdução curta ao abrir o Big Picture."
+        ),
+        "Movie": "Filme",
+        "Choose a startup movie": "Escolher um filme de arranque",
+        "Video files (*.webm *.mp4 *.m4v *.mov *.mkv)": (
+            "Ficheiros de vídeo (*.webm *.mp4 *.m4v *.mov *.mkv)"
+        ),
+        "All files (*)": "Todos os ficheiros (*)",
+        "Remove": "Remover",
+        "Click or press any key to skip": (
+            "Clique ou prima qualquer tecla para saltar"
+        ),
+        "Couldn't read that movie.": "Não foi possível ler esse filme.",
+        "That movie format is not supported.": (
+            "Esse formato de vídeo não é suportado."
+        ),
+        "Couldn't copy that movie.": "Não foi possível copiar esse filme.",
+        "Couldn't remove that movie.": "Não foi possível remover esse filme.",
+        "View all": "Ver tudo",
+        "All screenshots": "Todas as capturas",
+    }
+)
+
 _EXTRA_KEYS = ("Nintendo DS", "PS2", "STEAMGRIDDB")
 _KEYS = frozenset(_EXTRA_KEYS).union(
     *(catalog.keys() for catalog in TRANSLATIONS.values())

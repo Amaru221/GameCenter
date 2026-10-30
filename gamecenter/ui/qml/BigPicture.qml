@@ -211,7 +211,7 @@ Item {
             } else {
                 gameModal.nextViewer();
             }
-        } else {
+        } else if (!gameModal.galleryOpen) {
             gameModal.openViewer(shots, delta < 0 ? shots.length - 1 : 0);
         }
     }
@@ -241,6 +241,10 @@ Item {
         }
         if (gameModal.viewerOpen) {
             gameModal.closeViewer();
+            return;
+        }
+        if (gameModal.galleryOpen) {
+            gameModal.closeGallery();
             return;
         }
         if (gameModal.profileOpen) {
@@ -349,6 +353,15 @@ Item {
                 } else if (event.key === Qt.Key_Escape
                            || event.key === Qt.Key_Backspace) {
                     gameModal.closeViewer();
+                    event.accepted = true;
+                }
+                return;
+            }
+            if (gameModal.galleryOpen) {
+                // The grid is mouse/touch oriented; keyboard closes it.
+                if (event.key === Qt.Key_Escape
+                        || event.key === Qt.Key_Backspace) {
+                    gameModal.closeGallery();
                     event.accepted = true;
                 }
                 return;
@@ -487,8 +500,9 @@ Item {
                 return;
             }
             if (root.detailOpen) {
-                // The profile panel and the screenshot viewer own their input.
-                if (gameModal.profileOpen || gameModal.viewerOpen) {
+                // The profile panel, the gallery and the viewer own their input.
+                if (gameModal.profileOpen || gameModal.viewerOpen
+                        || gameModal.galleryOpen) {
                     return;
                 }
                 if (dy !== 0) {
@@ -517,7 +531,8 @@ Item {
             if (root.exitConfirmOpen) {
                 root.activateExitFocus();
             } else if (root.detailOpen) {
-                if (gameModal.profileOpen || gameModal.viewerOpen) {
+                if (gameModal.profileOpen || gameModal.viewerOpen
+                        || gameModal.galleryOpen) {
                     return;
                 }
                 root.detailOpen = false;
@@ -536,6 +551,8 @@ Item {
             } else if (root.detailOpen) {
                 if (gameModal.viewerOpen) {
                     gameModal.closeViewer();
+                } else if (gameModal.galleryOpen) {
+                    gameModal.closeGallery();
                 } else if (gameModal.profileOpen) {
                     gameModal.profileOpen = false;
                 } else {
@@ -550,7 +567,8 @@ Item {
                 return;
             }
             if (root.detailOpen
-                    && (gameModal.profileOpen || gameModal.viewerOpen)) {
+                    && (gameModal.profileOpen || gameModal.viewerOpen
+                        || gameModal.galleryOpen)) {
                 return;
             }
             root.closeRequested();
@@ -561,7 +579,7 @@ Item {
                 return;
             }
             if (root.detailOpen) {
-                if (!gameModal.profileOpen) {
+                if (!gameModal.profileOpen && !gameModal.galleryOpen) {
                     root.screenshotsStep(-1);
                 }
                 return;
@@ -574,7 +592,7 @@ Item {
                 return;
             }
             if (root.detailOpen) {
-                if (!gameModal.profileOpen) {
+                if (!gameModal.profileOpen && !gameModal.galleryOpen) {
                     root.screenshotsStep(1);
                 }
                 return;
@@ -587,7 +605,8 @@ Item {
                 return;
             }
             if (root.detailOpen) {
-                if (!gameModal.profileOpen && !gameModal.viewerOpen) {
+                if (!gameModal.profileOpen && !gameModal.viewerOpen
+                        && !gameModal.galleryOpen) {
                     root.toggleDetailFavorite();
                 }
             } else {
@@ -600,7 +619,9 @@ Item {
                 return;
             }
             if (root.detailOpen) {
-                root.toggleProfile();
+                if (!gameModal.galleryOpen) {
+                    root.toggleProfile();
+                }
             } else {
                 root.openDetail();
             }

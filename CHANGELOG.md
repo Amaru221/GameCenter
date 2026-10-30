@@ -1,5 +1,42 @@
 # Changelog
 
+## v0.22.0
+
+### Added
+
+- **Startup movies for Big Picture**: entering the console mode plays a short
+  intro. Two WebM clips ship with the app (**Cyberpunk 2077 System Reboot** and
+  **Star Wars Intro Disney**), and the intro can be enabled or disabled from
+  **Settings -> Startup movie**.
+- **Movie picker and custom imports**: choose either bundled movie or import a
+  video with **Browse...** (`.webm`, `.mp4`, `.m4v`, `.mov`, `.mkv`). Imported
+  files are copied to `%APPDATA%/GameCenter/startup_movies`, so moving the
+  original does not break the intro, and custom entries can be removed from the
+  same selector.
+- **Skip and safety net**: a click, any key, **A/B/Start** or **Esc** end the
+  intro immediately. Invalid codecs, missing files and a 20-second guard always
+  mount Big Picture instead of leaving a black screen.
+- **Screenshot gallery**: the game detail shows at most five thumbnails plus a
+  **View all** tile. The modal gallery uses a virtualized `GridView` (only the
+  visible thumbs are created), so libraries with hundreds of screenshots stay
+  light. Clicking a thumb still opens the full-screen viewer.
+
+### Changed
+
+- **Dock proportions**: the dark plate behind the inserted cartridge, the slot
+  mouth and the gray top rail now use an 84 px width (the cartridge itself is
+  ~71 px at slot scale) instead of 174/150 px. The insertion animation stays
+  centered and the dock no longer looks oversized.
+- **Settings close button is pinned**: it now lives outside the `ScrollView`,
+  so scrolling the settings content no longer moves the X.
+- **Single tab cue**: the Statistics view no longer plays its own tab sound on
+  top of the one from the main window, removing the occasional double beep.
+
+### Fixed
+
+- Double beep when switching between **Library / Stats / Store**.
+- The settings modal X drifted away with the scrolled content.
+
 ## v0.21.0
 
 ### Added

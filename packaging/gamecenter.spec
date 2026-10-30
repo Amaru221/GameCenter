@@ -10,6 +10,7 @@ ROOT = Path(SPECPATH).parent
 DATAS = [
     (str(ROOT / "gamecenter" / "ui" / "qml"), "gamecenter/ui/qml"),
     (str(ROOT / "gamecenter" / "ui" / "fonts"), "gamecenter/ui/fonts"),
+    (str(ROOT / "startup-movies"), "startup-movies"),
     (str(ROOT / "README.md"), "."),
     (str(ROOT / "LICENSE"), "."),
     (str(ROOT / "THIRD_PARTY_NOTICES.md"), "."),

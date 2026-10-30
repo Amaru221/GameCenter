@@ -26,6 +26,9 @@ Window {
     property bool bigPictureOpen: false
     // Big Picture is only instantiated while it is open (plus its fade-out).
     property bool bigPictureMounted: false
+    // While the intro plays Big Picture is not mounted yet, so its gamepad and
+    // keyboard handlers cannot steal the skip input.
+    property bool startupMovieActive: false
     // Panels opened from Big Picture wait for its fade-out.
     property string bigPicturePendingPanel: ""
 
@@ -49,13 +52,31 @@ Window {
 
     onBigPictureOpenChanged: {
         if (bigPictureOpen) {
-            bigPictureMounted = true;
-            Sounds.startup();
+            bigPictureUnmountTimer.stop();
             topBar.clearSearchFocus();
             requestActivate();
-        } else if (bigPictureMounted) {
-            // Keep the item alive for the 180 ms fade-out, then free it.
-            bigPictureUnmountTimer.restart();
+            if (StartupMovies.ready) {
+                bigPictureMounted = false;
+                startupMovieActive = true;
+            } else {
+                bigPictureMounted = true;
+                Sounds.startup();
+            }
+        } else {
+            startupMovieActive = false;
+            if (bigPictureMounted) {
+                // Keep the item alive for the 180 ms fade-out, then free it.
+                bigPictureUnmountTimer.restart();
+            }
+        }
+    }
+
+    onStartupMovieActiveChanged: {
+        if (startupMovieActive) {
+            bigPictureMounted = false;
+        } else if (bigPictureOpen) {
+            bigPictureMounted = true;
+            requestActivate();
         }
     }
 
@@ -243,8 +264,9 @@ Window {
                 id: insertPlate
                 objectName: "insertPlate"
                 z: 12
-                width: 174
-                height: 36
+                // Sized to the cartridge that actually enters the slot.
+                width: 84
+                height: 34
                 x: dock.x + (dock.width - width) / 2
                 y: dock.y - 12
 
@@ -469,6 +491,15 @@ Window {
         }
     }
 
+    StartupMovie {
+        id: startupMovie
+        anchors.fill: parent
+        z: 70
+        movieSource: StartupMovies.currentUrl
+        active: window.startupMovieActive
+        onFinished: window.startupMovieActive = false
+    }
+
     Timer {
         id: bigPictureUnmountTimer
         interval: 220
@@ -539,6 +570,23 @@ Window {
         }
     }
 
+    // Big Picture is not mounted while the intro plays, so A/B/Start only need
+    // to end the movie here.
+    Connections {
+        target: Gamepad
+        enabled: window.startupMovieActive
+        function onAccept() { window.startupMovieActive = false }
+        function onBack() { window.startupMovieActive = false }
+        function onMenu() { window.startupMovieActive = false }
+        function onPageLeft() { window.startupMovieActive = false }
+        function onPageRight() { window.startupMovieActive = false }
+    }
+
+    Connections {
+        target: StartupMovies
+        function onFailed(message) { toast.show(message) }
+    }
+
     Connections {
         target: Library
         function onFailed(message) { toast.show(message) }
@@ -601,8 +649,14 @@ Window {
 
     Shortcut {
         sequence: "Escape"
+        enabled: window.startupMovieActive
+        onActivated: window.startupMovieActive = false
+    }
+
+    Shortcut {
+        sequence: "Escape"
         enabled: !window.bigPictureOpen && !yearReview.opened
-                 && !detail.viewerOpen
+                 && !detail.viewerOpen && !detail.galleryOpen
                  && !Screenshots.recording
         onActivated: {
             if (updateOpen) {

@@ -16,6 +16,7 @@ os.environ.setdefault("QT_QUICK_BACKEND", "software")
 os.environ.setdefault("GC_NO_GAMEPAD", "1")
 os.environ.setdefault("GC_NO_HOTKEYS", "1")
 os.environ.setdefault("GC_NO_OVERLAY", "1")
+os.environ.setdefault("GC_NO_STARTUP_MOVIE", "1")
 
 from gamecenter.core.models import Game  # noqa: E402
 from gamecenter.ui import covers, library_model  # noqa: E402
@@ -1473,6 +1474,97 @@ def test_qml_detail_is_fullscreen_with_a_pinned_rotatable_cartridge(app, model) 
     assert card.property("y") == 72
 
 
+def test_qml_screenshot_preview_is_capped_and_gallery_is_virtualized(
+    app, model, tmp_path
+) -> None:
+    from PySide6.QtCore import QMetaObject, QObject, QUrl
+    from PySide6.QtGui import QColor, QImage
+    from PySide6.QtTest import QTest
+
+    from gamecenter.ui.app import create_engine
+
+    image_path = tmp_path / "shot.png"
+    image = QImage(320, 180, QImage.Format_RGB32)
+    image.fill(QColor("#1f6f8b"))
+    assert image.save(str(image_path), "PNG")
+    url = QUrl.fromLocalFile(str(image_path)).toString()
+    shots = [
+        {"url": url, "dateText": f"0{index + 1}/01/2026", "path": str(image_path)}
+        for index in range(12)
+    ]
+
+    detail_game = dict(model.gameAt(0))
+    detail_game["screenshots"] = shots
+    detail_game["screenshotCount"] = len(shots)
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.resize(1180, 800)
+    root.show()
+    root.setProperty("detailIndex", 0)
+    root.setProperty("detailGame", detail_game)
+    root.setProperty("detailOpen", True)
+    app.processEvents()
+    QTest.qWait(260)
+
+    detail = root.findChild(QObject, "gameDetail")
+    assert detail is not None
+    preview = detail.property("previewScreenshots")
+    if hasattr(preview, "toVariant"):
+        preview = preview.toVariant()
+    assert len(preview) == 5
+    view_all = detail.findChild(QObject, "screenshotViewAll")
+    assert view_all is not None and view_all.property("visible") is True
+
+    assert detail.property("galleryOpen") is False
+    QMetaObject.invokeMethod(detail, "openGallery")
+    app.processEvents()
+    assert detail.property("galleryOpen") is True
+
+    grid = detail.findChild(QObject, "screenshotGrid")
+    assert grid is not None
+    assert grid.property("count") == 12
+
+    QMetaObject.invokeMethod(detail, "closeGallery")
+    app.processEvents()
+    assert detail.property("galleryOpen") is False
+
+
+def test_qml_settings_close_stays_outside_the_scroller(app, model) -> None:
+    from PySide6.QtCore import QObject
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.show()
+    root.setProperty("settingsOpen", True)
+    app.processEvents()
+
+    close = root.findChild(QObject, "settingsClose")
+    scroll = root.findChild(QObject, "settingsScroll")
+    assert close is not None and scroll is not None
+    # The close button lives in the panel, not inside the scrolling content.
+    assert close.parent() is not scroll
+    assert close.parent() is scroll.parent()
+
+
+def test_stats_view_tab_click_does_not_play_a_second_cue() -> None:
+    from pathlib import Path
+
+    text = (
+        Path(__file__).resolve().parents[1]
+        / "gamecenter"
+        / "ui"
+        / "qml"
+        / "StatsView.qml"
+    ).read_text(encoding="utf-8")
+    marker = text.index("root.viewRequested(modelData.value)")
+    around = text[max(0, marker - 260) : marker]
+
+    assert "Sounds.tab()" not in around
+
+
 def test_qml_search_hides_in_stats_and_clears_focus_outside(app, model) -> None:
     from PySide6.QtCore import QMetaObject, QObject, QPoint, Qt
     from PySide6.QtTest import QTest
@@ -1628,6 +1720,37 @@ def test_qml_settings_has_a_sound_toggle(app, model) -> None:
     app.processEvents()
     assert sound.property("enabled") is True
     assert model._prefs.sound_enabled is True
+
+
+def test_qml_settings_has_startup_movie_controls(app, model) -> None:
+    from PySide6.QtCore import QObject
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.show()
+    root.setProperty("settingsOpen", True)
+    app.processEvents()
+
+    assert root.findChild(QObject, "startupMovieToggle") is not None
+    assert root.findChild(QObject, "startupMovieCombo") is not None
+    assert root.findChild(QObject, "startupMovieBrowse") is not None
+
+    startup = engine.rootContext().contextProperty("StartupMovies")
+    assert startup is not None
+    assert startup.property("enabled") is True
+    assert len(startup.property("options")) >= 2
+
+    startup.setEnabled(False)
+    app.processEvents()
+    assert startup.property("enabled") is False
+    assert model._prefs.startup_movie_enabled is False
+
+    startup.setEnabled(True)
+    app.processEvents()
+    assert startup.property("enabled") is True
+    assert model._prefs.startup_movie_enabled is True
 
 
 def test_qml_big_picture_detail_profile_and_screenshots(app, model) -> None:

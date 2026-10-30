@@ -178,6 +178,8 @@ class Preferences:
 
         data["checkUpdates"] = bool(data.get("checkUpdates", True))
         data["soundEnabled"] = bool(data.get("soundEnabled", True))
+        data["startupMovieEnabled"] = bool(data.get("startupMovieEnabled", True))
+        data["startupMovie"] = str(data.get("startupMovie") or "")
         language = str(data.get("language") or "en")
         data["language"] = language if language in CODES else "en"
 
@@ -306,6 +308,26 @@ class Preferences:
     @sound_enabled.setter
     def sound_enabled(self, value: bool) -> None:
         self._data["soundEnabled"] = bool(value)
+        self._save()
+
+    # -- startup movie ----------------------------------------------------
+
+    @property
+    def startup_movie_enabled(self) -> bool:
+        return bool(self._data["startupMovieEnabled"])
+
+    @startup_movie_enabled.setter
+    def startup_movie_enabled(self, value: bool) -> None:
+        self._data["startupMovieEnabled"] = bool(value)
+        self._save()
+
+    @property
+    def startup_movie(self) -> str:
+        return str(self._data["startupMovie"])
+
+    @startup_movie.setter
+    def startup_movie(self, value: str) -> None:
+        self._data["startupMovie"] = str(value or "")
         self._save()
 
     # -- screenshots ------------------------------------------------------
