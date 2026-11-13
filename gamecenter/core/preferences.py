@@ -177,6 +177,9 @@ class Preferences:
         )
 
         data["checkUpdates"] = bool(data.get("checkUpdates", True))
+        data["detectExternalSessions"] = bool(
+            data.get("detectExternalSessions", True)
+        )
         data["soundEnabled"] = bool(data.get("soundEnabled", True))
         data["startupMovieEnabled"] = bool(data.get("startupMovieEnabled", True))
         data["startupMovie"] = str(data.get("startupMovie") or "")
@@ -297,6 +300,17 @@ class Preferences:
     @last_update_check.setter
     def last_update_check(self, value: float) -> None:
         self._data["lastUpdateCheck"] = float(value)
+        self._save()
+
+    # -- sessions ---------------------------------------------------------
+
+    @property
+    def detect_external_sessions(self) -> bool:
+        return bool(self._data["detectExternalSessions"])
+
+    @detect_external_sessions.setter
+    def detect_external_sessions(self, value: bool) -> None:
+        self._data["detectExternalSessions"] = bool(value)
         self._save()
 
     # -- interface sounds -------------------------------------------------

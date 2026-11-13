@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 import shutil
 import threading
@@ -133,6 +134,7 @@ class LibraryModel(QAbstractListModel):
     artChanged = Signal()
     credentialsChanged = Signal()
     updatesChanged = Signal()
+    sessionSettingsChanged = Signal()
     playtimeChanged = Signal()
     detailsChanged = Signal()
     scanStateChanged = Signal()
@@ -204,11 +206,17 @@ class LibraryModel(QAbstractListModel):
         self._details_loaded: set[tuple[str, str]] = set()
         self._details_loading: set[tuple[str, str]] = set()
         self._detailsReady.connect(self._on_details_ready, Qt.QueuedConnection)
-        self._sessions = SessionTracker(on_end=self._session_ended)
+        self._sessions = SessionTracker(
+            on_end=self._session_ended,
+            games=lambda: self._all,
+            cover=self._cover_url,
+            detect_external=self._prefs.detect_external_sessions,
+        )
         self._session_timer = QTimer(self)
         self._session_timer.setInterval(1000)
-        self._session_timer.timeout.connect(self._sessions.poll)
+        self._session_timer.timeout.connect(self._sessions.tick)
         self._session_timer.start()
+        self._warm_sessions()
         app = QCoreApplication.instance()
         if app is not None:
             app.aboutToQuit.connect(self._sessions.finish_all)
@@ -939,6 +947,27 @@ class LibraryModel(QAbstractListModel):
     @Property(QObject, constant=True)
     def sessions(self) -> SessionTracker:
         return self._sessions
+
+    def _warm_sessions(self) -> None:
+        """Warm the process cache off the UI thread (one expensive pass)."""
+        if not self._sessions.detect_external:
+            return
+        if os.environ.get("GC_NO_EXTERNAL_SCAN"):
+            return  # tests and tools opt out of scanning the real desktop
+        threading.Thread(target=self._sessions.warm, daemon=True).start()
+
+    @Property(bool, notify=sessionSettingsChanged)
+    def detectExternalSessions(self) -> bool:
+        return self._prefs.detect_external_sessions
+
+    @Slot(bool)
+    def setDetectExternalSessions(self, value: bool) -> None:
+        value = bool(value)
+        self._prefs.detect_external_sessions = value
+        self._sessions.detect_external = value
+        self.sessionSettingsChanged.emit()
+        if value:
+            self._warm_sessions()
 
     @Property(QObject, constant=True)
     def translator(self) -> Translator:

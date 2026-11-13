@@ -189,6 +189,13 @@ la muestra como una estantería y lanza los juegos con un doble clic.
     se restaura desde Ajustes.
 - **Dock de sesiones**: al lanzar un juego aparece con su tiempo en marcha y se
   retira solo cuando el proceso termina (o con la ×).
+- **Detección de juegos externos**: mientras GameCenter está abierto también
+  reconoce los juegos que arrancas desde Steam, Epic, GOG, Battle.net, Riot o el
+  escritorio, y los añade al dock con su tiempo. El escaneo de procesos es
+  adaptativo (cada 5 s sin sesiones, cada 30 s con una en marcha) y usa la hora
+  real de arranque del proceso; se puede desactivar en **Ajustes → Game
+  sessions**. Si el juego ya llevaba más de 2 minutos abierto al detectarlo, la
+  sesión empieza en ese momento para no inflar el historial.
 - **Ajustes** (engranaje o `Ctrl+,`): color de acento entre 24 opciones,
   **color de superficie** para la barra superior, el dock Ready y la estantería,
   **color de los cartuchos** y tres estilos: clásico, **Nintendo DS** y **PS2**.
@@ -400,7 +407,8 @@ No hay claves, tokens ni cuentas en el repositorio ni en la app. Ver
 - **Steam**: se lee de `userdata/<cuenta>/config/localconfig.vdf`
   (`Playtime`, en minutos).
 - **Epic, GOG, Battle.net, Riot y juegos locales**: cuando termina una sesión
-  lanzada desde GameCenter se escribe un archivo en la raíz del juego:
+  (lanzada desde GameCenter o detectada como proceso externo) se escribe un
+  archivo en la raíz del juego:
 
   ```text
   .gamecenter_playtime.json
@@ -416,8 +424,10 @@ tienda se reconocen por su id estable; los manuales, por su título, aunque
 cambien de carpeta. Si la nueva carpeta tampoco es escribible, el tiempo sigue
 en el fallback y se muestra igualmente.
 
-Solo se cuentan los juegos lanzados desde GameCenter. Los de Steam no se tocan:
-Steam sigue siendo la fuente de verdad para sus horas.
+Se cuentan los juegos lanzados desde GameCenter y los que arrancas fuera de la
+app mientras está abierta (con la detección externa activa). Los de Steam no se
+tocan: Steam sigue siendo la fuente de verdad para sus horas, aunque la sesión
+detectada sí aparece en el timeline y en Stats.
 
 ## Actualizaciones
 

@@ -1,3 +1,106 @@
+# WORKFLOW STATE - Deteccion de juegos lanzados fuera de GameCenter
+
+## Feature 0.23.0 - Escaneo adaptativo de procesos externos
+
+### Descripcion funcional
+
+1. **Deteccion de lanzamientos externos**
+   - Mientras GameCenter esta abierto, detecta que un juego de la biblioteca se
+     ha empezado a ejecutar desde Steam, Epic, GOG, Battle.net, Riot o el
+     escritorio y lo añade al dock con su contador de sesion.
+   - La deteccion usa un escaneo **adaptativo**: cada 5 s cuando no hay sesiones
+     y cada 30 s cuando ya hay una en marcha. El escaneo nunca bloquea la UI.
+   - La hora de inicio es la real del proceso (`create_time`), asi el playtime
+     no pierde los segundos entre el arranque y el escaneo. Si el juego ya
+     llevaba mas de 2 minutos abierto cuando se detecta, la sesion empieza en el
+     momento de la deteccion para no inflar el historial.
+2. **Adopcion de PID en lanzamientos por URI**
+   - Cuando el juego se lanzo con `steam://` (sin PID), el escaneo encuentra el
+     proceso real y la sesion pasa a tener PID: la parada se detecta al instante
+     en vez de depender de la ventana de gracia de 30 s.
+3. **Parada automatica**
+   - Al desaparecer el proceso, la sesion se cierra, se guarda el tiempo en
+     `playtime` y en el historial, igual que una sesion lanzada desde la app.
+   - El PID se valida con su `create_time` para no confundirlo con otro proceso
+     que reutilice el mismo numero.
+4. **Ajuste**
+   - Nueva seccion **GAME SESSIONS** en Ajustes con el toggle *Detect games
+     started outside GameCenter* (activo por defecto). Al desactivarlo no se
+     programa ningun escaneo.
+5. **Coste**
+   - El primer escaneo (frio) calienta la cache de `psutil` en un hilo daemon.
+     Los siguientes solo enumeran PIDs y leen atributos ya cacheados: ~2 ms por
+     escaneo, sin hilo adicional en el bucle ni I/O de disco.
+   - El `QTimer` de 1 s sigue existiendo solo para refrescar el contador; el
+     escaneo se dispara segun el intervalo adaptativo.
+
+### Decisiones de arquitectura
+
+- `core/sessions.py` gana `ProcessScanner` (indice `nombre_exe -> juegos` +
+  carpetas de instalacion) y `SessionTracker.tick()`, que combina `poll()` con
+  `detect()` cuando toca. `SessionTracker` sigue sin conocer Qt-widgets: recibe
+  `games`, `cover` y `scanner` inyectables para testear sin procesos reales.
+- `psutil.process_iter(["name", "exe", "create_time"])` cachea los atributos por
+  PID; tras el primer recorrido el coste baja de ~800 ms a ~2 ms. Por eso
+  `SessionTracker.warm()` se lanza en un hilo daemon desde `LibraryModel` y
+  `detect()` no hace nada hasta que el cache esta caliente.
+- La coincidencia usa primero la carpeta de instalacion (cubre Steam, que solo
+  da `install_dir`) y despues el nombre del ejecutable (cubre juegos manuales
+  sin carpeta). Nunca se acepta un proceso sin ruta si el juego tiene carpeta.
+- `Session` añade `pid_started` para validar el PID en cada `poll()`.
+- La preferencia vive en `Preferences.detect_external_sessions`
+  (`detectExternalSessions` en `settings.json`, default `True`).
+
+### Contrato de API
+
+| Elemento | Tipo | Descripcion |
+| --- | --- | --- |
+| `sessions.ProcessScanner(process_iter=None)` | clase | Indice de ejecutables y escaneo de la lista de procesos. |
+| `ProcessScanner.rebuild(games)` | metodo | Recalcula indice y carpetas desde la biblioteca. |
+| `ProcessScanner.warm()` | metodo | Primer recorrido completo (calienta el cache de psutil). |
+| `ProcessScanner.scan()` | metodo -> list | `(Game, pid, started_at)` de los procesos que son juegos. |
+| `SessionTracker(games=None, cover=None, scanner=None, detect_external=False)` | parametros | Inyeccion para modelo y tests. |
+| `SessionTracker.detect()` | metodo -> int | Descubre juegos externos; devuelve cuantos son nuevos. |
+| `SessionTracker.tick()` | Slot | `detect()` si toca + `poll()`; lo llama el timer del modelo. |
+| `SessionTracker.warm()` | metodo | Calienta el scanner (seguro en hilo). |
+| `SessionTracker.detect_external` | bool | Activa/desactiva el escaneo. |
+| `Session.pid_started` | float \| None | `create_time` del PID para detectar reutilizacion. |
+| `Library.detectExternalSessions` | bool (notify `sessionSettingsChanged`) | Ajuste persistido. |
+| `Library.setDetectExternalSessions(bool)` | Slot | Cambia el ajuste y arranca el calentado si hace falta. |
+
+### Checklist
+
+#### Backend
+- [x] `core/sessions.py`: `ProcessScanner`, `Session.pid_started`, `detect()`, `tick()`, `warm()`.
+- [x] `core/sessions.py`: validacion de PID por `create_time` en `_process_running`.
+- [x] `core/preferences.py`: `detect_external_sessions` (default `True`).
+- [x] `ui/library_model.py`: tracker con proveedores, timer adaptativo y calentado en hilo.
+- [x] `ui/library_model.py`: propiedad y slot del ajuste.
+- [x] Traducciones ES/FR/DE/IT/PT.
+
+#### Frontend
+- [x] `SettingsPanel.qml`: seccion GAME SESSIONS con el toggle.
+
+#### Tests y docs
+- [x] Tests de `ProcessScanner` y `SessionTracker.detect()` con procesos falsos.
+- [x] Tests de preferencia y de la propiedad QML.
+- [x] README/CHANGELOG/WORKFLOW actualizados.
+- [x] `python -m pytest -q` en verde.
+
+### Verificacion
+
+- [x] `python -m pytest -q` -> **240 passed**.
+- [x] Escaneo en caliente medido: **3,4-5,0 ms** por pasada sobre ~280 procesos
+      (calentado inicial ~500 ms en hilo daemon).
+- [x] Deteccion real de un proceso hijo de prueba: `detect() == 1`, sesion con
+      PID y `create_time` correctos.
+- [x] `test_qml_settings_has_external_detection_toggle` verifica el toggle y la
+      persistencia.
+- [x] `python tools/idle_probe.py --seconds 6 --settle 6` -> **0 frames, RESULT ok**
+      (el escaneo no provoca repintados).
+
+---
+
 # WORKFLOW STATE - Startup movies, galeria de capturas y pulido de modales
 
 ## Feature 0.22.0 - Intros de Big Picture y galeria virtualizada
