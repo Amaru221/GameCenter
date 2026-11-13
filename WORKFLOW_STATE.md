@@ -98,6 +98,9 @@
       persistencia.
 - [x] `python tools/idle_probe.py --seconds 6 --settle 6` -> **0 frames, RESULT ok**
       (el escaneo no provoca repintados).
+- [x] Fusionado en `main` (`60b1b5a`), version 0.23.0 y tag `v0.23.0`
+      (`f15fb93`); workflow de release lanzado con las notas del CHANGELOG y el
+      SHA-256 del instalador.
 
 ---
 
