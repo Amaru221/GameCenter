@@ -1,5 +1,32 @@
 # Changelog
 
+## v0.23.0
+
+### Added
+
+- **External game detection**: while GameCenter is open, games started from
+  Steam, Epic, GOG, Battle.net, Riot or the desktop are discovered and added to
+  the dock with a live timer. Stopping the game closes the session and records
+  its playtime and timeline entry like a launch from the app.
+- **Adaptive process scan**: every 5 seconds when nothing is running and every
+  30 seconds when a session is already tracked. The first pass warms the
+  `psutil` cache in a background thread, so later scans cost ~2-5 ms and never
+  block the UI.
+- **Accurate start time**: the session uses the process' real `create_time`, so
+  the seconds between launch and detection are not lost. A game that had
+  already been running for more than two minutes when it was noticed starts
+  counting at detection time instead.
+- **PID adoption**: URI launches (`steam://...`) get the real process id once
+  the scanner finds it, so stopping is detected immediately instead of relying
+  on the 30-second launch grace.
+- **Settings toggle**: new **Game sessions** section with *Detect games started
+  outside GameCenter*, enabled by default and persisted in `settings.json`.
+
+### Fixed
+
+- A recycled process id can no longer keep a finished session alive: the pid is
+  validated against its `create_time` on every poll.
+
 ## v0.22.0
 
 ### Added

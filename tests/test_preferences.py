@@ -30,6 +30,19 @@ def test_startup_movie_round_trip(tmp_path) -> None:
     assert again.startup_movie == "default:cyberpunk.webm"
 
 
+def test_detect_external_sessions_round_trip(tmp_path) -> None:
+    path = tmp_path / "settings.json"
+
+    prefs = Preferences(path)
+    assert prefs.detect_external_sessions is True
+
+    prefs.detect_external_sessions = False
+    assert Preferences(path).detect_external_sessions is False
+
+    prefs.detect_external_sessions = True
+    assert Preferences(path).detect_external_sessions is True
+
+
 def test_appearance_round_trip(tmp_path) -> None:
     path = tmp_path / "settings.json"
 

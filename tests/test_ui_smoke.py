@@ -1753,6 +1753,33 @@ def test_qml_settings_has_startup_movie_controls(app, model) -> None:
     assert model._prefs.startup_movie_enabled is True
 
 
+def test_qml_settings_has_external_detection_toggle(app, model) -> None:
+    from PySide6.QtCore import QObject
+
+    from gamecenter.ui.app import create_engine
+
+    engine = create_engine(model)
+    root = engine.rootObjects()[0]
+    root.show()
+    root.setProperty("settingsOpen", True)
+    app.processEvents()
+
+    assert root.findChild(QObject, "detectExternalToggle") is not None
+    assert model.property("detectExternalSessions") is True
+    assert model._sessions.detect_external is True
+
+    model.setDetectExternalSessions(False)
+    app.processEvents()
+    assert model.property("detectExternalSessions") is False
+    assert model._prefs.detect_external_sessions is False
+    assert model._sessions.detect_external is False
+
+    model.setDetectExternalSessions(True)
+    app.processEvents()
+    assert model.property("detectExternalSessions") is True
+    assert model._prefs.detect_external_sessions is True
+
+
 def test_qml_big_picture_detail_profile_and_screenshots(app, model) -> None:
     from PySide6.QtCore import Q_ARG, QMetaObject, QObject
 

@@ -2491,6 +2491,68 @@ TRANSLATIONS["pt"].update(
     }
 )
 
+# 0.23.0 — games started outside GameCenter.
+TRANSLATIONS["es"].update(
+    {
+        "GAME SESSIONS": "SESIONES DE JUEGO",
+        "Detect games started outside GameCenter": (
+            "Detectar juegos iniciados fuera de GameCenter"
+        ),
+        "Adds games launched from Steam, Epic or your desktop to the dock and playtime.": (
+            "Añade al dock y al tiempo jugado los juegos iniciados desde Steam, "
+            "Epic o el escritorio."
+        ),
+    }
+)
+TRANSLATIONS["fr"].update(
+    {
+        "GAME SESSIONS": "SESSIONS DE JEU",
+        "Detect games started outside GameCenter": (
+            "Détecter les jeux lancés hors de GameCenter"
+        ),
+        "Adds games launched from Steam, Epic or your desktop to the dock and playtime.": (
+            "Ajoute au dock et au temps de jeu les jeux lancés depuis Steam, "
+            "Epic ou le bureau."
+        ),
+    }
+)
+TRANSLATIONS["de"].update(
+    {
+        "GAME SESSIONS": "SPIELSITZUNGEN",
+        "Detect games started outside GameCenter": (
+            "Außerhalb von GameCenter gestartete Spiele erkennen"
+        ),
+        "Adds games launched from Steam, Epic or your desktop to the dock and playtime.": (
+            "Fügt Spiele, die über Steam, Epic oder den Desktop gestartet "
+            "wurden, dem Dock und der Spielzeit hinzu."
+        ),
+    }
+)
+TRANSLATIONS["it"].update(
+    {
+        "GAME SESSIONS": "SESSIONI DI GIOCO",
+        "Detect games started outside GameCenter": (
+            "Rileva i giochi avviati fuori da GameCenter"
+        ),
+        "Adds games launched from Steam, Epic or your desktop to the dock and playtime.": (
+            "Aggiunge al dock e al tempo di gioco i giochi avviati da Steam, "
+            "Epic o dal desktop."
+        ),
+    }
+)
+TRANSLATIONS["pt"].update(
+    {
+        "GAME SESSIONS": "SESSÕES DE JOGO",
+        "Detect games started outside GameCenter": (
+            "Detetar jogos iniciados fora do GameCenter"
+        ),
+        "Adds games launched from Steam, Epic or your desktop to the dock and playtime.": (
+            "Adiciona ao dock e ao tempo de jogo os jogos iniciados pelo Steam, "
+            "Epic ou ambiente de trabalho."
+        ),
+    }
+)
+
 _EXTRA_KEYS = ("Nintendo DS", "PS2", "STEAMGRIDDB")
 _KEYS = frozenset(_EXTRA_KEYS).union(
     *(catalog.keys() for catalog in TRANSLATIONS.values())

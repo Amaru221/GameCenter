@@ -762,6 +762,65 @@ Item {
                     color: "#232936"
                 }
 
+                Text {
+                    text: Tr.strings["GAME SESSIONS"]
+                    color: "#8b95a5"
+                    font.family: "Chakra Petch"
+                    font.pixelSize: 11
+                    font.bold: true
+                    font.letterSpacing: 2.4
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+
+                    Column {
+                        Layout.fillWidth: true
+                        spacing: 2
+
+                        Text {
+                            text: Tr.strings["Detect games started outside GameCenter"]
+                            color: "#dfe6f0"
+                            font.family: "Sora"
+                            font.pixelSize: 12
+                        }
+
+                        Text {
+                            text: Tr.strings["Adds games launched from Steam, Epic or your desktop to the dock and playtime."]
+                            color: "#6f7887"
+                            font.family: "Sora"
+                            font.pixelSize: 10
+                            wrapMode: Text.WordWrap
+                        }
+                    }
+
+                    Rectangle {
+                        objectName: "detectExternalToggle"
+                        width: 44
+                        height: 24
+                        radius: 12
+                        color: Library.detectExternalSessions ? Library.accent : "#2a3140"
+                        Layout.alignment: Qt.AlignVCenter
+
+                        Rectangle {
+                            width: 18
+                            height: 18
+                            radius: 9
+                            color: "#ffffff"
+                            x: Library.detectExternalSessions ? 23 : 3
+                            anchors.verticalCenter: parent.verticalCenter
+                            Behavior on x { NumberAnimation { duration: 140 } }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Library.setDetectExternalSessions(!Library.detectExternalSessions)
+                        }
+                    }
+                }
+
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.topMargin: 4
